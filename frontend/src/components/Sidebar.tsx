@@ -2,9 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAnalysisContext } from "@/context/AnalysisContext";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { result, snoozedThreats, ignoredThreats, solvedThreats } = useAnalysisContext();
+  const feedCount = result?.classified_threats?.length ?? 0;
+  const snoozedCount = snoozedThreats.length;
+  const ignoredCount = ignoredThreats.length;
+  const solvedCount = solvedThreats.length;
 
   return (
     <aside className="w-[250px] min-w-[250px] min-h-screen bg-sidebar text-gray-400 text-sm flex flex-col">
@@ -28,10 +34,10 @@ export default function Sidebar() {
 
       {/* Primary nav */}
       <nav className="px-2 space-y-0.5">
-        <NavItem href="/" icon={<GridIcon />} label="Feed" active={pathname === "/"} />
-        <NavItem href="/snoozed" icon={<ClockIcon />} label="Snoozed" active={pathname === "/snoozed"} />
-        <NavItem href="/ignored" icon={<XIcon />} label="Ignored" badge="0" active={pathname === "/ignored"} />
-        <NavItem href="/solved" icon={<CheckIcon />} label="Solved" active={pathname === "/solved"} />
+        <NavItem href="/" icon={<GridIcon />} label="Feed" active={pathname === "/"} count={feedCount > 0 ? String(feedCount) : undefined} />
+        <NavItem href="/snoozed" icon={<ClockIcon />} label="Snoozed" active={pathname === "/snoozed"} count={snoozedCount > 0 ? String(snoozedCount) : undefined} />
+        <NavItem href="/ignored" icon={<XIcon />} label="Ignored" active={pathname === "/ignored"} badge={String(ignoredCount)} />
+        <NavItem href="/solved" icon={<CheckIcon />} label="Solved" active={pathname === "/solved"} count={solvedCount > 0 ? String(solvedCount) : undefined} />
       </nav>
 
       <Divider />

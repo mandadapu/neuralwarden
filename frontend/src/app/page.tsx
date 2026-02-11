@@ -13,8 +13,10 @@ import ThreatDetailPanel from "@/components/ThreatDetailPanel";
 
 export default function DashboardPage() {
   const [selectedThreatIndex, setSelectedThreatIndex] = useState<number | null>(null);
-  const { isLoading, result, error, logText, setLogText, runAnalysis, resume, updateThreat, removeThreat } =
-    useAnalysisContext();
+  const {
+    isLoading, result, error, logText, setLogText, runAnalysis, resume,
+    updateThreat, snoozeThreat, ignoreThreat,
+  } = useAnalysisContext();
 
   const threats = result?.classified_threats ?? [];
   const selectedThreat = selectedThreatIndex !== null ? threats[selectedThreatIndex] : null;
@@ -22,11 +24,11 @@ export default function DashboardPage() {
   const handleAction = (threatId: string, action: string) => {
     switch (action) {
       case "ignore":
-        removeThreat(threatId);
+        ignoreThreat(threatId);
         setSelectedThreatIndex(null);
         break;
       case "snooze":
-        removeThreat(threatId);
+        snoozeThreat(threatId);
         setSelectedThreatIndex(null);
         break;
       case "adjust_critical":
