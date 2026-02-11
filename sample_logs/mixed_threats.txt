@@ -1,0 +1,25 @@
+Jan 20 02:10:01 gateway firewall: DROP src=45.33.32.156 dst=10.0.1.10 proto=TCP dport=22
+Jan 20 02:10:02 gateway firewall: DROP src=45.33.32.156 dst=10.0.1.10 proto=TCP dport=23
+Jan 20 02:10:03 gateway firewall: DROP src=45.33.32.156 dst=10.0.1.10 proto=TCP dport=80
+Jan 20 02:10:04 gateway firewall: DROP src=45.33.32.156 dst=10.0.1.10 proto=TCP dport=443
+Jan 20 02:10:05 gateway firewall: DROP src=45.33.32.156 dst=10.0.1.10 proto=TCP dport=3389
+Jan 20 02:10:06 gateway firewall: DROP src=45.33.32.156 dst=10.0.1.10 proto=TCP dport=8080
+Jan 20 02:10:07 gateway firewall: DROP src=45.33.32.156 dst=10.0.1.10 proto=TCP dport=8443
+Jan 20 02:10:08 gateway firewall: DROP src=45.33.32.156 dst=10.0.1.10 proto=TCP dport=5432
+Jan 20 02:10:09 gateway firewall: DROP src=45.33.32.156 dst=10.0.1.10 proto=TCP dport=3306
+Jan 20 02:10:10 gateway firewall: DROP src=45.33.32.156 dst=10.0.1.10 proto=TCP dport=6379
+Jan 20 02:10:11 gateway firewall: DROP src=45.33.32.156 dst=10.0.1.10 proto=TCP dport=27017
+Jan 20 02:10:12 gateway firewall: DROP src=45.33.32.156 dst=10.0.1.10 proto=TCP dport=9200
+Jan 20 03:30:15 webserver sshd[4501]: Failed password for deploy from 45.33.32.156 port 22 ssh2
+Jan 20 03:30:16 webserver sshd[4502]: Failed password for deploy from 45.33.32.156 port 22 ssh2
+Jan 20 03:30:17 webserver sshd[4503]: Failed password for deploy from 45.33.32.156 port 22 ssh2
+Jan 20 03:30:18 webserver sshd[4504]: Failed password for deploy from 45.33.32.156 port 22 ssh2
+Jan 20 03:30:19 webserver sshd[4505]: Failed password for deploy from 45.33.32.156 port 22 ssh2
+Jan 20 03:30:20 webserver sshd[4506]: Failed password for deploy from 45.33.32.156 port 22 ssh2
+Jan 20 03:31:45 webserver sshd[4510]: Accepted password for deploy from 45.33.32.156 port 22 ssh2
+Jan 20 03:32:00 webserver sudo: deploy : TTY=pts/1 ; PWD=/home/deploy ; USER=root ; COMMAND=/bin/bash
+Jan 20 03:33:10 webserver sshd[4520]: Accepted publickey for deploy from 10.0.1.10 port 22 connecting to 10.0.1.25
+Jan 20 03:34:00 dbserver sshd[7701]: Accepted publickey for deploy from 10.0.1.10 port 22 ssh2
+Jan 20 03:35:15 dbserver bash[7720]: mysqldump --all-databases > /tmp/full-dump.sql executed by deploy
+Jan 20 03:40:22 dbserver scp[7730]: transfer started: /tmp/full-dump.sql to 198.51.100.99 size 2.3GB
+Jan 20 03:55:45 dbserver scp[7730]: transfer complete: 2.3GB sent to 198.51.100.99 in 923s

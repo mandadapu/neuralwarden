@@ -1,0 +1,12 @@
+Jan 10 03:14:22 server1 sshd[12345]: Failed password for admin from 203.0.113.50 port 22 ssh2
+Jan 10 03:14:23 server1 sshd[12346]: Failed password for admin from 203.0.113.50 port 22 ssh2
+Jan 10 03:14:24 server1 sshd[12347]: Failed password for admin from 203.0.113.50 port 22 ssh2
+Jan 10 03:14:25 server1 sshd[12348]: Failed password for admin from 203.0.113.50 port 22 ssh2
+Jan 10 03:14:26 server1 sshd[12349]: Failed password for admin from 203.0.113.50 port 22 ssh2
+Jan 10 03:14:27 server1 sshd[12350]: Failed password for admin from 203.0.113.50 port 22 ssh2
+Jan 10 03:14:28 server1 sshd[12351]: Failed password for root from 203.0.113.50 port 22 ssh2
+Jan 10 03:14:29 server1 sshd[12352]: Failed password for root from 203.0.113.50 port 22 ssh2
+Jan 10 03:14:30 server1 sshd[12353]: Failed password for root from 203.0.113.50 port 22 ssh2
+Jan 10 03:14:45 server1 sshd[12354]: Accepted password for admin from 203.0.113.50 port 22 ssh2
+Jan 10 03:15:01 server1 sudo: admin : TTY=pts/0 ; PWD=/home/admin ; USER=root ; COMMAND=/bin/bash
+Jan 10 03:15:12 server1 sudo: admin : TTY=pts/0 ; PWD=/root ; USER=root ; COMMAND=/usr/bin/cat /etc/shadow

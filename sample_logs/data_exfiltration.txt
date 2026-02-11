@@ -1,0 +1,9 @@
+Jan 15 14:22:01 fileserver sshd[8901]: Accepted publickey for backup-svc from 10.0.1.50 port 22 ssh2
+Jan 15 14:22:15 fileserver scp[8920]: transfer started: /data/customer-db-export.sql.gz to 198.51.100.23 size 1.8GB
+Jan 15 14:35:42 fileserver scp[8920]: transfer complete: 1.8GB sent to 198.51.100.23 in 812s
+Jan 15 14:36:01 fileserver scp[8925]: transfer started: /data/financial-records-2025.tar.gz to 198.51.100.23 size 750MB
+Jan 15 14:42:18 fileserver scp[8925]: transfer complete: 750MB sent to 198.51.100.23 in 377s
+Jan 15 14:43:00 fileserver scp[8930]: transfer started: /data/employee-pii-backup.enc to 198.51.100.23 size 420MB
+Jan 15 14:47:30 fileserver scp[8930]: transfer complete: 420MB sent to 198.51.100.23 in 270s
+Jan 15 14:48:15 fileserver bash[8935]: rm -rf /var/log/scp.log executed by backup-svc
+Jan 15 14:48:20 fileserver bash[8936]: history -c executed by backup-svc

@@ -1,0 +1,10 @@
+Jan 12 08:00:01 webserver crond[1234]: (root) CMD (/usr/sbin/logrotate /etc/logrotate.conf)
+Jan 12 08:00:05 webserver systemd[1]: Started Daily apt download activities.
+Jan 12 08:15:30 webserver sshd[5678]: Accepted publickey for deploy from 10.0.1.5 port 22 ssh2
+Jan 12 08:15:35 webserver nginx[9012]: 10.0.1.5 - - "GET /api/health HTTP/1.1" 200 15
+Jan 12 08:30:00 webserver nginx[9012]: 10.0.1.100 - - "GET / HTTP/1.1" 200 4523
+Jan 12 08:30:01 webserver nginx[9012]: 10.0.1.100 - - "GET /static/app.js HTTP/1.1" 200 89012
+Jan 12 09:00:00 webserver crond[1235]: (root) CMD (/usr/local/bin/backup.sh)
+Jan 12 09:00:15 webserver rsync[3456]: sending incremental file list to backup-server.internal
+Jan 12 09:01:30 webserver rsync[3456]: sent 12.5MB bytes received 234 bytes total size 12.5MB
+Jan 12 12:00:00 webserver ntpd[789]: time sync: offset +0.003s from pool.ntp.org
