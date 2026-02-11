@@ -1,8 +1,10 @@
 # AI NeuralWarden Pipeline v2.0
 
-A multi-agent security log analysis pipeline using **LangGraph** + **Anthropic Claude** with multi-model routing, shadow validation, RAG threat intelligence, and human-in-the-loop review.
+A multi-agent security log analysis platform with a **Next.js** dashboard and **FastAPI** backend, powered by **LangGraph** + **Anthropic Claude** with multi-model routing, shadow validation, RAG threat intelligence, and human-in-the-loop review.
 
 ## Architecture
+
+### Pipeline
 
 ```
 START
@@ -20,6 +22,32 @@ empty_report → END                                    clean_report → END  �
                                                                        report → END
 ```
 
+### System Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Next.js 16 Frontend (port 3000)                                    │
+│  ┌──────────┐  ┌──────────────┐  ┌─────────────────────────────┐   │
+│  │ Sidebar  │  │ Threat Feed  │  │ Threat Detail Slide-Out     │   │
+│  │ (nav +   │  │ + Summary    │  │ (severity gauge, tabs,      │   │
+│  │  counts) │  │   Cards      │  │  MITRE, remediation,        │   │
+│  │          │  │              │  │  actions dropdown)          │   │
+│  └──────────┘  └──────────────┘  └─────────────────────────────┘   │
+│  State: React Context + localStorage persistence                    │
+└───────────────────────────────┬─────────────────────────────────────┘
+                                │ HTTP (port 8000)
+┌───────────────────────────────▼─────────────────────────────────────┐
+│  FastAPI Backend                                                     │
+│  POST /api/analyze  │  POST /api/hitl/{id}/resume  │  GET /api/samples │
+│                                                                      │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │  LangGraph Pipeline (5 agents + validator)                     │  │
+│  │  Ingest(Haiku) → Detect(Sonnet) → Validate(Sonnet)           │  │
+│  │  → Classify(Sonnet+RAG) → HITL → Report(Opus)                │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
 ### 5 Specialized Agents + 1 Validator
 
 | Agent | Model | Cost | Purpose |
@@ -30,13 +58,16 @@ empty_report → END                                    clean_report → END  �
 | **Classify** | Sonnet 4.5 | $3.00/MTok | Risk-score threats + MITRE ATT&CK + RAG |
 | **Report** | Opus 4.6 | $15.00/MTok | Dual-audience incident reports |
 
-### v2.0 Enhancements
+### Key Features
 
-1. **Validator Agent** — Samples 5% of "clean" logs and checks for missed threats
-2. **RAG Threat Intelligence** — Pinecone vector DB with CVE data enriches classification
-3. **Human-in-the-Loop** — LangGraph `interrupt()` pauses for critical threats; Gradio approve/reject UI
-4. **Burst Mode** — Parallel ingest via `Send` API for >1000 logs
-5. **Agent Metrics** — Per-agent cost, latency, and token tracking
+1. **Next.js Dashboard** — Threat feed with detail slide-out panel, actions (snooze/ignore/solve), sidebar navigation with live counts
+2. **FastAPI REST API** — `/api/analyze`, `/api/hitl/{id}/resume`, `/api/samples` endpoints with CORS support
+3. **Validator Agent** — Samples 5% of "clean" logs and checks for missed threats
+4. **RAG Threat Intelligence** — Pinecone vector DB with CVE data enriches classification
+5. **Human-in-the-Loop** — LangGraph `interrupt()` pauses for critical threats; approve/reject UI
+6. **Burst Mode** — Parallel ingest via `Send` API for >1000 logs
+7. **Agent Metrics** — Per-agent cost, latency, and token tracking
+8. **Persistent State** — Analysis results and threat actions persist across navigation via React Context + localStorage
 
 ## Setup
 
@@ -45,8 +76,11 @@ empty_report → END                                    clean_report → END  �
 python3.13 -m venv .venv
 source .venv/bin/activate
 
-# Install
+# Install backend
 pip install -e ".[dev]"
+
+# Install frontend
+cd frontend && npm install && cd ..
 
 # Configure
 cp .env.example .env
@@ -64,6 +98,17 @@ python scripts/seed_pinecone.py
 
 ## Usage
 
+### Web Dashboard (recommended)
+
+```bash
+# Terminal 1: Start FastAPI backend
+uvicorn api.main:app --reload --port 8000
+
+# Terminal 2: Start Next.js frontend
+cd frontend && npm run dev
+# Opens at http://localhost:3000
+```
+
 ### CLI
 ```bash
 python main.py sample_logs/brute_force.txt
@@ -74,16 +119,27 @@ python main.py sample_logs/clean_logs.txt
 python main.py sample_logs/brute_force.txt --hitl
 ```
 
-### Gradio Dashboard
-```bash
-python app.py
-# Opens at http://localhost:7860
-```
-
 ### Tests
 ```bash
 pytest tests/ -v
 ```
+
+## Frontend Pages
+
+| Route | Page | Description |
+|-------|------|-------------|
+| `/` | **Threat Feed** | Log input, analysis, summary cards, findings table with detail panel |
+| `/snoozed` | **Snoozed** | Deferred threats with restore action |
+| `/ignored` | **Ignored** | False positives / accepted risk with restore action |
+| `/solved` | **Solved** | Resolved threats with reopen action |
+| `/autofix` | **Autofix** | Automated fix statistics |
+| `/log-sources` | **Log Sources** | Connected log source configuration |
+| `/agents` | **Agents** | Pipeline agent status and models |
+| `/mitre` | **MITRE ATT&CK** | Tactics and techniques reference |
+| `/threat-intel` | **Threat Intel** | Pinecone vector DB threat feed |
+| `/reports` | **Reports** | Generated incident reports |
+| `/pentests` | **Pentests** | Penetration testing tracker |
+| `/integrations` | **Integrations** | Third-party service connections |
 
 ## Sample Logs
 
@@ -99,7 +155,46 @@ pytest tests/ -v
 ```
 neuralwarden/
 ├── main.py                         # CLI entry point
-├── app.py                          # Gradio dashboard with HITL
+├── api/
+│   ├── main.py                     # FastAPI app (CORS, routers)
+│   ├── schemas.py                  # Pydantic request/response schemas
+│   ├── services.py                 # Pipeline orchestration service
+│   └── routers/
+│       ├── analyze.py              # POST /api/analyze
+│       ├── hitl.py                 # POST /api/hitl/{id}/resume
+│       └── samples.py             # GET /api/samples
+├── frontend/
+│   ├── package.json                # Next.js 16 + React 19
+│   └── src/
+│       ├── app/
+│       │   ├── layout.tsx          # Root layout (Sidebar + Topbar + AnalysisProvider)
+│       │   ├── page.tsx            # Main threat feed dashboard
+│       │   ├── globals.css         # Tailwind v4 theme (blue/navy)
+│       │   ├── snoozed/page.tsx    # Snoozed threats
+│       │   ├── ignored/page.tsx    # Ignored threats
+│       │   ├── solved/page.tsx     # Solved threats
+│       │   └── ...                 # 8 more route pages
+│       ├── components/
+│       │   ├── Sidebar.tsx         # Navigation with live counts
+│       │   ├── Topbar.tsx          # Header bar
+│       │   ├── ThreatsTable.tsx    # Findings table with clickable rows
+│       │   ├── ThreatDetailPanel.tsx # Slide-out detail panel + actions
+│       │   ├── SeverityGauge.tsx   # SVG semicircular risk gauge
+│       │   ├── SeverityBadge.tsx   # Colored severity pill
+│       │   ├── ThreatTypeIcon.tsx  # Threat type SVG icons
+│       │   ├── SummaryCards.tsx    # Stats cards (threats, logs, cost)
+│       │   ├── LogInput.tsx        # Log paste textarea
+│       │   ├── HitlReviewPanel.tsx # HITL approve/reject UI
+│       │   ├── IncidentReport.tsx  # Report renderer
+│       │   ├── CostBreakdown.tsx   # Agent cost breakdown
+│       │   └── PageShell.tsx       # Shared sub-page layout
+│       ├── context/
+│       │   └── AnalysisContext.tsx  # Global state + localStorage persistence
+│       └── lib/
+│           ├── api.ts              # Backend API client
+│           ├── types.ts            # TypeScript interfaces
+│           ├── constants.ts        # Severity colors, labels
+│           └── remediation.ts      # Threat remediation guidance
 ├── pipeline/
 │   ├── state.py                    # PipelineState TypedDict
 │   ├── graph.py                    # LangGraph StateGraph v2.0

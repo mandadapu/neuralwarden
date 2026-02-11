@@ -1,11 +1,18 @@
 # API & Developer Documentation
 
-Comprehensive reference for the AI NeuralWarden Pipeline internals — data models, agents, rule engine, pipeline orchestration, CLI, and Gradio dashboard.
+Comprehensive reference for the AI NeuralWarden Pipeline internals — data models, REST API, agents, rule engine, pipeline orchestration, CLI, and Next.js dashboard.
 
 ---
 
 ## Table of Contents
 
+- [REST API](#rest-api)
+  - [POST /api/analyze](#post-apianalyze)
+  - [POST /api/hitl/{thread_id}/resume](#post-apihitlthread_idresume)
+  - [GET /api/samples](#get-apisamples)
+  - [GET /api/samples/{sample_id}](#get-apisamplessample_id)
+  - [GET /api/health](#get-apihealth)
+- [Response Schemas](#response-schemas)
 - [Data Models](#data-models)
   - [LogEntry](#logentry)
   - [Threat](#threat)
@@ -21,11 +28,135 @@ Comprehensive reference for the AI NeuralWarden Pipeline internals — data mode
   - [Report Agent (Opus 4.6)](#report-agent)
 - [Pipeline Orchestration](#pipeline-orchestration)
 - [CLI Reference](#cli-reference)
-- [Gradio Dashboard](#gradio-dashboard)
+- [Frontend Architecture](#frontend-architecture)
 - [Error Handling & Fallbacks](#error-handling--fallbacks)
 - [Sample Log Formats](#sample-log-formats)
 - [Testing](#testing)
 - [Cost Model](#cost-model)
+
+---
+
+## REST API
+
+**Base URL:** `http://localhost:8000`
+
+The FastAPI backend exposes a REST API consumed by the Next.js frontend. CORS is configured for `localhost:3000` and `localhost:3001`.
+
+### POST /api/analyze
+
+Runs the full pipeline on raw security logs.
+
+**Request:**
+```json
+{
+  "logs": "Feb 10 14:32:01 web-server sshd: Failed password for admin from 203.0.113.50..."
+}
+```
+
+**Response:** `AnalysisResponse` (see [Response Schemas](#response-schemas))
+
+**Notes:**
+- Long-running (~20-40s depending on log volume and threat count)
+- Returns `status: "hitl_required"` if critical threats trigger human-in-the-loop review
+- Returns `status: "error"` with `error` field on pipeline failure
+
+### POST /api/hitl/{thread_id}/resume
+
+Resumes a paused pipeline after human-in-the-loop review.
+
+**Path:** `thread_id` — the `thread_id` from the initial analysis response
+
+**Request:**
+```json
+{
+  "decision": "approve",
+  "notes": "Confirmed as real threat, proceed with report generation"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `decision` | `"approve" \| "reject"` | Yes | Human reviewer decision |
+| `notes` | `string` | No | Optional reviewer notes |
+
+**Response:** `AnalysisResponse` with `status: "completed"`
+
+### GET /api/samples
+
+Lists available sample log scenarios.
+
+**Response:**
+```json
+{
+  "samples": [
+    { "id": "brute_force", "name": "Brute Force Attack" },
+    { "id": "data_exfiltration", "name": "Data Exfiltration" },
+    { "id": "mixed_threats", "name": "Mixed Threats (Multi-Stage)" },
+    { "id": "clean_logs", "name": "Clean Logs (No Threats)" }
+  ]
+}
+```
+
+### GET /api/samples/{sample_id}
+
+Returns the content of a specific sample log file.
+
+**Response:**
+```json
+{
+  "id": "brute_force",
+  "name": "Brute Force Attack",
+  "content": "Feb 10 14:32:01 web-server sshd: Failed password..."
+}
+```
+
+### GET /api/health
+
+Health check endpoint.
+
+**Response:**
+```json
+{ "status": "ok", "version": "2.0.0" }
+```
+
+---
+
+## Response Schemas
+
+### AnalysisResponse
+
+Top-level response for `/api/analyze` and `/api/hitl/{id}/resume`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `thread_id` | `string \| null` | LangGraph thread ID (present when HITL is triggered) |
+| `status` | `"completed" \| "hitl_required" \| "error"` | Pipeline result status |
+| `summary` | `SummaryResponse` | Aggregated stats |
+| `classified_threats` | `ClassifiedThreatResponse[]` | All classified threats |
+| `pending_critical_threats` | `PendingThreatResponse[]` | Threats awaiting HITL review |
+| `report` | `IncidentReportResponse \| null` | Generated incident report |
+| `agent_metrics` | `dict[string, AgentMetricsResponse]` | Per-agent cost/latency |
+| `pipeline_time` | `float` | Total pipeline duration (seconds) |
+| `error` | `string \| null` | Error message if `status == "error"` |
+
+### SummaryResponse
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `total_threats` | `int` | Total threats detected |
+| `severity_counts` | `{critical, high, medium, low}` | Breakdown by severity |
+| `auto_ignored` | `int` | Informational/auto-dismissed threats |
+| `total_logs` | `int` | Total log lines processed |
+| `logs_cleared` | `int` | Clean log lines |
+
+### AgentMetricsResponse
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `cost_usd` | `float` | API cost in USD |
+| `latency_ms` | `float` | Agent execution time |
+| `input_tokens` | `int` | Tokens consumed |
+| `output_tokens` | `int` | Tokens generated |
 
 ---
 
@@ -396,44 +527,90 @@ ACTION PLAN
 
 ---
 
-## Gradio Dashboard
+## Frontend Architecture
 
-**File:** `app.py`
+**Stack:** Next.js 16 (App Router) + React 19 + Tailwind CSS v4
+**Theme:** Blue/Navy (`sidebar=#0f172a`, `primary=#2563eb`)
 
 ### Launch
 
 ```bash
-python app.py
-# Opens at http://localhost:7860
+cd frontend && npm run dev
+# Opens at http://localhost:3000
 ```
 
-### Layout
+### State Management
 
-Four-panel dashboard:
+**File:** `frontend/src/context/AnalysisContext.tsx`
 
-1. **Input Section** — Textarea for pasting logs + dropdown with 4 sample scenarios + "Analyze Threats" button
-2. **Stats Bar** — Shows: log count, threat count, invalid count, pipeline time
-3. **Threat Detection Panel** — Color-coded threat cards with severity badges and confidence scores
-4. **Risk Classification Panel** — 4-column severity grid (critical/high/medium/low counts) + MITRE technique tags
-5. **Incident Report** — Full markdown-rendered report
+Global state via React Context (`AnalysisProvider`) wrapping the entire app in `layout.tsx`. State persists to `localStorage` under the key `neuralwarden_analysis`.
 
-### Event Wiring
+| State | Type | Description |
+|-------|------|-------------|
+| `result` | `AnalysisResponse \| null` | Latest analysis result from backend |
+| `logText` | `string` | Current log input text |
+| `isLoading` | `boolean` | Pipeline running indicator |
+| `error` | `string \| null` | Error message |
+| `snoozedThreats` | `ClassifiedThreat[]` | Threats deferred for later |
+| `ignoredThreats` | `ClassifiedThreat[]` | False positives / accepted risk |
+| `solvedThreats` | `ClassifiedThreat[]` | Resolved threats |
 
-| Trigger | Input | Output |
-|---------|-------|--------|
-| `sample_dropdown.change` | `sample_dropdown` | `log_input` (loads sample text) |
-| `analyze_btn.click` | `log_input` | `stats_bar`, `threats_panel`, `classification_panel`, `report_panel` |
+**Actions:**
+- `runAnalysis(logs)` — Calls `POST /api/analyze`, resets all threat lists
+- `resume(decision, notes)` — Calls `POST /api/hitl/{id}/resume`
+- `snoozeThreat(id)` / `ignoreThreat(id)` / `solveThreat(id)` — Moves threat from feed to respective list
+- `restoreThreat(id, from)` — Moves threat back to feed
+- `updateThreat(id, updates)` — In-place updates (risk level adjustment)
 
-### Key Functions
+### Key Components
 
-**`analyze_logs(log_text: str) -> tuple[str, str, str, str]`**
-Splits input into lines, runs pipeline, formats 4 HTML/markdown outputs.
+**`ThreatDetailPanel.tsx`** — Slide-out panel (480px) from the right, triggered by clicking a threat row:
+- Header with close button and threat name
+- Severity gauge (SVG semicircle) + severity badge + type/method/MITRE tags
+- Tabbed content: Overview | Activity | Tasks
+- Overview sections: TL;DR, Business Impact, MITRE ATT&CK, remediation steps, affected systems, source details
+- Actions dropdown: Snooze, Ignore, Mark as solved, Adjust severity (submenu)
+- Prev/next navigation with keyboard shortcuts (Escape, arrow keys)
+- Backdrop overlay with body scroll lock
 
-**`load_sample(sample_name: str) -> str`**
-Maps dropdown label to file in `sample_logs/` and returns contents.
+**`ThreatsTable.tsx`** — Findings table with clickable rows, severity badges, confidence indicators
 
-**`_severity_color(risk: str) -> str`**
-Returns hex color for severity: critical=#dc2626, high=#ea580c, medium=#ca8a04, low=#2563eb, informational=#6b7280.
+**`Sidebar.tsx`** — Navigation with live counts from context (feed count, snoozed, ignored, solved)
+
+**`SeverityGauge.tsx`** — SVG semicircular gauge rendering `risk_score` (0-10) as a colored arc
+
+### Routing
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/` | `page.tsx` | Main feed: log input, analysis, summary cards, findings table, detail panel |
+| `/snoozed` | `snoozed/page.tsx` | Deferred threats table with restore action |
+| `/ignored` | `ignored/page.tsx` | Accepted risk / false positives with restore action |
+| `/solved` | `solved/page.tsx` | Resolved threats with reopen action |
+| `/autofix` | `autofix/page.tsx` | Automated fix statistics |
+| `/log-sources` | `log-sources/page.tsx` | Connected log sources |
+| `/agents` | `agents/page.tsx` | Pipeline agent status |
+| `/mitre` | `mitre/page.tsx` | MITRE ATT&CK reference |
+| `/threat-intel` | `threat-intel/page.tsx` | Pinecone threat intel feed |
+| `/reports` | `reports/page.tsx` | Generated reports |
+| `/pentests` | `pentests/page.tsx` | Pentest tracker |
+| `/integrations` | `integrations/page.tsx` | Third-party connections |
+
+### API Client
+
+**File:** `frontend/src/lib/api.ts`
+
+Calls the FastAPI backend directly on port 8000 (bypasses Next.js rewrite proxy to avoid timeout issues with long-running analysis):
+
+```typescript
+const BASE = `${window.location.protocol}//${window.location.hostname}:8000/api`;
+```
+
+**Functions:**
+- `analyze(logs: string): Promise<AnalysisResponse>`
+- `resumeHitl(threadId, decision, notes): Promise<AnalysisResponse>`
+- `fetchSamples(): Promise<SampleInfo[]>`
+- `fetchSampleContent(id: string): Promise<string>`
 
 ---
 
