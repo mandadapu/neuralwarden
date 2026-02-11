@@ -8,6 +8,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from models.incident_report import ActionStep, IncidentReport
 from models.threat import ClassifiedThreat
+from pipeline.metrics import AgentTimer
 from pipeline.state import PipelineState
 
 MODEL = "claude-opus-4-6"
@@ -82,22 +83,24 @@ def run_report(state: PipelineState) -> dict:
             max_tokens=4096,
         )
 
-        response = llm.invoke([
-            SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(
-                content=(
-                    f"Generate an incident report for this security event.\n\n"
-                    f"## Detection Statistics\n"
-                    f"- Total logs analyzed: {state.get('total_count', 0)}\n"
-                    f"- Invalid entries: {state.get('invalid_count', 0)}\n"
-                    f"- Rule-based detections: {detection_stats.get('rules_matched', 0)}\n"
-                    f"- AI detections: {detection_stats.get('ai_detections', 0)}\n"
-                    f"- Total threats: {detection_stats.get('total_threats', 0)}\n\n"
-                    f"## Classified Threats\n{json.dumps(threat_summary, indent=2)}\n\n"
-                    f"## Log Timeline (samples)\n" + "\n".join(log_samples)
-                )
-            ),
-        ])
+        with AgentTimer("report", MODEL) as timer:
+            response = llm.invoke([
+                SystemMessage(content=SYSTEM_PROMPT),
+                HumanMessage(
+                    content=(
+                        f"Generate an incident report for this security event.\n\n"
+                        f"## Detection Statistics\n"
+                        f"- Total logs analyzed: {state.get('total_count', 0)}\n"
+                        f"- Invalid entries: {state.get('invalid_count', 0)}\n"
+                        f"- Rule-based detections: {detection_stats.get('rules_matched', 0)}\n"
+                        f"- AI detections: {detection_stats.get('ai_detections', 0)}\n"
+                        f"- Total threats: {detection_stats.get('total_threats', 0)}\n\n"
+                        f"## Classified Threats\n{json.dumps(threat_summary, indent=2)}\n\n"
+                        f"## Log Timeline (samples)\n" + "\n".join(log_samples)
+                    )
+                ),
+            ])
+            timer.record_usage(response)
 
         content = response.content
         if "```" in content:
@@ -134,7 +137,10 @@ def run_report(state: PipelineState) -> dict:
             mitre_techniques=report_data.get("mitre_techniques", []),
             generated_at=datetime.now(),
         )
-        return {"report": report}
+        return {
+            "report": report,
+            "agent_metrics": {**state.get("agent_metrics", {}), "report": timer.metrics},
+        }
 
     except Exception as e:
         print(f"[Report] Report generation failed, using template: {e}")

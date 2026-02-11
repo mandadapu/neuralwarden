@@ -7,6 +7,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from models.log_entry import LogEntry
 from models.threat import Threat
+from pipeline.metrics import AgentTimer
 from pipeline.state import PipelineState
 from rules.detection import run_all_rules
 
@@ -87,17 +88,19 @@ def run_detect(state: PipelineState) -> dict:
         log_text = _format_logs_for_prompt(valid_logs)
         rule_text = _format_rule_threats(rule_threats)
 
-        response = llm.invoke([
-            SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(
-                content=(
-                    f"Analyze these {len(valid_logs)} parsed log entries for threats.\n\n"
-                    f"## Parsed Logs\n{log_text}\n\n"
-                    f"## Already Detected by Rules\n{rule_text}\n\n"
-                    "Find any ADDITIONAL threats that rules missed."
-                )
-            ),
-        ])
+        with AgentTimer("detect", MODEL) as timer:
+            response = llm.invoke([
+                SystemMessage(content=SYSTEM_PROMPT),
+                HumanMessage(
+                    content=(
+                        f"Analyze these {len(valid_logs)} parsed log entries for threats.\n\n"
+                        f"## Parsed Logs\n{log_text}\n\n"
+                        f"## Already Detected by Rules\n{rule_text}\n\n"
+                        "Find any ADDITIONAL threats that rules missed."
+                    )
+                ),
+            ])
+            timer.record_usage(response)
 
         content = response.content
         if "```" in content:
@@ -123,6 +126,7 @@ def run_detect(state: PipelineState) -> dict:
         print(f"[Detect] AI detection failed, using rules only: {e}")
 
     all_threats = rule_threats + ai_threats
+    detect_metrics = timer.metrics if "timer" in locals() else {}
     return {
         "threats": all_threats,
         "detection_stats": {
@@ -130,4 +134,5 @@ def run_detect(state: PipelineState) -> dict:
             "ai_detections": len(ai_threats),
             "total_threats": len(all_threats),
         },
+        "agent_metrics": {**state.get("agent_metrics", {}), "detect": detect_metrics},
     }

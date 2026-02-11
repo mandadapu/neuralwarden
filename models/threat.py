@@ -14,7 +14,7 @@ class Threat(BaseModel):
     source_log_indices: list[int] = Field(
         default_factory=list, description="Indices of logs that triggered this detection"
     )
-    method: Literal["rule_based", "ai_detected"] = Field(
+    method: Literal["rule_based", "ai_detected", "validator_detected"] = Field(
         description="Detection method used"
     )
     description: str = Field(description="Human-readable description of the threat")
@@ -28,7 +28,7 @@ class ClassifiedThreat(BaseModel):
     type: str
     confidence: float
     source_log_indices: list[int] = Field(default_factory=list)
-    method: Literal["rule_based", "ai_detected"]
+    method: Literal["rule_based", "ai_detected", "validator_detected"]
     description: str
     source_ip: str = ""
 

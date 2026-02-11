@@ -5,7 +5,7 @@ from unittest.mock import patch
 from models.incident_report import IncidentReport
 from models.log_entry import LogEntry
 from models.threat import ClassifiedThreat, Threat
-from pipeline.graph import should_classify, should_detect
+from pipeline.graph import should_classify_after_validate as should_classify, should_detect
 
 
 class TestConditionalRouting:

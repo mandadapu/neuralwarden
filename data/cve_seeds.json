@@ -1,0 +1,189 @@
+[
+  {
+    "id": "CVE-2024-6387",
+    "text": "regreSSHion: Remote unauthenticated code execution in OpenSSH server. Race condition in signal handler allows RCE on glibc-based Linux. Affects OpenSSH 8.5p1 through 9.7p1.",
+    "metadata": {
+      "cve_id": "CVE-2024-6387",
+      "severity": "critical",
+      "cvss": 8.1,
+      "affected_software": "OpenSSH",
+      "technique": "T1190",
+      "tactic": "Initial Access",
+      "published": "2024-07-01"
+    }
+  },
+  {
+    "id": "CVE-2023-38408",
+    "text": "OpenSSH ssh-agent remote code execution via PKCS#11 provider. Forwarded agent socket can be exploited for arbitrary code execution on the client.",
+    "metadata": {
+      "cve_id": "CVE-2023-38408",
+      "severity": "critical",
+      "cvss": 9.8,
+      "affected_software": "OpenSSH",
+      "technique": "T1563",
+      "tactic": "Lateral Movement",
+      "published": "2023-07-19"
+    }
+  },
+  {
+    "id": "CVE-2021-4034",
+    "text": "PwnKit: Local privilege escalation in polkit pkexec. Memory corruption in command-line argument handling allows any unprivileged user to gain root.",
+    "metadata": {
+      "cve_id": "CVE-2021-4034",
+      "severity": "critical",
+      "cvss": 7.8,
+      "affected_software": "polkit",
+      "technique": "T1068",
+      "tactic": "Privilege Escalation",
+      "published": "2022-01-25"
+    }
+  },
+  {
+    "id": "CVE-2023-22809",
+    "text": "Sudo privilege escalation via sudoedit. Arbitrary file write by exploiting user-provided environment variables in sudoedit.",
+    "metadata": {
+      "cve_id": "CVE-2023-22809",
+      "severity": "high",
+      "cvss": 7.8,
+      "affected_software": "sudo",
+      "technique": "T1548.003",
+      "tactic": "Privilege Escalation",
+      "published": "2023-01-18"
+    }
+  },
+  {
+    "id": "CVE-2021-3156",
+    "text": "Baron Samedit: Heap-based buffer overflow in sudo. Allows any local user to gain root privileges without authentication via sudoedit -s.",
+    "metadata": {
+      "cve_id": "CVE-2021-3156",
+      "severity": "critical",
+      "cvss": 7.8,
+      "affected_software": "sudo",
+      "technique": "T1548.003",
+      "tactic": "Privilege Escalation",
+      "published": "2021-01-26"
+    }
+  },
+  {
+    "id": "CVE-2024-3094",
+    "text": "XZ Utils backdoor. Malicious code injected into xz compression library versions 5.6.0 and 5.6.1, enabling SSH authentication bypass on affected systems.",
+    "metadata": {
+      "cve_id": "CVE-2024-3094",
+      "severity": "critical",
+      "cvss": 10.0,
+      "affected_software": "xz-utils",
+      "technique": "T1195.002",
+      "tactic": "Initial Access",
+      "published": "2024-03-29"
+    }
+  },
+  {
+    "id": "CVE-2023-4966",
+    "text": "Citrix Bleed: Information disclosure in Citrix NetScaler. Allows session token theft and unauthorized access without credentials.",
+    "metadata": {
+      "cve_id": "CVE-2023-4966",
+      "severity": "critical",
+      "cvss": 9.4,
+      "affected_software": "Citrix NetScaler",
+      "technique": "T1539",
+      "tactic": "Credential Access",
+      "published": "2023-10-10"
+    }
+  },
+  {
+    "id": "THREAT-INTEL-001",
+    "text": "SSH brute force attacks commonly originate from botnets using credential stuffing. Typical pattern: 5-50 attempts/minute from single IP, targeting root/admin/deploy accounts. Often precedes lateral movement.",
+    "metadata": {
+      "severity": "high",
+      "technique": "T1110.001",
+      "tactic": "Credential Access",
+      "category": "brute_force"
+    }
+  },
+  {
+    "id": "THREAT-INTEL-002",
+    "text": "Port scanning reconnaissance typically targets common service ports (22, 80, 443, 3306, 5432, 6379, 27017). Nmap SYN scans from external IPs indicate pre-attack probing. Often followed by exploitation within 24-48 hours.",
+    "metadata": {
+      "severity": "medium",
+      "technique": "T1046",
+      "tactic": "Discovery",
+      "category": "port_scan"
+    }
+  },
+  {
+    "id": "THREAT-INTEL-003",
+    "text": "Data exfiltration via SCP/SFTP to external IPs. Attackers stage data in /tmp, compress with tar/gzip, then transfer. Transfers >100MB to non-corporate IPs are high-confidence indicators of exfiltration.",
+    "metadata": {
+      "severity": "critical",
+      "technique": "T1048.002",
+      "tactic": "Exfiltration",
+      "category": "data_exfiltration"
+    }
+  },
+  {
+    "id": "THREAT-INTEL-004",
+    "text": "Lateral movement via SSH key reuse. After compromising one host, attackers use stolen SSH keys to pivot to internal servers. Internal-to-internal SSH on non-standard ports is a strong indicator.",
+    "metadata": {
+      "severity": "high",
+      "technique": "T1021.004",
+      "tactic": "Lateral Movement",
+      "category": "lateral_movement"
+    }
+  },
+  {
+    "id": "THREAT-INTEL-005",
+    "text": "Privilege escalation via sudo misconfiguration. Attackers exploit NOPASSWD entries, wildcard injection in sudoers, or known sudo CVEs to gain root access after initial foothold.",
+    "metadata": {
+      "severity": "high",
+      "technique": "T1548.003",
+      "tactic": "Privilege Escalation",
+      "category": "privilege_escalation"
+    }
+  },
+  {
+    "id": "THREAT-INTEL-006",
+    "text": "Living-off-the-land techniques using standard tools: curl/wget for C2, crontab for persistence, netcat for reverse shells. These bypass signature-based detection by using legitimate binaries.",
+    "metadata": {
+      "severity": "high",
+      "technique": "T1059.004",
+      "tactic": "Execution",
+      "category": "living_off_the_land"
+    }
+  },
+  {
+    "id": "CVE-2024-21626",
+    "text": "Leaky Vessels: Container escape vulnerability in runc. Allows attackers to break out of container isolation and access the host filesystem.",
+    "metadata": {
+      "cve_id": "CVE-2024-21626",
+      "severity": "high",
+      "cvss": 8.6,
+      "affected_software": "runc/Docker/Kubernetes",
+      "technique": "T1611",
+      "tactic": "Privilege Escalation",
+      "published": "2024-01-31"
+    }
+  },
+  {
+    "id": "THREAT-INTEL-007",
+    "text": "Database exfiltration pattern: mysqldump or pg_dump to local file, followed by compression and SCP to external IP. Often occurs during off-hours to avoid detection.",
+    "metadata": {
+      "severity": "critical",
+      "technique": "T1005",
+      "tactic": "Collection",
+      "category": "data_exfiltration"
+    }
+  },
+  {
+    "id": "CVE-2023-46747",
+    "text": "F5 BIG-IP authentication bypass. Remote unauthenticated attacker can execute arbitrary system commands via the management port.",
+    "metadata": {
+      "cve_id": "CVE-2023-46747",
+      "severity": "critical",
+      "cvss": 9.8,
+      "affected_software": "F5 BIG-IP",
+      "technique": "T1190",
+      "tactic": "Initial Access",
+      "published": "2023-10-26"
+    }
+  }
+]

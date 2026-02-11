@@ -1,24 +1,42 @@
-# AI NeuralWarden Pipeline
+# AI NeuralWarden Pipeline v2.0
 
-A multi-agent security log analysis pipeline using **LangGraph** + **Anthropic Claude** with multi-model routing for cost-optimized threat detection and incident reporting.
+A multi-agent security log analysis pipeline using **LangGraph** + **Anthropic Claude** with multi-model routing, shadow validation, RAG threat intelligence, and human-in-the-loop review.
 
 ## Architecture
 
 ```
-Raw Logs → [Ingest Agent] → [Detect Agent] → [Classify Agent] → [Report Agent] → Incident Report
-             Haiku 4.5       Sonnet 4.5       Sonnet 4.5         Opus 4.6
-             $0.25/MTok      $3.00/MTok       $3.00/MTok         $15.00/MTok
+START
+  │
+  [should_burst?] ─── >1000 logs ──→ ingest_chunk (x N parallel) → aggregate
+  │                                                                    │
+  ▼                                                                    ▼
+[ingest] ──── valid logs? ──→ [detect] ──→ [validate] ──── threats? ──→ [classify + RAG]
+  │ No                                                      │ No           │
+  ▼                                                         ▼             [should_hitl?]
+empty_report → END                                    clean_report → END  │          │
+                                                                          ▼          ▼
+                                                                    hitl_review   report → END
+                                                                          │
+                                                                       report → END
 ```
 
-**4 Specialized Agents:**
-- **Ingest** (Haiku 4.5) — Parses raw security logs into structured entries
-- **Detect** (Sonnet 4.5) — Finds threats via rule-based patterns + AI detection
-- **Classify** (Sonnet 4.5) — Risk-scores threats with MITRE ATT&CK mappings
-- **Report** (Opus 4.6) — Generates dual-audience incident reports with action plans
+### 5 Specialized Agents + 1 Validator
 
-**Conditional Routing** — Skips unnecessary agents to save API costs:
-- No valid logs → skip all downstream agents
-- No threats found → skip classification and reporting
+| Agent | Model | Cost | Purpose |
+|-------|-------|------|---------|
+| **Ingest** | Haiku 4.5 | $0.25/MTok | Parse raw logs into structured entries |
+| **Detect** | Sonnet 4.5 | $3.00/MTok | Rule-based + AI threat detection |
+| **Validate** | Sonnet 4.5 | $3.00/MTok | Shadow-check 5% of "clean" logs |
+| **Classify** | Sonnet 4.5 | $3.00/MTok | Risk-score threats + MITRE ATT&CK + RAG |
+| **Report** | Opus 4.6 | $15.00/MTok | Dual-audience incident reports |
+
+### v2.0 Enhancements
+
+1. **Validator Agent** — Samples 5% of "clean" logs and checks for missed threats
+2. **RAG Threat Intelligence** — Pinecone vector DB with CVE data enriches classification
+3. **Human-in-the-Loop** — LangGraph `interrupt()` pauses for critical threats; Gradio approve/reject UI
+4. **Burst Mode** — Parallel ingest via `Send` API for >1000 logs
+5. **Agent Metrics** — Per-agent cost, latency, and token tracking
 
 ## Setup
 
@@ -32,7 +50,16 @@ pip install -e ".[dev]"
 
 # Configure
 cp .env.example .env
-# Add your ANTHROPIC_API_KEY to .env
+# Add your API keys to .env:
+#   ANTHROPIC_API_KEY  (required)
+#   OPENAI_API_KEY     (for RAG embeddings)
+#   PINECONE_API_KEY   (for RAG vector store)
+```
+
+### Seed Pinecone (optional, for RAG)
+
+```bash
+python scripts/seed_pinecone.py
 ```
 
 ## Usage
@@ -42,6 +69,9 @@ cp .env.example .env
 python main.py sample_logs/brute_force.txt
 python main.py sample_logs/mixed_threats.txt
 python main.py sample_logs/clean_logs.txt
+
+# With human-in-the-loop for critical threats
+python main.py sample_logs/brute_force.txt --hitl
 ```
 
 ### Gradio Dashboard
@@ -68,22 +98,33 @@ pytest tests/ -v
 
 ```
 neuralwarden/
-├── main.py                    # CLI entry point
-├── app.py                     # Gradio dashboard
+├── main.py                         # CLI entry point
+├── app.py                          # Gradio dashboard with HITL
 ├── pipeline/
-│   ├── state.py               # PipelineState TypedDict
-│   ├── graph.py               # LangGraph StateGraph
+│   ├── state.py                    # PipelineState TypedDict
+│   ├── graph.py                    # LangGraph StateGraph v2.0
+│   ├── metrics.py                  # AgentTimer cost/latency tracking
+│   ├── vector_store.py             # Pinecone RAG wrapper
 │   └── agents/
-│       ├── ingest.py          # Haiku 4.5
-│       ├── detect.py          # Sonnet 4.5
-│       ├── classify.py        # Sonnet 4.5
-│       └── report.py          # Opus 4.6
+│       ├── ingest.py               # Haiku 4.5
+│       ├── ingest_chunk.py         # Burst mode chunk processor
+│       ├── detect.py               # Sonnet 4.5
+│       ├── validate.py             # Sonnet 4.5 (shadow validator)
+│       ├── classify.py             # Sonnet 4.5 (+ RAG)
+│       ├── hitl.py                 # Human-in-the-loop interrupt
+│       └── report.py               # Opus 4.6
 ├── rules/
-│   └── detection.py           # Rule-based detection patterns
+│   └── detection.py                # Rule-based detection patterns
 ├── models/
 │   ├── log_entry.py
 │   ├── threat.py
 │   └── incident_report.py
+├── data/
+│   └── cve_seeds.json              # CVE data for Pinecone
+├── scripts/
+│   └── seed_pinecone.py            # Seed Pinecone index
 ├── sample_logs/
-└── tests/
+├── tests/                          # 49 tests
+└── docs/
+    └── API.md                      # Full API documentation
 ```

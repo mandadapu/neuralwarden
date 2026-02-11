@@ -6,7 +6,9 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from models.threat import ClassifiedThreat, Threat
+from pipeline.metrics import AgentTimer
 from pipeline.state import PipelineState
+from pipeline.vector_store import format_threat_intel_context
 
 MODEL = "claude-sonnet-4-5-20250929"
 
@@ -19,6 +21,9 @@ SYSTEM_PROMPT = """You are a cybersecurity risk classifier. For each detected th
 5. Business impact assessment
 6. Affected systems
 7. Remediation priority (1 = highest)
+
+If threat intelligence context is provided for a threat, use it to refine your risk assessment.
+Known CVEs and recent exploits should increase the risk score and inform the MITRE mapping.
 
 Respond with a JSON array. Each object must have these exact fields:
 [{
@@ -62,10 +67,11 @@ def run_classify(state: PipelineState) -> dict:
     if not threats:
         return {"classified_threats": []}
 
-    # Format threats for prompt
+    # Format threats for prompt with RAG enrichment
     threat_data = []
+    rag_context: dict[str, str] = {}
     for t in threats:
-        threat_data.append({
+        entry: dict = {
             "threat_id": t.threat_id,
             "type": t.type,
             "confidence": t.confidence,
@@ -73,7 +79,12 @@ def run_classify(state: PipelineState) -> dict:
             "description": t.description,
             "source_ip": t.source_ip,
             "source_log_count": len(t.source_log_indices),
-        })
+        }
+        intel = format_threat_intel_context(t.description, t.type, t.source_ip)
+        if intel:
+            entry["threat_intelligence"] = intel
+            rag_context[t.threat_id] = intel
+        threat_data.append(entry)
 
     try:
         llm = ChatAnthropic(
@@ -82,12 +93,14 @@ def run_classify(state: PipelineState) -> dict:
             max_tokens=4096,
         )
 
-        response = llm.invoke([
-            SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(
-                content=f"Classify these {len(threats)} detected threats:\n\n{json.dumps(threat_data, indent=2)}"
-            ),
-        ])
+        with AgentTimer("classify", MODEL) as timer:
+            response = llm.invoke([
+                SystemMessage(content=SYSTEM_PROMPT),
+                HumanMessage(
+                    content=f"Classify these {len(threats)} detected threats:\n\n{json.dumps(threat_data, indent=2)}"
+                ),
+            ])
+            timer.record_usage(response)
 
         content = response.content
         if "```" in content:
@@ -126,7 +139,11 @@ def run_classify(state: PipelineState) -> dict:
 
         # Sort by remediation priority
         classified.sort(key=lambda c: c.remediation_priority)
-        return {"classified_threats": classified}
+        return {
+            "classified_threats": classified,
+            "rag_context": rag_context,
+            "agent_metrics": {**state.get("agent_metrics", {}), "classify": timer.metrics},
+        }
 
     except Exception as e:
         print(f"[Classify] Classification failed, using fallback: {e}")

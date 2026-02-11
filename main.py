@@ -81,9 +81,13 @@ def cli():
     """Run the pipeline from command line."""
     load_dotenv()
 
+    # Parse --hitl flag
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    enable_hitl = "--hitl" in sys.argv
+
     # Read logs from file argument or stdin
-    if len(sys.argv) > 1:
-        log_file = sys.argv[1]
+    if args:
+        log_file = args[0]
         try:
             with open(log_file) as f:
                 raw_logs = [line.strip() for line in f if line.strip()]
@@ -101,7 +105,7 @@ def cli():
     print(f"\nAnalyzing {len(raw_logs)} log entries...\n")
 
     # Run pipeline
-    result = run_pipeline(raw_logs)
+    result = run_pipeline(raw_logs, enable_hitl=enable_hitl)
 
     # Print stats
     stats = result.get("detection_stats", {})
@@ -110,6 +114,29 @@ def cli():
     print(f"  Detected: {stats.get('total_threats', 0)} threats "
           f"({stats.get('rules_matched', 0)} rule-based, {stats.get('ai_detections', 0)} AI)")
     print(f"  Classified: {len(result.get('classified_threats', []))} threats")
+
+    # Validator stats
+    if result.get("validator_sample_size", 0) > 0:
+        print(f"  Validator: sampled {result['validator_sample_size']} clean logs, "
+              f"found {result.get('validator_missed_count', 0)} missed threats")
+
+    # Burst mode
+    if result.get("burst_mode"):
+        print(f"  Burst mode: {result.get('chunk_count', 0)} parallel chunks")
+
+    # Cost tracking
+    agent_metrics = result.get("agent_metrics", {})
+    if agent_metrics:
+        total_cost = result.get("pipeline_cost", 0)
+        print(f"\n  Cost breakdown:")
+        for agent_name, metrics in agent_metrics.items():
+            cost = metrics.get("cost_usd", 0)
+            latency = metrics.get("latency_ms", 0)
+            tokens_in = metrics.get("input_tokens", 0)
+            tokens_out = metrics.get("output_tokens", 0)
+            print(f"    {agent_name:12s}: ${cost:.4f} ({tokens_in}in/{tokens_out}out) {latency:.0f}ms")
+        print(f"    {'TOTAL':12s}: ${total_cost:.4f}")
+
     print()
 
     # Print report

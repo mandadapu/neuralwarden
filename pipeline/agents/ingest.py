@@ -6,6 +6,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from models.log_entry import LogEntry
+from pipeline.metrics import AgentTimer
 from pipeline.state import PipelineState
 
 MODEL = "claude-haiku-4-5-20251001"
@@ -49,10 +50,12 @@ def run_ingest(state: PipelineState) -> dict:
     )
 
     try:
-        response = llm.invoke([
-            SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(content=f"Parse these {len(raw_logs)} log lines:\n\n{numbered_logs}"),
-        ])
+        with AgentTimer("ingest", MODEL) as timer:
+            response = llm.invoke([
+                SystemMessage(content=SYSTEM_PROMPT),
+                HumanMessage(content=f"Parse these {len(raw_logs)} log lines:\n\n{numbered_logs}"),
+            ])
+            timer.record_usage(response)
 
         content = response.content
         # Extract JSON from response (handle markdown code blocks)
@@ -104,6 +107,7 @@ def run_ingest(state: PipelineState) -> dict:
             "parsed_logs": parsed_logs,
             "invalid_count": invalid_count,
             "total_count": len(raw_logs),
+            "agent_metrics": {**state.get("agent_metrics", {}), "ingest": timer.metrics},
         }
 
     except Exception as e:
