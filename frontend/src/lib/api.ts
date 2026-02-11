@@ -1,6 +1,9 @@
 import type { AnalysisResponse, SampleInfo, SampleContent } from "./types";
 
-const BASE = "/api";
+const BASE =
+  typeof window !== "undefined"
+    ? `${window.location.protocol}//${window.location.hostname}:8000/api`
+    : "/api";
 
 export async function analyze(logs: string): Promise<AnalysisResponse> {
   const res = await fetch(`${BASE}/analyze`, {

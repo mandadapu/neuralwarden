@@ -1,9 +1,16 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
 export default function Sidebar() {
+  const pathname = usePathname();
+
   return (
     <aside className="w-[250px] min-w-[250px] min-h-screen bg-sidebar text-gray-400 text-sm flex flex-col">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 py-4.5">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-purple-400 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-blue-400 flex items-center justify-center">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           </svg>
@@ -21,47 +28,49 @@ export default function Sidebar() {
 
       {/* Primary nav */}
       <nav className="px-2 space-y-0.5">
-        <NavItem icon={<GridIcon />} label="Feed" active />
-        <NavItem icon={<ClockIcon />} label="Snoozed" />
-        <NavItem icon={<XIcon />} label="Ignored" badge="0" />
-        <NavItem icon={<CheckIcon />} label="Solved" />
+        <NavItem href="/" icon={<GridIcon />} label="Feed" active={pathname === "/"} />
+        <NavItem href="/snoozed" icon={<ClockIcon />} label="Snoozed" active={pathname === "/snoozed"} />
+        <NavItem href="/ignored" icon={<XIcon />} label="Ignored" badge="0" active={pathname === "/ignored"} />
+        <NavItem href="/solved" icon={<CheckIcon />} label="Solved" active={pathname === "/solved"} />
       </nav>
 
       <Divider />
 
       <nav className="px-2">
-        <NavItem icon={<WrenchIcon />} label="AutoFix" />
+        <NavItem href="/autofix" icon={<WrenchIcon />} label="AutoFix" active={pathname === "/autofix"} />
       </nav>
 
       <Divider />
 
       {/* Resources */}
       <nav className="px-2 space-y-0.5">
-        <NavItem icon={<BoxIcon />} label="Log Sources" count="4" />
-        <NavItem icon={<ServerIcon />} label="Agents" count="6" />
-        <NavItem icon={<SunIcon />} label="MITRE ATT&CK" count="1" />
-        <NavItem icon={<ShieldIcon />} label="Threat Intel" count="1" />
+        <NavItem href="/log-sources" icon={<BoxIcon />} label="Log Sources" count="4" active={pathname === "/log-sources"} />
+        <NavItem href="/agents" icon={<ServerIcon />} label="Agents" count="6" active={pathname === "/agents"} />
+        <NavItem href="/mitre" icon={<SunIcon />} label="MITRE ATT&CK" count="1" active={pathname === "/mitre"} />
+        <NavItem href="/threat-intel" icon={<ShieldIcon />} label="Threat Intel" count="1" active={pathname === "/threat-intel"} />
       </nav>
 
       <Divider />
 
       {/* Bottom nav */}
       <nav className="px-2 pb-5 space-y-0.5">
-        <NavItem icon={<FileIcon />} label="Reports" />
-        <NavItem icon={<SearchIcon />} label="Pentests" />
-        <NavItem icon={<LayoutIcon />} label="Integrations" />
+        <NavItem href="/reports" icon={<FileIcon />} label="Reports" active={pathname === "/reports"} />
+        <NavItem href="/pentests" icon={<SearchIcon />} label="Pentests" active={pathname === "/pentests"} />
+        <NavItem href="/integrations" icon={<LayoutIcon />} label="Integrations" active={pathname === "/integrations"} />
       </nav>
     </aside>
   );
 }
 
 function NavItem({
+  href,
   icon,
   label,
   active,
   badge,
   count,
 }: {
+  href: string;
   icon: React.ReactNode;
   label: string;
   active?: boolean;
@@ -69,8 +78,9 @@ function NavItem({
   count?: string;
 }) {
   return (
-    <div
-      className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg cursor-pointer ${
+    <Link
+      href={href}
+      className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg transition-colors ${
         active ? "bg-primary/[.18] text-white font-semibold" : "text-[#8b8fa3] hover:bg-white/5"
       }`}
     >
@@ -84,7 +94,7 @@ function NavItem({
       {count !== undefined && (
         <span className="bg-white/10 text-[#8b8fa3] text-[11px] font-semibold px-1.5 py-0.5 rounded-full">{count}</span>
       )}
-    </div>
+    </Link>
   );
 }
 

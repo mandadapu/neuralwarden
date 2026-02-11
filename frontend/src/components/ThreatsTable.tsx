@@ -4,8 +4,10 @@ import ThreatTypeIcon from "./ThreatTypeIcon";
 
 export default function ThreatsTable({
   threats,
+  onThreatClick,
 }: {
   threats: ClassifiedThreat[];
+  onThreatClick?: (threat: ClassifiedThreat, index: number) => void;
 }) {
   return (
     <div className="mx-7 mb-5">
@@ -20,7 +22,7 @@ export default function ThreatsTable({
             <span className="text-gray-400 text-[13px]">Search</span>
           </div>
           <div className="flex border border-gray-200 rounded-lg overflow-hidden">
-            <div className="px-4 py-2 bg-[#1a1a2e] text-white text-[13px] font-medium cursor-pointer">
+            <div className="px-4 py-2 bg-[#0f172a] text-white text-[13px] font-medium cursor-pointer">
               All findings
             </div>
             <div className="px-4 py-2 bg-white text-gray-500 text-[13px] font-medium border-l border-gray-200 cursor-pointer">
@@ -68,7 +70,9 @@ export default function ThreatsTable({
                 </td>
               </tr>
             ) : (
-              threats.map((ct) => <ThreatRow key={ct.threat_id} threat={ct} />)
+              threats.map((ct, index) => (
+                <ThreatRow key={ct.threat_id} threat={ct} onClick={() => onThreatClick?.(ct, index)} />
+              ))
             )}
           </tbody>
         </table>
@@ -77,7 +81,7 @@ export default function ThreatsTable({
   );
 }
 
-function ThreatRow({ threat: ct }: { threat: ClassifiedThreat }) {
+function ThreatRow({ threat: ct, onClick }: { threat: ClassifiedThreat; onClick?: () => void }) {
   const desc =
     ct.description.length > 90
       ? ct.description.slice(0, 90) + "..."
@@ -87,7 +91,7 @@ function ThreatRow({ threat: ct }: { threat: ClassifiedThreat }) {
   const isValidator = ct.method === "validator_detected";
 
   return (
-    <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+    <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer" onClick={onClick}>
       <td className="px-4 py-3.5">
         <ThreatTypeIcon type={ct.type} />
       </td>
@@ -121,7 +125,7 @@ function ThreatRow({ threat: ct }: { threat: ClassifiedThreat }) {
       </td>
       <td className="px-4 py-3.5">
         {isValidator ? (
-          <span className="px-2.5 py-1 rounded-md text-xs font-semibold text-purple-600 border border-purple-300 bg-purple-50">
+          <span className="px-2.5 py-1 rounded-md text-xs font-semibold text-blue-600 border border-blue-300 bg-blue-50">
             Validator
           </span>
         ) : (

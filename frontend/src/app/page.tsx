@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useAnalysis } from "@/hooks/useAnalysis";
+import { useAnalysisContext } from "@/context/AnalysisContext";
 import Topbar from "@/components/Topbar";
 import SummaryCards from "@/components/SummaryCards";
 import LogInput from "@/components/LogInput";
@@ -9,10 +9,40 @@ import ThreatsTable from "@/components/ThreatsTable";
 import HitlReviewPanel from "@/components/HitlReviewPanel";
 import CostBreakdown from "@/components/CostBreakdown";
 import IncidentReport from "@/components/IncidentReport";
+import ThreatDetailPanel from "@/components/ThreatDetailPanel";
 
 export default function DashboardPage() {
-  const [logText, setLogText] = useState("");
-  const { isLoading, result, error, runAnalysis, resume } = useAnalysis();
+  const [selectedThreatIndex, setSelectedThreatIndex] = useState<number | null>(null);
+  const { isLoading, result, error, logText, setLogText, runAnalysis, resume, updateThreat, removeThreat } =
+    useAnalysisContext();
+
+  const threats = result?.classified_threats ?? [];
+  const selectedThreat = selectedThreatIndex !== null ? threats[selectedThreatIndex] : null;
+
+  const handleAction = (threatId: string, action: string) => {
+    switch (action) {
+      case "ignore":
+        removeThreat(threatId);
+        setSelectedThreatIndex(null);
+        break;
+      case "snooze":
+        removeThreat(threatId);
+        setSelectedThreatIndex(null);
+        break;
+      case "adjust_critical":
+        updateThreat(threatId, { risk: "critical" });
+        break;
+      case "adjust_high":
+        updateThreat(threatId, { risk: "high" });
+        break;
+      case "adjust_medium":
+        updateThreat(threatId, { risk: "medium" });
+        break;
+      case "adjust_low":
+        updateThreat(threatId, { risk: "low" });
+        break;
+    }
+  };
 
   return (
     <>
@@ -33,7 +63,10 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <ThreatsTable threats={result?.classified_threats ?? []} />
+      <ThreatsTable
+        threats={threats}
+        onThreatClick={(_threat, index) => setSelectedThreatIndex(index)}
+      />
 
       {result?.status === "hitl_required" && (
         <HitlReviewPanel
@@ -57,6 +90,17 @@ export default function DashboardPage() {
       )}
 
       <IncidentReport report={result?.report ?? null} />
+
+      {selectedThreat && (
+        <ThreatDetailPanel
+          threat={selectedThreat}
+          threats={threats}
+          currentIndex={selectedThreatIndex!}
+          onClose={() => setSelectedThreatIndex(null)}
+          onNavigate={(index) => setSelectedThreatIndex(index)}
+          onAction={handleAction}
+        />
+      )}
     </>
   );
 }
