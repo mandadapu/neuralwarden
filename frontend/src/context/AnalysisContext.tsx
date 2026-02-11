@@ -113,14 +113,18 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
 
   const moveThreat = useCallback(
     (threatId: string, destination: "snoozed" | "ignored" | "solved") => {
+      const setter =
+        destination === "snoozed" ? setSnoozedThreats :
+        destination === "ignored" ? setIgnoredThreats : setSolvedThreats;
+
       setResult((prev) => {
         if (!prev) return prev;
         const threat = prev.classified_threats.find((ct) => ct.threat_id === threatId);
         if (!threat) return prev;
-        const setter =
-          destination === "snoozed" ? setSnoozedThreats :
-          destination === "ignored" ? setIgnoredThreats : setSolvedThreats;
-        setter((list) => [...list, threat]);
+        // Use functional update with dedup check, separate from setResult
+        setter((list) =>
+          list.some((ct) => ct.threat_id === threatId) ? list : [...list, threat]
+        );
         return {
           ...prev,
           classified_threats: prev.classified_threats.filter((ct) => ct.threat_id !== threatId),
@@ -138,18 +142,18 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     const setter =
       from === "snoozed" ? setSnoozedThreats :
       from === "ignored" ? setIgnoredThreats : setSolvedThreats;
-    let threat: ClassifiedThreat | undefined;
+
     setter((list) => {
-      threat = list.find((ct) => ct.threat_id === threatId);
+      const threat = list.find((ct) => ct.threat_id === threatId);
+      if (threat) {
+        setResult((prev) => {
+          if (!prev) return prev;
+          if (prev.classified_threats.some((ct) => ct.threat_id === threatId)) return prev;
+          return { ...prev, classified_threats: [...prev.classified_threats, threat] };
+        });
+      }
       return list.filter((ct) => ct.threat_id !== threatId);
     });
-    if (threat) {
-      const t = threat;
-      setResult((prev) => {
-        if (!prev) return prev;
-        return { ...prev, classified_threats: [...prev.classified_threats, t] };
-      });
-    }
   }, []);
 
   return (
