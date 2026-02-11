@@ -164,7 +164,6 @@ def load_sample(sample_name: str) -> str:
 
 with gr.Blocks(
     title="AI NeuralWarden Pipeline",
-    theme=gr.themes.Soft(),
 ) as demo:
     gr.Markdown(
         "# AI NeuralWarden Pipeline\n"
@@ -216,4 +215,4 @@ with gr.Blocks(
     )
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(theme=gr.themes.Soft())
