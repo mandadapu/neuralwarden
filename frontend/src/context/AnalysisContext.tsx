@@ -3,7 +3,8 @@
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import type { AnalysisResponse, ClassifiedThreat } from "@/lib/types";
 import type { StageProgress } from "@/components/PipelineProgress";
-import { analyzeStream, type StreamEvent, getLatestReport, resumeHitl } from "@/lib/api";
+import { useSession } from "next-auth/react";
+import { analyzeStream, type StreamEvent, getLatestReport, resumeHitl, setApiUserEmail } from "@/lib/api";
 
 interface AnalysisContextType {
   isLoading: boolean;
@@ -33,6 +34,7 @@ const AnalysisContext = createContext<AnalysisContextType | null>(null);
 const STORAGE_KEY = "neuralwarden_analysis";
 
 export function AnalysisProvider({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,27 +46,34 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const [ignoredThreats, setIgnoredThreats] = useState<ClassifiedThreat[]>([]);
   const [solvedThreats, setSolvedThreats] = useState<ClassifiedThreat[]>([]);
 
-  // Restore last session on mount: try localStorage first, then API
+  // Set API user email whenever session changes
   useEffect(() => {
-    let loaded = false;
+    setApiUserEmail(session?.user?.email ?? "");
+  }, [session?.user?.email]);
+
+  // Restore last session: load from server per-user, local state from localStorage
+  useEffect(() => {
+    // Load local-only state (snoozed/ignored/solved lists, log text)
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.result) { setResult(parsed.result); loaded = true; }
         if (parsed.logText) setLogText(parsed.logText);
         setSnoozedThreats(parsed.snoozedThreats ?? []);
         setIgnoredThreats(parsed.ignoredThreats ?? []);
         setSolvedThreats(parsed.solvedThreats ?? []);
       }
     } catch {}
-    // If no local results, load latest from API (works in incognito / fresh browser)
-    if (!loaded) {
-      getLatestReport().then((data) => {
-        if (data) setResult(data);
-      }).catch(() => {});
-    }
   }, []);
+
+  // Load latest analysis from server once user session is available
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    setApiUserEmail(session.user.email);
+    getLatestReport().then((data) => {
+      if (data) setResult(data);
+    }).catch(() => {});
+  }, [session?.user?.email]);
 
   // Persist on change
   useEffect(() => {

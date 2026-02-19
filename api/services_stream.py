@@ -48,7 +48,7 @@ def _sse_event(event_type: str, data: dict) -> str:
     return json.dumps({"event": event_type, **data}, default=str)
 
 
-async def stream_analysis(logs: str, skip_ingest: bool = False) -> AsyncIterator[str]:
+async def stream_analysis(logs: str, skip_ingest: bool = False, user_email: str = "") -> AsyncIterator[str]:
     """Generator that yields SSE events as each pipeline agent completes.
 
     Event types:
@@ -61,6 +61,7 @@ async def stream_analysis(logs: str, skip_ingest: bool = False) -> AsyncIterator
     Args:
         logs: Raw security log text (newline-separated).
         skip_ingest: If True, parse logs deterministically and skip LLM ingest.
+        user_email: Email of the authenticated user (for per-user persistence).
     """
     raw_logs = list(dict.fromkeys(line.strip() for line in logs.strip().split("\n") if line.strip()))
     if not raw_logs:
@@ -188,10 +189,10 @@ async def stream_analysis(logs: str, skip_ingest: bool = False) -> AsyncIterator
             # Persist to report history
             try:
                 from api.database import save_analysis
-                analysis_id = save_analysis(response.model_dump())
+                analysis_id = save_analysis(response.model_dump(mode="json"), user_email=user_email)
                 response.analysis_id = analysis_id
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"[Stream] Failed to save analysis: {e}")
 
             yield _sse_event("complete", {"response": response.model_dump()})
 

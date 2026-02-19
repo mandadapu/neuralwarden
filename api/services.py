@@ -125,7 +125,7 @@ def _build_summary(result: dict, classified_count: int) -> SummaryResponse:
     )
 
 
-def run_analysis(logs: str) -> AnalysisResponse:
+def run_analysis(logs: str, user_email: str = "") -> AnalysisResponse:
     """Run the pipeline synchronously and return the response."""
     raw_logs = list(dict.fromkeys(line.strip() for line in logs.strip().split("\n") if line.strip()))
     if not raw_logs:
@@ -208,10 +208,10 @@ def run_analysis(logs: str) -> AnalysisResponse:
         # Persist to report history
         try:
             from api.database import save_analysis
-            analysis_id = save_analysis(response.model_dump())
+            analysis_id = save_analysis(response.model_dump(mode="json"), user_email=user_email)
             response.analysis_id = analysis_id
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[Services] Failed to save analysis: {e}")
 
         return response
 

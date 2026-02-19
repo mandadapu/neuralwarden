@@ -1,6 +1,6 @@
 """SSE streaming endpoint for real-time pipeline progress."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
 from sse_starlette.sse import EventSourceResponse
 
 from api.schemas import AnalyzeRequest
@@ -10,14 +10,8 @@ router = APIRouter(prefix="/api", tags=["stream"])
 
 
 @router.post("/analyze/stream")
-async def analyze_stream(req: AnalyzeRequest):
-    """Stream pipeline progress as Server-Sent Events.
-
-    Each event is a JSON object with an `event` field indicating the type:
-    - agent_start: An agent is about to run
-    - agent_complete: An agent finished
-    - hitl_required: Pipeline paused for human review
-    - complete: Pipeline finished with full response
-    - error: Pipeline encountered an error
-    """
-    return EventSourceResponse(stream_analysis(req.logs, skip_ingest=req.skip_ingest))
+async def analyze_stream(req: AnalyzeRequest, x_user_email: str = Header("")):
+    """Stream pipeline progress as Server-Sent Events."""
+    return EventSourceResponse(
+        stream_analysis(req.logs, skip_ingest=req.skip_ingest, user_email=x_user_email)
+    )

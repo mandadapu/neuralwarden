@@ -15,6 +15,7 @@ _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS analyses (
     id TEXT PRIMARY KEY,
     created_at TEXT NOT NULL,
+    user_email TEXT DEFAULT '',
     status TEXT NOT NULL DEFAULT 'completed',
     log_count INTEGER DEFAULT 0,
     threat_count INTEGER DEFAULT 0,
@@ -27,6 +28,10 @@ CREATE TABLE IF NOT EXISTS analyses (
     metrics_json TEXT DEFAULT '{}',
     full_response_json TEXT DEFAULT '{}'
 )
+"""
+
+_MIGRATE_USER_EMAIL = """
+ALTER TABLE analyses ADD COLUMN user_email TEXT DEFAULT ''
 """
 
 
@@ -43,12 +48,17 @@ def init_db() -> None:
     conn = _get_conn()
     try:
         conn.execute(_CREATE_TABLE)
+        # Migrate: add user_email column if missing
+        try:
+            conn.execute(_MIGRATE_USER_EMAIL)
+        except sqlite3.OperationalError:
+            pass  # column already exists
         conn.commit()
     finally:
         conn.close()
 
 
-def save_analysis(response_data: dict) -> str:
+def save_analysis(response_data: dict, user_email: str = "") -> str:
     """Save a completed analysis response. Returns the analysis ID."""
     analysis_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -66,13 +76,14 @@ def save_analysis(response_data: dict) -> str:
     try:
         conn.execute(
             """INSERT INTO analyses
-               (id, created_at, status, log_count, threat_count, critical_count,
+               (id, created_at, user_email, status, log_count, threat_count, critical_count,
                 pipeline_time, pipeline_cost, summary, threats_json, report_json,
                 metrics_json, full_response_json)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 analysis_id,
                 now,
+                user_email,
                 response_data.get("status", "completed"),
                 summary.get("total_logs", 0),
                 summary.get("total_threats", 0),
@@ -92,16 +103,24 @@ def save_analysis(response_data: dict) -> str:
         conn.close()
 
 
-def list_analyses(limit: int = 50) -> list[dict]:
-    """List recent analyses, newest first."""
+def list_analyses(limit: int = 50, user_email: str = "") -> list[dict]:
+    """List recent analyses, newest first. Filter by user_email if provided."""
     conn = _get_conn()
     try:
-        rows = conn.execute(
-            """SELECT id, created_at, status, log_count, threat_count,
-                      critical_count, pipeline_time, pipeline_cost, summary
-               FROM analyses ORDER BY created_at DESC LIMIT ?""",
-            (limit,),
-        ).fetchall()
+        if user_email:
+            rows = conn.execute(
+                """SELECT id, created_at, user_email, status, log_count, threat_count,
+                          critical_count, pipeline_time, pipeline_cost, summary
+                   FROM analyses WHERE user_email = ? ORDER BY created_at DESC LIMIT ?""",
+                (user_email, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """SELECT id, created_at, user_email, status, log_count, threat_count,
+                          critical_count, pipeline_time, pipeline_cost, summary
+                   FROM analyses ORDER BY created_at DESC LIMIT ?""",
+                (limit,),
+            ).fetchall()
         return [dict(row) for row in rows]
     finally:
         conn.close()

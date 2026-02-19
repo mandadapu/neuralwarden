@@ -5,10 +5,21 @@ const BASE =
     ? `${window.location.protocol}//${window.location.hostname}:8000/api`
     : "/api";
 
+// User email is set by AnalysisContext after session loads
+let _userEmail = "";
+export function setApiUserEmail(email: string) {
+  _userEmail = email;
+}
+function authHeaders(): Record<string, string> {
+  const h: Record<string, string> = { "Content-Type": "application/json" };
+  if (_userEmail) h["X-User-Email"] = _userEmail;
+  return h;
+}
+
 export async function analyze(logs: string): Promise<AnalysisResponse> {
   const res = await fetch(`${BASE}/analyze`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ logs }),
   });
   if (!res.ok) throw new Error(`Analysis failed: ${res.statusText}`);
@@ -63,7 +74,7 @@ export async function analyzeStream(
 ): Promise<void> {
   const res = await fetch(`${BASE}/analyze/stream`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ logs, skip_ingest: skipIngest }),
   });
   if (!res.ok) throw new Error(`Stream failed: ${res.statusText}`);
@@ -99,7 +110,7 @@ export async function analyzeStream(
 // --- Report history ---
 
 export async function listReports(limit = 50): Promise<ReportSummary[]> {
-  const res = await fetch(`${BASE}/reports?limit=${limit}`);
+  const res = await fetch(`${BASE}/reports?limit=${limit}`, { headers: authHeaders() });
   if (!res.ok) throw new Error(`Failed to list reports: ${res.statusText}`);
   const data = await res.json();
   return data.reports;
@@ -112,7 +123,7 @@ export async function getReport(id: string): Promise<Record<string, unknown>> {
 }
 
 export async function getLatestReport(): Promise<AnalysisResponse | null> {
-  const res = await fetch(`${BASE}/reports/latest`);
+  const res = await fetch(`${BASE}/reports/latest`, { headers: authHeaders() });
   if (!res.ok) return null;
   const data = await res.json();
   if (!data || !data.status) return null;
