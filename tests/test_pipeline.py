@@ -50,6 +50,40 @@ class TestConditionalRouting:
         assert should_classify(state) == "clean_report"
 
 
+class TestSkipIngest:
+    def test_should_burst_routes_to_skip_ingest_when_preparsed(self):
+        from pipeline.graph import should_burst
+
+        state = {
+            "raw_logs": ["line1", "line2"],
+            "parsed_logs": [
+                LogEntry(index=0, raw_text="line1", is_valid=True),
+                LogEntry(index=1, raw_text="line2", is_valid=True),
+            ],
+        }
+        assert should_burst(state) == "skip_ingest"
+
+    def test_should_burst_routes_to_ingest_when_no_preparsed(self):
+        from pipeline.graph import should_burst
+
+        state = {"raw_logs": ["line1", "line2"], "parsed_logs": []}
+        assert should_burst(state) == "ingest"
+
+    def test_skip_ingest_node_computes_counts(self):
+        from pipeline.graph import skip_ingest_node
+
+        state = {
+            "parsed_logs": [
+                LogEntry(index=0, raw_text="line1", is_valid=True),
+                LogEntry(index=1, raw_text="line2", is_valid=False),
+                LogEntry(index=2, raw_text="line3", is_valid=True),
+            ]
+        }
+        result = skip_ingest_node(state)
+        assert result["total_count"] == 3
+        assert result["invalid_count"] == 1
+
+
 class TestShortCircuitPaths:
     def test_empty_report_has_correct_summary(self):
         from pipeline.graph import empty_report_node

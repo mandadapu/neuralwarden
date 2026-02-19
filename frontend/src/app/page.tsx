@@ -15,7 +15,7 @@ import ThreatDetailPanel from "@/components/ThreatDetailPanel";
 export default function DashboardPage() {
   const [selectedThreatIndex, setSelectedThreatIndex] = useState<number | null>(null);
   const {
-    isLoading, result, error, logText, pipelineProgress, setLogText, runAnalysis, resume,
+    isLoading, result, error, logText, skipIngest, pipelineProgress, setLogText, runAnalysis, resume,
     updateThreat, snoozeThreat, ignoreThreat,
   } = useAnalysisContext();
 
@@ -58,6 +58,7 @@ export default function DashboardPage() {
         onChange={setLogText}
         onAnalyze={() => runAnalysis(logText)}
         isLoading={isLoading}
+        skipIngest={skipIngest}
       />
 
       {isLoading && pipelineProgress.length > 0 && (

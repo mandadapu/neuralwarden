@@ -58,12 +58,13 @@ export type StreamEvent = {
 
 export async function analyzeStream(
   logs: string,
-  onEvent: (event: StreamEvent) => void
+  onEvent: (event: StreamEvent) => void,
+  skipIngest = false
 ): Promise<void> {
   const res = await fetch(`${BASE}/analyze/stream`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ logs }),
+    body: JSON.stringify({ logs, skip_ingest: skipIngest }),
   });
   if (!res.ok) throw new Error(`Stream failed: ${res.statusText}`);
   if (!res.body) throw new Error("No response body");

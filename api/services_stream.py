@@ -48,7 +48,7 @@ def _sse_event(event_type: str, data: dict) -> str:
     return json.dumps({"event": event_type, **data})
 
 
-async def stream_analysis(logs: str) -> AsyncIterator[str]:
+async def stream_analysis(logs: str, skip_ingest: bool = False) -> AsyncIterator[str]:
     """Generator that yields SSE events as each pipeline agent completes.
 
     Event types:
@@ -57,6 +57,10 @@ async def stream_analysis(logs: str) -> AsyncIterator[str]:
     - hitl_required: Pipeline paused for human review
     - complete: Pipeline finished (includes full response)
     - error: Pipeline failed
+
+    Args:
+        logs: Raw security log text (newline-separated).
+        skip_ingest: If True, parse logs deterministically and skip LLM ingest.
     """
     raw_logs = [line.strip() for line in logs.strip().split("\n") if line.strip()]
     if not raw_logs:
@@ -69,17 +73,28 @@ async def stream_analysis(logs: str) -> AsyncIterator[str]:
         })
         return
 
+    # Pre-parse if skip_ingest requested (saves LLM tokens)
+    parsed_logs = None
+    if skip_ingest:
+        from api.gcp_logging import deterministic_parse
+        parsed_logs = deterministic_parse(raw_logs)
+
     graph = _get_hitl_graph()
     thread_id = str(uuid.uuid4())
     config = {"configurable": {"thread_id": thread_id}}
-    initial_state = _build_initial_state(raw_logs)
+    initial_state = _build_initial_state(raw_logs, parsed_logs=parsed_logs)
 
     start = time.time()
     prev_state: dict = {}
     completed_agents: list[str] = []
 
-    # Signal pipeline start
-    yield _sse_event("agent_start", {"stage": "ingest", "agent_index": 0, "total_agents": 5})
+    # Signal pipeline start — skip ingest stage if pre-parsed
+    if skip_ingest:
+        yield _sse_event("agent_complete", {"stage": "ingest", "agent_index": 0, "total_agents": 5, "elapsed_s": 0, "cost_usd": 0, "latency_ms": 0})
+        completed_agents.append("ingest")
+        yield _sse_event("agent_start", {"stage": "detect", "agent_index": 1, "total_agents": 5})
+    else:
+        yield _sse_event("agent_start", {"stage": "ingest", "agent_index": 0, "total_agents": 5})
 
     try:
         for event in graph.stream(initial_state, config, stream_mode="values"):

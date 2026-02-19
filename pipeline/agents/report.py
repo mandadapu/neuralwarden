@@ -12,7 +12,7 @@ from pipeline.metrics import AgentTimer
 from pipeline.security import extract_json, sanitize_log_line, validate_report_output, wrap_user_data
 from pipeline.state import PipelineState
 
-MODEL = "claude-opus-4-6"
+MODEL = "claude-haiku-4-5-20251001"
 
 SYSTEM_PROMPT = """You are a senior incident response analyst writing a formal incident report. Your audience is DUAL:
 1. Executive leadership who need a 2-3 sentence summary and key actions

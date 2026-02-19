@@ -190,3 +190,97 @@ class TestFetchLogs:
 
         with pytest.raises(RuntimeError, match="GOOGLE_APPLICATION_CREDENTIALS"):
             fetch_logs("test-project")
+
+
+# --------------- deterministic_parse tests ---------------
+
+
+class TestDeterministicParse:
+    def test_parses_http_log_line(self):
+        from api.gcp_logging import deterministic_parse
+
+        lines = [
+            "2026-02-18T19:31:35Z WARNING cloud_run_revision/archcelerate: GET /wp-admin/setup-config.php status=404 src=185.220.100.252"
+        ]
+        entries = deterministic_parse(lines)
+        assert len(entries) == 1
+        e = entries[0]
+        assert e.timestamp == "2026-02-18T19:31:35Z"
+        assert e.source == "cloud_run_revision"
+        assert e.event_type == "recon_probe"
+        assert e.source_ip == "185.220.100.252"
+        assert e.is_valid is True
+        assert e.index == 0
+
+    def test_parses_text_log_line(self):
+        from api.gcp_logging import deterministic_parse
+
+        lines = [
+            "2026-02-18T10:00:00Z INFO cloudsql_database/mydb: LOG: connection authorized: user=postgres"
+        ]
+        entries = deterministic_parse(lines)
+        assert len(entries) == 1
+        assert entries[0].event_type == "info"
+        assert entries[0].source == "cloudsql_database"
+
+    def test_classifies_401_as_failed_auth(self):
+        from api.gcp_logging import deterministic_parse
+
+        lines = [
+            "2026-02-18T10:00:00Z WARNING cloud_run_revision/app: POST /api/login status=401 src=10.0.0.1"
+        ]
+        entries = deterministic_parse(lines)
+        assert entries[0].event_type == "failed_auth"
+
+    def test_classifies_500_as_server_error(self):
+        from api.gcp_logging import deterministic_parse
+
+        lines = [
+            "2026-02-18T10:00:00Z ERROR cloud_run_revision/app: GET /api/data status=500 src=10.0.0.1"
+        ]
+        entries = deterministic_parse(lines)
+        assert entries[0].event_type == "server_error"
+
+    def test_classifies_error_severity(self):
+        from api.gcp_logging import deterministic_parse
+
+        lines = [
+            "2026-02-18T10:00:00Z ERROR cloud_run_revision/app: Something bad happened"
+        ]
+        entries = deterministic_parse(lines)
+        assert entries[0].event_type == "error"
+
+    def test_handles_unparseable_line(self):
+        from api.gcp_logging import deterministic_parse
+
+        lines = ["this is not a valid gcp log line"]
+        entries = deterministic_parse(lines)
+        assert len(entries) == 1
+        assert entries[0].event_type == "unknown"
+        assert entries[0].is_valid is True
+
+    def test_handles_empty_lines(self):
+        from api.gcp_logging import deterministic_parse
+
+        lines = ["", "  ", "2026-02-18T10:00:00Z INFO test/app: hello"]
+        entries = deterministic_parse(lines)
+        assert len(entries) == 1
+        assert entries[0].details == "hello"
+
+    def test_git_env_probe(self):
+        from api.gcp_logging import deterministic_parse
+
+        lines = [
+            "2026-02-18T19:31:35Z WARNING cloud_run_revision/app: GET /.git/config status=404 src=1.2.3.4"
+        ]
+        entries = deterministic_parse(lines)
+        assert entries[0].event_type == "recon_probe"
+
+    def test_env_probe(self):
+        from api.gcp_logging import deterministic_parse
+
+        lines = [
+            "2026-02-18T19:31:35Z WARNING cloud_run_revision/app: GET /.env status=404 src=1.2.3.4"
+        ]
+        entries = deterministic_parse(lines)
+        assert entries[0].event_type == "recon_probe"

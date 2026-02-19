@@ -28,7 +28,11 @@ CHUNK_SIZE = 200
 
 
 def should_burst(state: PipelineState) -> list[Send] | str:
-    """Route to burst mode if log count exceeds threshold."""
+    """Route to burst mode if log count exceeds threshold, or skip ingest if pre-parsed."""
+    # If parsed_logs already populated (pre-parsed / skip_ingest), skip LLM ingest entirely
+    if state.get("parsed_logs"):
+        return "skip_ingest"
+
     raw_logs = state.get("raw_logs", [])
     if len(raw_logs) > BURST_THRESHOLD:
         chunks = []
@@ -117,6 +121,17 @@ def aggregate_ingest(state: PipelineState) -> dict:
     }
 
 
+def skip_ingest_node(state: PipelineState) -> dict:
+    """Pass-through node for pre-parsed logs — just compute counts, no LLM."""
+    parsed_logs = state.get("parsed_logs", [])
+    invalid_count = sum(1 for log in parsed_logs if not log.is_valid)
+    total_count = len(parsed_logs)
+    return {
+        "invalid_count": invalid_count,
+        "total_count": total_count,
+    }
+
+
 # ── Build the graph ──
 
 
@@ -133,6 +148,7 @@ def build_pipeline(enable_hitl: bool = False):
     workflow.add_node("ingest", run_ingest)
     workflow.add_node("ingest_chunk", run_ingest_chunk)
     workflow.add_node("aggregate_ingest", aggregate_ingest)
+    workflow.add_node("skip_ingest", skip_ingest_node)
     workflow.add_node("detect", run_detect)
     workflow.add_node("validate", run_validate)
     workflow.add_node("classify", run_classify)
@@ -146,6 +162,13 @@ def build_pipeline(enable_hitl: bool = False):
     # Normal ingest → should_detect
     workflow.add_conditional_edges(
         "ingest",
+        should_detect,
+        {"detect": "detect", "empty_report": "empty_report"},
+    )
+
+    # Pre-parsed (skip_ingest) → should_detect
+    workflow.add_conditional_edges(
+        "skip_ingest",
         should_detect,
         {"detect": "detect", "empty_report": "empty_report"},
     )

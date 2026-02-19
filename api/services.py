@@ -24,10 +24,10 @@ def _get_hitl_graph():
     return build_pipeline(enable_hitl=True)
 
 
-def _build_initial_state(raw_logs: list[str]) -> dict:
-    return {
+def _build_initial_state(raw_logs: list[str], parsed_logs=None) -> dict:
+    state = {
         "raw_logs": raw_logs,
-        "parsed_logs": [],
+        "parsed_logs": parsed_logs or [],
         "invalid_count": 0,
         "total_count": 0,
         "threats": [],
@@ -48,6 +48,7 @@ def _build_initial_state(raw_logs: list[str]) -> dict:
         "burst_mode": False,
         "chunk_count": 0,
     }
+    return state
 
 
 def _serialize_report(report) -> IncidentReportResponse | None:

@@ -9,11 +9,13 @@ export default function LogInput({
   onChange,
   onAnalyze,
   isLoading,
+  skipIngest = false,
 }: {
   value: string;
   onChange: (v: string) => void;
   onAnalyze: () => void;
   isLoading: boolean;
+  skipIngest?: boolean;
 }) {
   const [samples, setSamples] = useState<SampleInfo[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -62,7 +64,7 @@ export default function LogInput({
       <textarea
         className="w-full border border-gray-200 rounded-lg p-3 text-[13px] font-mono text-gray-800 resize-y focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
         rows={6}
-        placeholder="Paste security logs here or load a sample scenario..."
+        placeholder={"Paste security logs here, load a sample, or fetch from GCP Cloud Logging (Log Sources page)...\n\nExample:\n2026-02-19T04:14:58Z WARNING cloud_run_revision/archcelerate: GET /wp-admin/setup-config.php status=404 src=172.71.184.229"}
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -117,6 +119,14 @@ export default function LogInput({
           </svg>
           PII auto-redacted
         </span>
+        {skipIngest && (
+          <span className="inline-flex items-center gap-1 text-xs text-blue-600 ml-1 bg-blue-50 border border-blue-200 rounded-md px-2 py-0.5 font-medium">
+            <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+            </svg>
+            GCP Pre-parsed (no ingest tokens)
+          </span>
+        )}
       </div>
     </div>
   );

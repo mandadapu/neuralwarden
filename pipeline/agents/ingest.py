@@ -11,6 +11,7 @@ from pipeline.security import extract_json, mask_pii_logs, sanitize_logs, wrap_u
 from pipeline.state import PipelineState
 
 MODEL = "claude-haiku-4-5-20251001"
+BATCH_SIZE = 30  # Max logs per LLM call to stay within token limits
 
 SYSTEM_PROMPT = """You are a security log parser. Your job is to parse raw security log lines into structured JSON.
 
@@ -29,6 +30,68 @@ Respond ONLY with a JSON array of objects. Each object must have these exact fie
 If a line cannot be parsed, still include it with event_type "unknown" and fill in whatever fields you can."""
 
 
+def _parse_batch(
+    llm: ChatAnthropic,
+    batch_logs: list[str],
+    raw_logs: list[str],
+    offset: int,
+) -> list[LogEntry]:
+    """Parse a single batch of logs via LLM, return LogEntry list."""
+    numbered = "\n".join(f"[{i}] {line}" for i, line in enumerate(batch_logs))
+
+    response = llm.invoke([
+        SystemMessage(content=SYSTEM_PROMPT),
+        HumanMessage(
+            content=f"Parse these {len(batch_logs)} log lines:\n\n{wrap_user_data(numbered)}"
+        ),
+    ])
+
+    content = extract_json(response.content)
+    parsed_data = json.loads(content)
+
+    entries: list[LogEntry] = []
+    for i, entry in enumerate(parsed_data):
+        global_idx = offset + i
+        try:
+            entries.append(
+                LogEntry(
+                    index=global_idx,
+                    timestamp=entry.get("timestamp", ""),
+                    source=entry.get("source", ""),
+                    event_type=entry.get("event_type", "unknown"),
+                    source_ip=entry.get("source_ip", ""),
+                    dest_ip=entry.get("dest_ip", ""),
+                    user=entry.get("user", ""),
+                    details=entry.get("details", ""),
+                    raw_text=raw_logs[global_idx] if global_idx < len(raw_logs) else "",
+                    is_valid=True,
+                )
+            )
+        except Exception as e:
+            entries.append(
+                LogEntry(
+                    index=global_idx,
+                    raw_text=raw_logs[global_idx] if global_idx < len(raw_logs) else "",
+                    is_valid=False,
+                    parse_error=str(e),
+                )
+            )
+
+    # Mark any missing entries from this batch as unparsed
+    for i in range(len(entries), len(batch_logs)):
+        global_idx = offset + i
+        entries.append(
+            LogEntry(
+                index=global_idx,
+                raw_text=raw_logs[global_idx] if global_idx < len(raw_logs) else "",
+                is_valid=False,
+                parse_error="Not included in LLM response",
+            )
+        )
+
+    return entries, response
+
+
 def run_ingest(state: PipelineState) -> dict:
     """Parse raw log lines into structured LogEntry objects."""
     raw_logs = state.get("raw_logs", [])
@@ -39,70 +102,30 @@ def run_ingest(state: PipelineState) -> dict:
             "total_count": 0,
         }
 
-    # Sanitize and batch logs into a single prompt
+    # Sanitize
     safe_logs = sanitize_logs(raw_logs)
     safe_logs = mask_pii_logs(safe_logs)
-    numbered_logs = "\n".join(
-        f"[{i}] {line}" for i, line in enumerate(safe_logs)
-    )
 
     llm = ChatAnthropic(
         model=MODEL,
         temperature=0,
-        max_tokens=4096,
+        max_tokens=8192,
     )
 
     try:
+        all_parsed: list[LogEntry] = []
+
         with AgentTimer("ingest", MODEL) as timer:
-            response = llm.invoke([
-                SystemMessage(content=SYSTEM_PROMPT),
-                HumanMessage(content=f"Parse these {len(raw_logs)} log lines:\n\n{wrap_user_data(numbered_logs)}"),
-            ])
-            timer.record_usage(response)
+            # Process in batches to avoid token truncation
+            for start in range(0, len(safe_logs), BATCH_SIZE):
+                batch = safe_logs[start : start + BATCH_SIZE]
+                entries, response = _parse_batch(llm, batch, raw_logs, start)
+                all_parsed.extend(entries)
+                timer.record_usage(response)
 
-        content = extract_json(response.content)
-        parsed_data = json.loads(content)
-
-        parsed_logs: list[LogEntry] = []
-        for i, entry in enumerate(parsed_data):
-            try:
-                log = LogEntry(
-                    index=i,
-                    timestamp=entry.get("timestamp", ""),
-                    source=entry.get("source", ""),
-                    event_type=entry.get("event_type", "unknown"),
-                    source_ip=entry.get("source_ip", ""),
-                    dest_ip=entry.get("dest_ip", ""),
-                    user=entry.get("user", ""),
-                    details=entry.get("details", ""),
-                    raw_text=raw_logs[i] if i < len(raw_logs) else "",
-                    is_valid=True,
-                )
-                parsed_logs.append(log)
-            except Exception as e:
-                parsed_logs.append(
-                    LogEntry(
-                        index=i,
-                        raw_text=raw_logs[i] if i < len(raw_logs) else "",
-                        is_valid=False,
-                        parse_error=str(e),
-                    )
-                )
-
-        # If LLM returned fewer entries than raw logs, mark remaining as unparsed
-        for i in range(len(parsed_logs), len(raw_logs)):
-            parsed_logs.append(
-                LogEntry(
-                    index=i,
-                    raw_text=raw_logs[i],
-                    is_valid=False,
-                    parse_error="Not included in LLM response",
-                )
-            )
-
-        invalid_count = sum(1 for log in parsed_logs if not log.is_valid)
+        invalid_count = sum(1 for log in all_parsed if not log.is_valid)
         return {
-            "parsed_logs": parsed_logs,
+            "parsed_logs": all_parsed,
             "invalid_count": invalid_count,
             "total_count": len(raw_logs),
             "agent_metrics": {**state.get("agent_metrics", {}), "ingest": timer.metrics},

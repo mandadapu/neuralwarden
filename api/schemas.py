@@ -11,6 +11,10 @@ from pydantic import BaseModel, Field
 
 class AnalyzeRequest(BaseModel):
     logs: str = Field(description="Raw security log text (newline-separated)")
+    skip_ingest: bool = Field(
+        default=False,
+        description="If True, parse logs deterministically (no LLM) and skip ingest agent. Use for pre-structured GCP logs.",
+    )
 
 
 class HitlResumeRequest(BaseModel):

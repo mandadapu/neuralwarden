@@ -7,11 +7,10 @@ import { getGcpStatus, fetchGcpLogs, type GcpStatus } from "@/lib/api";
 import PageShell from "@/components/PageShell";
 
 const SOURCES = [
-  { name: "Firewall Logs", type: "Network", status: "Active", events: "12.4K/day" },
-  { name: "SSH Auth Logs", type: "Authentication", status: "Active", events: "3.2K/day" },
-  { name: "Syslog (Linux)", type: "System", status: "Active", events: "8.7K/day" },
-  { name: "Web Access Logs", type: "Application", status: "Paused", events: "---" },
   { name: "GCP Cloud Logging", type: "Cloud", status: "Active", events: "On-demand" },
+  { name: "Cloud Run (archcelerate)", type: "HTTP / Application", status: "Active", events: "3K/day" },
+  { name: "Cloud SQL (PostgreSQL)", type: "Database", status: "Active", events: "600/day" },
+  { name: "File Watcher", type: "Local", status: "Stopped", events: "---" },
 ];
 
 function getApiBase() {
@@ -21,7 +20,7 @@ function getApiBase() {
 
 export default function LogSourcesPage() {
   const router = useRouter();
-  const { setLogText } = useAnalysisContext();
+  const { setLogText, setSkipIngest } = useAnalysisContext();
 
   // File Watcher state
   const [watchDir, setWatchDir] = useState("./watch");
@@ -102,6 +101,7 @@ export default function LogSourcesPage() {
     try {
       const result = await fetchGcpLogs(projectId, logFilter, maxEntries, hoursBack);
       setLogText(result.logs);
+      setSkipIngest(true);
       setFetchResult(
         `Fetched ${result.entry_count} log entries from project "${result.project_id}". Redirecting to dashboard...`
       );

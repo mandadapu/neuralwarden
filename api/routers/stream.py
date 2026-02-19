@@ -20,4 +20,4 @@ async def analyze_stream(req: AnalyzeRequest):
     - complete: Pipeline finished with full response
     - error: Pipeline encountered an error
     """
-    return EventSourceResponse(stream_analysis(req.logs))
+    return EventSourceResponse(stream_analysis(req.logs, skip_ingest=req.skip_ingest))

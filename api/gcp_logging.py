@@ -1,9 +1,12 @@
-"""Google Cloud Logging integration — fetch and format log entries."""
+"""Google Cloud Logging integration — fetch, format, and pre-parse log entries."""
 
 from __future__ import annotations
 
 import os
+import re
 from datetime import datetime, timezone, timedelta
+
+from models.log_entry import LogEntry
 
 try:
     from google.cloud import logging as cloud_logging
@@ -138,3 +141,95 @@ def fetch_logs(
             lines.append(line)
 
     return lines
+
+
+# ── Deterministic parser (no LLM) ──
+
+_LINE_RE = re.compile(
+    r"^(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)\s+"
+    r"(?P<severity>\w+)\s+"
+    r"(?P<resource>[^:]+):\s*"
+    r"(?P<payload>.+)$"
+)
+
+_HTTP_RE = re.compile(
+    r"^(?P<method>GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s+"
+    r"(?P<url>\S+)\s+"
+    r"status=(?P<status>\d+)"
+    r"(?:\s+src=(?P<src>[^\s]+))?"
+)
+
+
+def _classify_event(severity: str, payload: str, http_match: re.Match | None) -> str:
+    """Classify event type from severity and payload content."""
+    if http_match:
+        status = int(http_match.group("status"))
+        url = http_match.group("url").lower()
+        if status >= 500:
+            return "server_error"
+        if status == 401 or status == 403:
+            return "failed_auth"
+        if status == 404 and any(p in url for p in ["/wp-admin", "/wp-login", "/.git", "/.env"]):
+            return "recon_probe"
+        if status >= 400:
+            return "http_client_error"
+        return "http_request"
+    sev = severity.upper()
+    if sev in ("ERROR", "CRITICAL", "ALERT", "EMERGENCY"):
+        return "error"
+    if sev == "WARNING":
+        return "warning"
+    return "info"
+
+
+def deterministic_parse(lines: list[str]) -> list[LogEntry]:
+    """Parse GCP-formatted log lines into LogEntry objects without LLM.
+
+    Expects lines formatted by _format_entry(), e.g.:
+    2026-02-18T19:31:35Z WARNING cloud_run_revision/archcelerate: GET /wp-admin status=404 src=1.2.3.4
+    """
+    entries: list[LogEntry] = []
+    for i, line in enumerate(lines):
+        line = line.strip()
+        if not line:
+            continue
+        m = _LINE_RE.match(line)
+        if not m:
+            entries.append(LogEntry(
+                index=i, raw_text=line, is_valid=True,
+                event_type="unknown", details=line,
+            ))
+            continue
+
+        timestamp = m.group("timestamp")
+        severity = m.group("severity")
+        resource = m.group("resource").strip()
+        payload = m.group("payload").strip()
+
+        # Extract source from resource (e.g. "cloud_run_revision/archcelerate" → "cloud_run_revision")
+        source = resource.split("/")[0] if "/" in resource else resource
+
+        # Try to parse HTTP request payload
+        http_m = _HTTP_RE.match(payload)
+        source_ip = ""
+        details = payload
+        if http_m:
+            source_ip = http_m.group("src") or ""
+            details = payload
+
+        event_type = _classify_event(severity, payload, http_m)
+
+        entries.append(LogEntry(
+            index=i,
+            timestamp=timestamp,
+            source=source,
+            event_type=event_type,
+            source_ip=source_ip,
+            dest_ip="",
+            user="",
+            details=details,
+            raw_text=line,
+            is_valid=True,
+        ))
+
+    return entries

@@ -12,7 +12,7 @@ from pipeline.metrics import AgentTimer
 from pipeline.security import extract_json, validate_threat_output, wrap_user_data
 from pipeline.state import PipelineState
 
-MODEL = "claude-sonnet-4-5-20250929"
+MODEL = "claude-haiku-4-5-20251001"
 
 SYSTEM_PROMPT = """You are a cybersecurity validator performing a quality assurance check on a threat detection pipeline.
 

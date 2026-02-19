@@ -11,11 +11,13 @@ interface AnalysisContextType {
   result: AnalysisResponse | null;
   error: string | null;
   logText: string;
+  skipIngest: boolean;
   pipelineProgress: StageProgress[];
   snoozedThreats: ClassifiedThreat[];
   ignoredThreats: ClassifiedThreat[];
   solvedThreats: ClassifiedThreat[];
   setLogText: (text: string) => void;
+  setSkipIngest: (skip: boolean) => void;
   runAnalysis: (logs: string) => Promise<void>;
   resume: (decision: "approve" | "reject", notes: string) => Promise<void>;
   updateThreat: (threatId: string, updates: { status?: string; risk?: string }) => void;
@@ -34,19 +36,18 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const [result, setResult] = useState<AnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [logText, setLogText] = useState("");
+  const [skipIngest, setSkipIngest] = useState(false);
   const [pipelineProgress, setPipelineProgress] = useState<StageProgress[]>([]);
   const [snoozedThreats, setSnoozedThreats] = useState<ClassifiedThreat[]>([]);
   const [ignoredThreats, setIgnoredThreats] = useState<ClassifiedThreat[]>([]);
   const [solvedThreats, setSolvedThreats] = useState<ClassifiedThreat[]>([]);
 
-  // Load persisted state on mount
+  // Load persisted threat lists on mount (but start with clean logs/results)
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        setResult(parsed.result ?? null);
-        setLogText(parsed.logText ?? "");
         setSnoozedThreats(parsed.snoozedThreats ?? []);
         setIgnoredThreats(parsed.ignoredThreats ?? []);
         setSolvedThreats(parsed.solvedThreats ?? []);
@@ -102,13 +103,14 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         } else if (event.event === "error") {
           setError(event.error ?? "Pipeline error");
         }
-      });
+      }, skipIngest);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsLoading(false);
+      setSkipIngest(false);
     }
-  }, []);
+  }, [skipIngest]);
 
   const resume = useCallback(
     async (decision: "approve" | "reject", notes: string) => {
@@ -136,7 +138,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
       return {
         ...prev,
         classified_threats: prev.classified_threats.map((ct) =>
-          ct.threat_id === threatId ? { ...ct, ...updates } : ct
+          ct.threat_id === threatId ? { ...ct, ...updates } as typeof ct : ct
         ),
       };
     });
@@ -190,8 +192,8 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   return (
     <AnalysisContext.Provider
       value={{
-        isLoading, result, error, logText, pipelineProgress, snoozedThreats, ignoredThreats, solvedThreats,
-        setLogText, runAnalysis, resume, updateThreat, snoozeThreat, ignoreThreat, solveThreat, restoreThreat,
+        isLoading, result, error, logText, skipIngest, pipelineProgress, snoozedThreats, ignoredThreats, solvedThreats,
+        setLogText, setSkipIngest, runAnalysis, resume, updateThreat, snoozeThreat, ignoreThreat, solveThreat, restoreThreat,
       }}
     >
       {children}
