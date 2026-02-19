@@ -95,7 +95,7 @@ async def create_cloud(request: Request, body: CreateCloudRequest):
         services=json.dumps(body.services),
     )
     account = get_cloud_account(account_id)
-    return account
+    return _account_with_counts(account)
 
 
 # IMPORTANT: /checks must be defined BEFORE /{cloud_id} to avoid
@@ -135,7 +135,7 @@ async def update_cloud(cloud_id: str, body: UpdateCloudRequest):
     if updates:
         update_cloud_account(cloud_id, **updates)
 
-    return get_cloud_account(cloud_id)
+    return _account_with_counts(get_cloud_account(cloud_id))
 
 
 @router.delete("/{cloud_id}")

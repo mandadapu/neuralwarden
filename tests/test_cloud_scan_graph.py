@@ -65,3 +65,47 @@ def test_run_cloud_scan_no_assets():
         )
         assert result["scan_status"] == "complete"
         assert result["total_assets"] == 0
+
+
+def test_correlation_engine_e2e():
+    """Full pipeline: scanner finds open firewall, logs show brute force → active exploit."""
+    mock_assets = [
+        # Public: open firewall → active scanner will flag gcp_002
+        {"asset_type": "firewall_rule", "name": "allow-ssh",
+         "metadata": {"source_ranges": ["0.0.0.0/0"], "direction": "INGRESS"}},
+        # Private: internal VM → log analyzer will check its logs
+        {"asset_type": "compute_instance", "name": "allow-ssh",
+         "metadata": {"networkInterfaces": [{"networkIP": "10.0.0.5"}]}},
+    ]
+
+    # Log analyzer returns logs that match the firewall resource AND brute-force patterns
+    brute_force_logs = [
+        "2025-01-01 WARNING allow-ssh: Failed password for root from 203.0.113.5",
+        "2025-01-01 WARNING allow-ssh: Invalid user admin from 203.0.113.5",
+        "2025-01-01 WARNING allow-ssh: Failed password for ubuntu from 198.51.100.1",
+        "2025-01-01 WARNING allow-ssh: Connection closed by authenticating user root",
+    ]
+
+    with patch("pipeline.cloud_scan_graph._discover_assets", return_value=mock_assets):
+        with patch("pipeline.agents.log_analyzer._fetch_asset_logs", return_value=brute_force_logs):
+            result = run_cloud_scan(
+                cloud_account_id="test-id",
+                project_id="test-proj",
+                credentials_json="{}",
+                enabled_services=["cloud_logging", "firewall"],
+            )
+
+            assert result["scan_status"] == "complete"
+            assert result["active_exploits_detected"] >= 1
+
+            # The correlated issues list should have the upgraded issue
+            correlated = result.get("correlated_issues", [])
+            active_issues = [i for i in correlated if i.get("correlated")]
+            assert len(active_issues) >= 1
+
+            active = active_issues[0]
+            assert active["severity"] == "critical"
+            assert active["title"].startswith("[ACTIVE]")
+            assert active["verdict"] == "Brute Force Attempt in Progress"
+            assert active["mitre_tactic"] == "TA0006"
+            assert active["mitre_technique"] == "T1110"
