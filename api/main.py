@@ -15,7 +15,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.database import init_db
-from api.routers import analyze, export, generator, hitl, reports, samples, stream, watcher
+from api.routers import analyze, export, gcp_logging, generator, hitl, reports, samples, stream, watcher
 
 app = FastAPI(title="NeuralWarden API", version="2.0.0")
 
@@ -32,6 +32,7 @@ app.add_middleware(
 
 app.include_router(analyze.router)
 app.include_router(export.router)
+app.include_router(gcp_logging.router)
 app.include_router(generator.router)
 app.include_router(hitl.router)
 app.include_router(reports.router)

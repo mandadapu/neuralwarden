@@ -139,3 +139,46 @@ export async function generateLogs(
   const data = await res.json();
   return data.logs;
 }
+
+// --- GCP Cloud Logging ---
+
+export interface GcpStatus {
+  available: boolean;
+  credentials_set: boolean;
+  project_id: string | null;
+}
+
+export interface GcpFetchResult {
+  logs: string;
+  entry_count: number;
+  project_id: string;
+}
+
+export async function getGcpStatus(): Promise<GcpStatus> {
+  const res = await fetch(`${BASE}/gcp-logging/status`);
+  if (!res.ok) throw new Error(`GCP status check failed: ${res.statusText}`);
+  return res.json();
+}
+
+export async function fetchGcpLogs(
+  projectId: string,
+  logFilter: string,
+  maxEntries: number,
+  hoursBack: number
+): Promise<GcpFetchResult> {
+  const res = await fetch(`${BASE}/gcp-logging/fetch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      project_id: projectId,
+      log_filter: logFilter,
+      max_entries: maxEntries,
+      hours_back: hoursBack,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `GCP fetch failed: ${res.statusText}`);
+  }
+  return res.json();
+}

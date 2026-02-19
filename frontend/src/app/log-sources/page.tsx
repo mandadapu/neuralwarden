@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useAnalysisContext } from "@/context/AnalysisContext";
+import { getGcpStatus, fetchGcpLogs, type GcpStatus } from "@/lib/api";
 import PageShell from "@/components/PageShell";
 
 const SOURCES = [
@@ -8,6 +11,7 @@ const SOURCES = [
   { name: "SSH Auth Logs", type: "Authentication", status: "Active", events: "3.2K/day" },
   { name: "Syslog (Linux)", type: "System", status: "Active", events: "8.7K/day" },
   { name: "Web Access Logs", type: "Application", status: "Paused", events: "---" },
+  { name: "GCP Cloud Logging", type: "Cloud", status: "Active", events: "On-demand" },
 ];
 
 function getApiBase() {
@@ -16,10 +20,24 @@ function getApiBase() {
 }
 
 export default function LogSourcesPage() {
+  const router = useRouter();
+  const { setLogText } = useAnalysisContext();
+
+  // File Watcher state
   const [watchDir, setWatchDir] = useState("./watch");
   const [running, setRunning] = useState(false);
   const [currentDir, setCurrentDir] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // GCP Cloud Logging state
+  const [gcpStatus, setGcpStatus] = useState<GcpStatus | null>(null);
+  const [projectId, setProjectId] = useState("archcelerate");
+  const [logFilter, setLogFilter] = useState("");
+  const [maxEntries, setMaxEntries] = useState(500);
+  const [hoursBack, setHoursBack] = useState(24);
+  const [gcpLoading, setGcpLoading] = useState(false);
+  const [gcpError, setGcpError] = useState<string | null>(null);
+  const [fetchResult, setFetchResult] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -30,12 +48,13 @@ export default function LogSourcesPage() {
         setCurrentDir(data.watch_dir);
       }
     } catch {
-      // API not reachable — leave defaults
+      // API not reachable
     }
   }, []);
 
   useEffect(() => {
     fetchStatus();
+    getGcpStatus().then(setGcpStatus).catch(() => {});
   }, [fetchStatus]);
 
   const handleStart = async () => {
@@ -73,6 +92,24 @@ export default function LogSourcesPage() {
       // ignore
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFetchGcp = async () => {
+    setGcpLoading(true);
+    setGcpError(null);
+    setFetchResult(null);
+    try {
+      const result = await fetchGcpLogs(projectId, logFilter, maxEntries, hoursBack);
+      setLogText(result.logs);
+      setFetchResult(
+        `Fetched ${result.entry_count} log entries from project "${result.project_id}". Redirecting to dashboard...`
+      );
+      setTimeout(() => router.push("/"), 800);
+    } catch (err) {
+      setGcpError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setGcpLoading(false);
     }
   };
 
@@ -116,6 +153,96 @@ export default function LogSourcesPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* GCP Cloud Logging Card */}
+      <div className="mt-6 bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-base font-semibold text-[#1a1a2e]">Google Cloud Logging</h3>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Fetch logs from GCP Cloud Logging and analyze them through the pipeline
+            </p>
+          </div>
+          <span className={`px-2.5 py-1 rounded-md text-xs font-semibold ${
+            gcpStatus?.credentials_set
+              ? "bg-green-50 text-green-700 border border-green-200"
+              : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+          }`}>
+            {gcpStatus === null
+              ? "Checking..."
+              : gcpStatus.credentials_set
+              ? "Credentials Set"
+              : "Not Configured"}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">GCP Project ID</label>
+            <input
+              type="text"
+              value={projectId}
+              onChange={(e) => setProjectId(e.target.value)}
+              placeholder="my-gcp-project"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Hours Back</label>
+            <input
+              type="number"
+              value={hoursBack}
+              onChange={(e) => setHoursBack(Number(e.target.value))}
+              min={1}
+              max={168}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Log Filter <span className="text-gray-400 font-normal">(optional — LQL syntax)</span>
+          </label>
+          <input
+            type="text"
+            value={logFilter}
+            onChange={(e) => setLogFilter(e.target.value)}
+            placeholder='severity>=WARNING OR resource.type="cloud_run_revision"'
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <div className="flex items-end gap-3">
+          <div className="w-32">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Max Entries</label>
+            <input
+              type="number"
+              value={maxEntries}
+              onChange={(e) => setMaxEntries(Number(e.target.value))}
+              min={10}
+              max={2000}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          <button
+            onClick={handleFetchGcp}
+            disabled={gcpLoading || !projectId.trim()}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {gcpLoading ? "Fetching..." : "Fetch & Analyze"}
+          </button>
+        </div>
+
+        {gcpError && (
+          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-700">{gcpError}</p>
+          </div>
+        )}
+        {fetchResult && (
+          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm text-green-700">{fetchResult}</p>
+          </div>
+        )}
       </div>
 
       {/* File Watcher Card */}
