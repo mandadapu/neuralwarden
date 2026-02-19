@@ -1,0 +1,67 @@
+"""Tests for the cloud scan super agent graph."""
+import json
+from unittest.mock import patch, MagicMock
+from pipeline.cloud_scan_graph import build_scan_pipeline, run_cloud_scan, _discover_assets
+
+
+def test_build_scan_pipeline_compiles():
+    graph = build_scan_pipeline()
+    assert graph is not None
+
+
+def test_discover_assets_parses_metadata_json():
+    """_discover_assets should convert metadata_json strings to metadata dicts."""
+    mock_result = {
+        "assets": [
+            {
+                "asset_type": "firewall_rule",
+                "name": "allow-ssh",
+                "metadata_json": json.dumps({"source_ranges": ["0.0.0.0/0"], "direction": "INGRESS"}),
+            },
+            {
+                "asset_type": "compute_instance",
+                "name": "web-vm",
+                "metadata_json": json.dumps({"networkInterfaces": [{"accessConfigs": [{}]}]}),
+            },
+        ],
+        "issues": [],
+    }
+    with patch("api.gcp_scanner.run_scan", return_value=mock_result):
+        assets = _discover_assets("proj", "{}", ["compute"])
+        assert assets[0]["metadata"]["source_ranges"] == ["0.0.0.0/0"]
+        assert "metadata_json" not in assets[0]  # should be removed
+        assert "accessConfigs" in assets[1]["metadata"]["networkInterfaces"][0]
+
+
+def test_run_cloud_scan_with_mock_discovery():
+    """Full scan with mocked GCP APIs produces issues and correct status."""
+    mock_assets = [
+        {"asset_type": "firewall_rule", "name": "open-ssh",
+         "metadata": {"source_ranges": ["0.0.0.0/0"], "direction": "INGRESS"}},
+        {"asset_type": "compute_instance", "name": "internal-vm",
+         "metadata": {"networkInterfaces": [{"networkIP": "10.0.0.1"}]}},
+    ]
+
+    with patch("pipeline.cloud_scan_graph._discover_assets", return_value=mock_assets):
+        with patch("pipeline.agents.log_analyzer._fetch_asset_logs", return_value=[]):
+            result = run_cloud_scan(
+                cloud_account_id="test-id",
+                project_id="test-proj",
+                credentials_json="{}",
+                enabled_services=["cloud_logging", "compute"],
+            )
+            assert result["scan_status"] == "complete"
+            assert len(result.get("scan_issues", [])) >= 1  # open-ssh -> gcp_002
+            assert result["total_assets"] == 2
+
+
+def test_run_cloud_scan_no_assets():
+    """Scan with no assets still completes."""
+    with patch("pipeline.cloud_scan_graph._discover_assets", return_value=[]):
+        result = run_cloud_scan(
+            cloud_account_id="test-id",
+            project_id="empty-proj",
+            credentials_json="{}",
+        )
+        assert result["scan_status"] == "complete"
+        assert result["total_assets"] == 0
