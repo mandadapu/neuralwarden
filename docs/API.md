@@ -1,17 +1,28 @@
 # API & Developer Documentation
 
-Comprehensive reference for the AI NeuralWarden Pipeline internals — data models, REST API, agents, rule engine, pipeline orchestration, CLI, and Next.js dashboard.
+Comprehensive reference for the NeuralWarden platform — REST API, Cloud Scan API, data models, agents, pipeline orchestration, and Next.js dashboard.
 
 ---
 
 ## Table of Contents
 
-- [REST API](#rest-api)
+- [REST API — Threat Pipeline](#rest-api--threat-pipeline)
   - [POST /api/analyze](#post-apianalyze)
   - [POST /api/hitl/{thread_id}/resume](#post-apihitlthread_idresume)
   - [GET /api/samples](#get-apisamples)
   - [GET /api/samples/{sample_id}](#get-apisamplessample_id)
   - [GET /api/health](#get-apihealth)
+- [REST API — Cloud Management](#rest-api--cloud-management)
+  - [GET /api/clouds](#get-apiclouds)
+  - [POST /api/clouds](#post-apiclouds)
+  - [GET /api/clouds/{id}](#get-apicloudsid)
+  - [PUT /api/clouds/{id}](#put-apicloudsid)
+  - [DELETE /api/clouds/{id}](#delete-apicloudsid)
+  - [POST /api/clouds/{id}/scan](#post-apicloudsidscan)
+  - [GET /api/clouds/{id}/issues](#get-apicloudsidissues)
+  - [GET /api/clouds/{id}/assets](#get-apicloudsidasssets)
+  - [PATCH /api/clouds/issues/{issue_id}](#patch-apicloudsissuesissue_id)
+  - [GET /api/clouds/checks](#get-apicloudsschecks)
 - [Response Schemas](#response-schemas)
 - [Data Models](#data-models)
   - [LogEntry](#logentry)
@@ -118,6 +129,124 @@ Health check endpoint.
 ```json
 { "status": "ok", "version": "2.0.0" }
 ```
+
+---
+
+## REST API — Cloud Management
+
+All cloud endpoints require the `X-User-Email` header for per-user isolation. Credentials are never returned in responses.
+
+### GET /api/clouds
+
+List cloud accounts for the authenticated user.
+
+**Headers:** `X-User-Email: user@example.com`
+
+**Response:**
+```json
+[
+  {
+    "id": "uuid",
+    "user_email": "user@example.com",
+    "provider": "gcp",
+    "name": "My GCP Project",
+    "project_id": "my-project-123",
+    "purpose": "production",
+    "services": "[\"cloud_logging\", \"compute\"]",
+    "last_scan_at": "2026-02-19T23:13:39Z",
+    "status": "active",
+    "issue_counts": { "critical": 1, "high": 2, "medium": 3, "low": 0, "total": 6 }
+  }
+]
+```
+
+### POST /api/clouds
+
+Create a new cloud account.
+
+**Request:**
+```json
+{
+  "name": "My GCP Project",
+  "project_id": "my-project-123",
+  "provider": "gcp",
+  "purpose": "production",
+  "credentials_json": "{...service account key JSON...}",
+  "services": ["cloud_logging", "compute", "firewall"]
+}
+```
+
+### GET /api/clouds/{id}
+
+Get a single cloud account with issue counts.
+
+### PUT /api/clouds/{id}
+
+Update cloud account fields (name, purpose, credentials, services).
+
+**Request:**
+```json
+{
+  "name": "Updated Name",
+  "purpose": "staging",
+  "credentials_json": "{...new key...}",
+  "services": ["cloud_logging", "compute", "firewall", "storage"]
+}
+```
+
+All fields are optional — only provided fields are updated.
+
+### DELETE /api/clouds/{id}
+
+Delete a cloud account and all its associated issues/assets.
+
+### POST /api/clouds/{id}/scan
+
+**SSE streaming endpoint.** Triggers the Cloud Scan Super Agent and streams progress events.
+
+**Response:** `text/event-stream`
+
+```
+data: {"event": "starting", "total_assets": 0, "assets_scanned": 0}
+data: {"event": "discovered", "total_assets": 5}
+data: {"event": "routing", "total_assets": 5, "public_count": 2, "private_count": 3}
+data: {"event": "scanned", "assets_scanned": 5, "scan_type": "full"}
+data: {"event": "complete", "scan_type": "full", "asset_count": 5, "issue_count": 3, "active_exploits_detected": 1, "issue_counts": {...}, "has_report": false}
+```
+
+**SSE Event Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `event` | `string` | Stage: starting, discovered, routing, scanned, complete, error |
+| `total_assets` | `int` | Total assets discovered |
+| `public_count` | `int` | Assets routed to active scanner |
+| `private_count` | `int` | Assets routed to log analyzer |
+| `active_exploits_detected` | `int` | Issues correlated with live log activity |
+| `issue_counts` | `object` | Breakdown by severity (critical/high/medium/low/total) |
+
+### GET /api/clouds/{id}/issues
+
+List issues for a cloud account. Optional query params: `status`, `severity`.
+
+### GET /api/clouds/{id}/assets
+
+List assets for a cloud account. Optional query param: `asset_type`.
+
+### PATCH /api/clouds/issues/{issue_id}
+
+Update issue status.
+
+**Request:**
+```json
+{ "status": "solved" }
+```
+
+Valid statuses: `todo`, `in_progress`, `ignored`, `solved`
+
+### GET /api/clouds/checks
+
+List compliance check definitions. Optional query param: `category`.
 
 ---
 
@@ -338,6 +467,8 @@ Aggregator that runs all five detectors and returns combined `list[Threat]`.
 
 ## Agents
 
+### Threat Pipeline Agents
+
 ### Ingest Agent
 
 **File:** `pipeline/agents/ingest.py`
@@ -422,6 +553,52 @@ Generates dual-audience incident reports with action plans.
 4. Returns a complete `IncidentReport` object
 
 **Fallback:** Generates a template report with raw classified threat data and an auto-generated action plan (one step per threat). The `summary` notes that manual review is required.
+
+### Cloud Scan Agents
+
+### Discovery Agent
+
+**File:** `pipeline/cloud_scan_graph.py:discovery_node`
+
+Enumerates GCP assets using `gcp_scanner.run_scan()`. Parses `metadata_json` strings into `metadata` dicts for downstream agents.
+
+### Router Agent
+
+**File:** `pipeline/agents/cloud_router.py`
+
+Inspects each asset's metadata to classify as public or private. Routes via LangGraph `Send()` for parallel processing.
+
+**Public criteria:** compute with external IP, bucket without enforced public access prevention, firewall with 0.0.0.0/0, Cloud SQL with public IP.
+
+### Active Scanner Agent
+
+**File:** `pipeline/agents/active_scanner.py`
+
+Runs compliance checks on public-facing assets:
+- `gcp_002` — Firewall allows unrestricted ingress (0.0.0.0/0)
+- `gcp_004` — GCS bucket publicly accessible via IAM
+- `gcp_006` — Compute instance using default service account
+
+### Log Analyzer Agent
+
+**File:** `pipeline/agents/log_analyzer.py`
+
+Queries Cloud Logging for resource-specific audit events (last 24h, severity >= WARNING). Generates issues for error spikes (`log_001`) and authentication failures (`log_002`).
+
+### Correlation Engine
+
+**File:** `pipeline/agents/correlation_engine.py`
+
+Runs in the Aggregate Node. Cross-references scan issues with log lines by resource name + attack pattern matching. When a scanner finding has matching behavioral signals in logs, the issue is upgraded to critical with MITRE ATT&CK mapping and `[ACTIVE]` tag.
+
+**Intelligence Matrix:**
+
+| Scanner Rule | Log Patterns | Verdict | MITRE |
+|---|---|---|---|
+| `gcp_002` | Failed password, Invalid user, Connection closed | Brute Force Attempt in Progress | TA0006 / T1110 |
+| `gcp_004` | AnonymousAccess, GetObject, storage.objects.get | Data Exfiltration Occurring | TA0010 / T1530 |
+| `gcp_006` | CreateServiceAccountKey, SetIamPolicy | Privilege Escalation Risk | TA0004 / T1078.004 |
+| `log_002` | Invalid user, unauthorized, brute | Unauthorized Access Attempt | TA0001 / T1078 |
 
 ---
 
@@ -583,16 +760,19 @@ Global state via React Context (`AnalysisProvider`) wrapping the entire app in `
 
 | Route | Component | Description |
 |-------|-----------|-------------|
-| `/` | `page.tsx` | Main feed: log input, analysis, summary cards, findings table, detail panel |
+| `/login` | `(auth)/login/page.tsx` | Google OAuth login |
+| `/` | `page.tsx` | Main feed: summary cards, findings table, cost breakdown, incident report |
 | `/snoozed` | `snoozed/page.tsx` | Deferred threats table with restore action |
 | `/ignored` | `ignored/page.tsx` | Accepted risk / false positives with restore action |
 | `/solved` | `solved/page.tsx` | Resolved threats with reopen action |
 | `/autofix` | `autofix/page.tsx` | Automated fix statistics |
-| `/log-sources` | `log-sources/page.tsx` | Connected log sources |
-| `/agents` | `agents/page.tsx` | Pipeline agent status |
+| `/clouds` | `clouds/page.tsx` | Connected GCP accounts with issue counts |
+| `/clouds/connect` | `clouds/connect/page.tsx` | Add new GCP project |
+| `/clouds/[id]` | `clouds/[id]/layout.tsx` | Cloud detail: SSE scan, issues, assets, VMs, checks tabs |
+| `/agents` | `agents/page.tsx` | 11 pipeline agents grouped by Threat Pipeline / Cloud Scan |
 | `/mitre` | `mitre/page.tsx` | MITRE ATT&CK reference |
 | `/threat-intel` | `threat-intel/page.tsx` | Pinecone threat intel feed |
-| `/reports` | `reports/page.tsx` | Generated reports |
+| `/reports` | `reports/page.tsx` | Generated reports with PDF export |
 | `/pentests` | `pentests/page.tsx` | Pentest tracker |
 | `/integrations` | `integrations/page.tsx` | Third-party connections |
 
@@ -611,6 +791,15 @@ const BASE = `${window.location.protocol}//${window.location.hostname}:8000/api`
 - `resumeHitl(threadId, decision, notes): Promise<AnalysisResponse>`
 - `fetchSamples(): Promise<SampleInfo[]>`
 - `fetchSampleContent(id: string): Promise<string>`
+- `listClouds(): Promise<CloudAccount[]>`
+- `createCloud(data): Promise<CloudAccount>`
+- `getCloud(id): Promise<CloudAccount>`
+- `updateCloud(id, updates): Promise<CloudAccount>`
+- `deleteCloud(id): Promise<void>`
+- `scanCloudStream(id, onEvent): Promise<void>` — SSE streaming
+- `listCloudIssues(id, status?, severity?): Promise<CloudIssue[]>`
+- `listCloudAssets(id, assetType?): Promise<CloudAsset[]>`
+- `listCloudChecks(category?): Promise<CloudCheck[]>`
 
 ---
 
@@ -658,14 +847,20 @@ pytest tests/ -v
 
 ### Test Files
 
-| File | Coverage |
-|------|----------|
-| `tests/test_ingest.py` | LogEntry model validation, edge cases |
-| `tests/test_detect.py` | All 5 rule-based detection patterns, thresholds |
-| `tests/test_classify.py` | Fallback classification, model constraints |
-| `tests/test_pipeline.py` | Conditional routing, short-circuit paths, state flow |
+| File | Tests | Coverage |
+|------|-------|----------|
+| `tests/test_correlation_engine.py` | 12 | Correlation rules, severity upgrade, MITRE mapping, case-insensitive matching |
+| `tests/test_cloud_scan_graph.py` | 5 | Pipeline compilation, discovery, mock scan, E2E correlation |
+| `tests/test_cloud_router.py` | 9 | Public/private classification for all asset types |
+| `tests/test_active_scanner.py` | 5 | Firewall, compute, bucket compliance checks |
+| `tests/test_log_analyzer.py` | 4 | Log fetching, error/auth issue generation |
+| `tests/test_cloud_scan_state.py` | 3 | TypedDict structure, fan-in aggregation |
+| `tests/test_detect.py` | — | All 5 rule-based detection patterns, thresholds |
+| `tests/test_classify.py` | — | Fallback classification, model constraints |
+| `tests/test_pipeline.py` | — | Conditional routing, short-circuit paths |
+| `tests/test_ingest.py` | — | LogEntry model validation, edge cases |
 
-All tests run **without API calls** — they test models, rules, and routing logic using mocked or synthetic data.
+**38+ tests total.** All tests run without API calls — they use mocked or synthetic data.
 
 ---
 

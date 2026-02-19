@@ -1,73 +1,75 @@
-# AI NeuralWarden Pipeline v2.0
+# NeuralWarden — AI-Powered Cloud Security Platform
 
-A multi-agent security log analysis platform with a **Next.js** dashboard and **FastAPI** backend, powered by **LangGraph** + **Anthropic Claude** with multi-model routing, shadow validation, RAG threat intelligence, and human-in-the-loop review.
+An agentic cloud security platform that combines **static vulnerability scanning**, **behavioral log analysis**, and **threat correlation** to detect active exploits across GCP infrastructure. Built with **LangGraph**, **Anthropic Claude**, **Next.js 16**, and **FastAPI**.
+
+## What It Does
+
+1. **Connects to your GCP project** — discovers VMs, firewalls, buckets, Cloud SQL
+2. **Routes assets intelligently** — public assets get active compliance scans, private assets get log-based analysis
+3. **Correlates findings** — cross-references scanner vulnerabilities with log activity to detect active exploits (e.g., open SSH port + brute force logs = active breach)
+4. **Maps to MITRE ATT&CK** — every correlated finding gets tactic/technique IDs
+5. **Generates incident reports** — prioritized action plans with business impact
 
 ## Architecture
 
-### Pipeline
-
 ```
-START
-  │
-  [should_burst?] ─── >1000 logs ──→ ingest_chunk (x N parallel) → aggregate
-  │                                                                    │
-  ▼                                                                    ▼
-[ingest] ──── valid logs? ──→ [detect] ──→ [validate] ──── threats? ──→ [classify + RAG]
-  │ No                                                      │ No           │
-  ▼                                                         ▼             [should_hitl?]
-empty_report → END                                    clean_report → END  │          │
-                                                                          ▼          ▼
-                                                                    hitl_review   report → END
-                                                                          │
-                                                                       report → END
-```
-
-### System Overview
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│  Next.js 16 Frontend (port 3000)                                    │
-│  ┌──────────┐  ┌──────────────┐  ┌─────────────────────────────┐   │
-│  │ Sidebar  │  │ Threat Feed  │  │ Threat Detail Slide-Out     │   │
-│  │ (nav +   │  │ + Summary    │  │ (severity gauge, tabs,      │   │
-│  │  counts) │  │   Cards      │  │  MITRE, remediation,        │   │
-│  │          │  │              │  │  actions dropdown)          │   │
-│  └──────────┘  └──────────────┘  └─────────────────────────────┘   │
-│  State: React Context + localStorage persistence                    │
-└───────────────────────────────┬─────────────────────────────────────┘
-                                │ HTTP (port 8000)
-┌───────────────────────────────▼─────────────────────────────────────┐
-│  FastAPI Backend                                                     │
-│  POST /api/analyze  │  POST /api/hitl/{id}/resume  │  GET /api/samples │
-│                                                                      │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │  LangGraph Pipeline (5 agents + validator)                     │  │
-│  │  Ingest(Haiku) → Detect(Sonnet) → Validate(Sonnet)           │  │
-│  │  → Classify(Sonnet+RAG) → HITL → Report(Opus)                │  │
-│  └────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Next.js 16 Frontend (port 3000)                                            │
+│  ┌──────────┐  ┌──────────────┐  ┌──────────────────┐  ┌───────────────┐   │
+│  │ Sidebar  │  │ Threat Feed  │  │ Cloud Detail     │  │ Configure     │   │
+│  │ (11 nav  │  │ + Summary    │  │ SSE Scan Progress│  │ Modal         │   │
+│  │  items)  │  │   Cards      │  │ Issues/Assets/VMs│  │ Creds/Services│   │
+│  └──────────┘  └──────────────┘  └──────────────────┘  └───────────────┘   │
+│  Auth: Auth.js v5 (Google OAuth)  │  State: React Context + localStorage   │
+└────────────────────────────────────┬────────────────────────────────────────┘
+                                     │ HTTP + SSE (port 8000)
+┌────────────────────────────────────▼────────────────────────────────────────┐
+│  FastAPI Backend                                                            │
+│                                                                             │
+│  ┌─── Cloud Scan Super Agent (LangGraph) ──────────────────────────────┐   │
+│  │                                                                      │   │
+│  │  Discovery → Router → ┬─ Active Scanner (public) ─┐→ Aggregate     │   │
+│  │                       └─ Log Analyzer (private)  ──┘  + Correlate   │   │
+│  │                                                          │           │   │
+│  │                                                    Threat Pipeline   │   │
+│  │                                              Detect→Validate→Classify│   │
+│  │                                                    →HITL→Report     │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  SQLite: cloud_accounts, cloud_issues, cloud_assets (per-user isolation)   │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 5 Specialized Agents + 1 Validator
+## 11 AI Agents
 
-| Agent | Model | Cost | Purpose |
-|-------|-------|------|---------|
-| **Ingest** | Haiku 4.5 | $0.25/MTok | Parse raw logs into structured entries |
-| **Detect** | Sonnet 4.5 | $3.00/MTok | Rule-based + AI threat detection |
-| **Validate** | Sonnet 4.5 | $3.00/MTok | Shadow-check 5% of "clean" logs |
-| **Classify** | Sonnet 4.5 | $3.00/MTok | Risk-score threats + MITRE ATT&CK + RAG |
-| **Report** | Opus 4.6 | $15.00/MTok | Dual-audience incident reports |
+### Threat Pipeline (6 agents — LLM-powered)
 
-### Key Features
+| # | Agent | Model | Purpose |
+|---|-------|-------|---------|
+| 1 | **Ingest** | Haiku 4.5 | Parse raw logs into structured entries |
+| 2 | **Detect** | Sonnet 4.5 | Rule-based + AI threat detection |
+| 3 | **Validate** | Sonnet 4.5 | Shadow-check 5% of "clean" logs |
+| 4 | **Classify** | Sonnet 4.5 | Risk scoring + MITRE ATT&CK + RAG |
+| 5 | **HITL Gate** | — | Human-in-the-loop review for critical threats |
+| 6 | **Report** | Opus 4.6 | Incident reports with action plans |
 
-1. **Next.js Dashboard** — Threat feed with detail slide-out panel, actions (snooze/ignore/solve), sidebar navigation with live counts
-2. **FastAPI REST API** — `/api/analyze`, `/api/hitl/{id}/resume`, `/api/samples` endpoints with CORS support
-3. **Validator Agent** — Samples 5% of "clean" logs and checks for missed threats
-4. **RAG Threat Intelligence** — Pinecone vector DB with CVE data enriches classification
-5. **Human-in-the-Loop** — LangGraph `interrupt()` pauses for critical threats; approve/reject UI
-6. **Burst Mode** — Parallel ingest via `Send` API for >1000 logs
-7. **Agent Metrics** — Per-agent cost, latency, and token tracking
-8. **Persistent State** — Analysis results and threat actions persist across navigation via React Context + localStorage
+### Cloud Scan Super Agent (5 agents — deterministic, $0 cost)
+
+| # | Agent | Purpose |
+|---|-------|---------|
+| 7 | **Discovery** | Enumerates GCP assets (VMs, buckets, firewalls, SQL) |
+| 8 | **Router** | Routes assets to active scan (public) or log analysis (private) |
+| 9 | **Active Scanner** | Compliance checks on public-facing assets |
+| 10 | **Log Analyzer** | Queries Cloud Logging for behavioral signals |
+| 11 | **Correlation Engine** | Cross-references scanner + log findings to detect active exploits |
+
+### Correlation Intelligence Matrix
+
+| Scanner Finds | Log Agent Finds | Verdict | MITRE |
+|---|---|---|---|
+| GCP_002 (Open SSH) | Failed password, Invalid user | Brute Force in Progress | T1110 |
+| GCP_004 (Public Bucket) | AnonymousAccess, GetObject | Data Exfiltration | T1530 |
+| GCP_006 (Default SA) | CreateServiceAccountKey | Privilege Escalation | T1078.004 |
 
 ## Setup
 
@@ -84,142 +86,114 @@ cd frontend && npm install && cd ..
 
 # Configure
 cp .env.example .env
-# Add your API keys to .env:
-#   ANTHROPIC_API_KEY  (required)
+# Required:
+#   ANTHROPIC_API_KEY
+#   AUTH_GOOGLE_ID + AUTH_GOOGLE_SECRET  (for OAuth)
+#   AUTH_SECRET                           (for session encryption)
+# Optional:
 #   OPENAI_API_KEY     (for RAG embeddings)
 #   PINECONE_API_KEY   (for RAG vector store)
 ```
 
-### Seed Pinecone (optional, for RAG)
-
-```bash
-python scripts/seed_pinecone.py
-```
-
 ## Usage
 
-### Web Dashboard (recommended)
-
 ```bash
-# Terminal 1: Start FastAPI backend
-uvicorn api.main:app --reload --port 8000
+# Terminal 1: Backend
+uvicorn api.main:app --host 0.0.0.0 --port 8000
 
-# Terminal 2: Start Next.js frontend
+# Terminal 2: Frontend
 cd frontend && npm run dev
 # Opens at http://localhost:3000
 ```
 
 ### CLI
+
 ```bash
 python main.py sample_logs/brute_force.txt
-python main.py sample_logs/mixed_threats.txt
-python main.py sample_logs/clean_logs.txt
-
-# With human-in-the-loop for critical threats
-python main.py sample_logs/brute_force.txt --hitl
+python main.py sample_logs/mixed_threats.txt --hitl
 ```
 
 ### Tests
+
 ```bash
-pytest tests/ -v
+# Run with project venv (has all deps)
+.venv/bin/python -m pytest tests/ -v
+# 38+ tests covering all agents, correlation engine, and pipeline
 ```
 
 ## Frontend Pages
 
 | Route | Page | Description |
 |-------|------|-------------|
-| `/` | **Threat Feed** | Log input, analysis, summary cards, findings table with detail panel |
+| `/` | **Feed** | Summary cards, findings table, cost breakdown, incident report |
 | `/snoozed` | **Snoozed** | Deferred threats with restore action |
-| `/ignored` | **Ignored** | False positives / accepted risk with restore action |
-| `/solved` | **Solved** | Resolved threats with reopen action |
-| `/autofix` | **Autofix** | Automated fix statistics |
-| `/log-sources` | **Log Sources** | Connected log source configuration |
-| `/agents` | **Agents** | Pipeline agent status and models |
+| `/ignored` | **Ignored** | False positives / accepted risk |
+| `/solved` | **Solved** | Resolved threats |
+| `/autofix` | **AutoFix** | Automated remediation stats |
+| `/clouds` | **Clouds** | Connected GCP accounts with issue counts |
+| `/clouds/connect` | **Connect** | Add new GCP project with service account |
+| `/clouds/[id]` | **Cloud Detail** | SSE scan progress, issues, assets, VMs, checks |
+| `/agents` | **Agents** | 11 pipeline agents with status |
 | `/mitre` | **MITRE ATT&CK** | Tactics and techniques reference |
 | `/threat-intel` | **Threat Intel** | Pinecone vector DB threat feed |
-| `/reports` | **Reports** | Generated incident reports |
+| `/reports` | **Reports** | Generated incident reports with PDF export |
 | `/pentests` | **Pentests** | Penetration testing tracker |
 | `/integrations` | **Integrations** | Third-party service connections |
 
-## Sample Logs
+## Multi-Tenancy
 
-| File | Scenario | Expected Threats |
-|------|----------|-----------------|
-| `brute_force.txt` | SSH brute force + privilege escalation | 2+ threats (critical/high) |
-| `data_exfiltration.txt` | Large outbound transfers | 1+ data exfil threat |
-| `mixed_threats.txt` | Port scan + brute force + lateral movement + exfil | 4+ threats |
-| `clean_logs.txt` | Normal operations | 0 threats (short-circuit) |
+Each user authenticates via Google OAuth. Cloud accounts, issues, and assets are isolated per `user_email`. The `X-User-Email` header is set by the frontend auth middleware. This supports both:
+
+- **Multi-tenant SaaS** — each user sees only their own clouds
+- **Single-tenant hosted** — deploy for one org with shared GCP credentials
 
 ## Project Structure
 
 ```
 neuralwarden/
-├── main.py                         # CLI entry point
 ├── api/
 │   ├── main.py                     # FastAPI app (CORS, routers)
-│   ├── schemas.py                  # Pydantic request/response schemas
-│   ├── services.py                 # Pipeline orchestration service
+│   ├── cloud_database.py           # Cloud accounts/issues/assets CRUD
+│   ├── gcp_scanner.py              # GCP asset discovery + compliance checks
+│   ├── gcp_logging.py              # Cloud Logging client + deterministic parser
 │   └── routers/
-│       ├── analyze.py              # POST /api/analyze
-│       ├── hitl.py                 # POST /api/hitl/{id}/resume
-│       └── samples.py             # GET /api/samples
-├── frontend/
-│   ├── package.json                # Next.js 16 + React 19
-│   └── src/
-│       ├── app/
-│       │   ├── layout.tsx          # Root layout (Sidebar + Topbar + AnalysisProvider)
-│       │   ├── page.tsx            # Main threat feed dashboard
-│       │   ├── globals.css         # Tailwind v4 theme (blue/navy)
-│       │   ├── snoozed/page.tsx    # Snoozed threats
-│       │   ├── ignored/page.tsx    # Ignored threats
-│       │   ├── solved/page.tsx     # Solved threats
-│       │   └── ...                 # 8 more route pages
-│       ├── components/
-│       │   ├── Sidebar.tsx         # Navigation with live counts
-│       │   ├── Topbar.tsx          # Header bar
-│       │   ├── ThreatsTable.tsx    # Findings table with clickable rows
-│       │   ├── ThreatDetailPanel.tsx # Slide-out detail panel + actions
-│       │   ├── SeverityGauge.tsx   # SVG semicircular risk gauge
-│       │   ├── SeverityBadge.tsx   # Colored severity pill
-│       │   ├── ThreatTypeIcon.tsx  # Threat type SVG icons
-│       │   ├── SummaryCards.tsx    # Stats cards (threats, logs, cost)
-│       │   ├── LogInput.tsx        # Log paste textarea
-│       │   ├── HitlReviewPanel.tsx # HITL approve/reject UI
-│       │   ├── IncidentReport.tsx  # Report renderer
-│       │   ├── CostBreakdown.tsx   # Agent cost breakdown
-│       │   └── PageShell.tsx       # Shared sub-page layout
-│       ├── context/
-│       │   └── AnalysisContext.tsx  # Global state + localStorage persistence
-│       └── lib/
-│           ├── api.ts              # Backend API client
-│           ├── types.ts            # TypeScript interfaces
-│           ├── constants.ts        # Severity colors, labels
-│           └── remediation.ts      # Threat remediation guidance
+│       ├── analyze.py              # POST /api/analyze (threat pipeline)
+│       ├── clouds.py               # Cloud CRUD + SSE scan + issues/assets
+│       ├── hitl.py                 # Human-in-the-loop resume
+│       └── ...
 ├── pipeline/
-│   ├── state.py                    # PipelineState TypedDict
-│   ├── graph.py                    # LangGraph StateGraph v2.0
-│   ├── metrics.py                  # AgentTimer cost/latency tracking
-│   ├── vector_store.py             # Pinecone RAG wrapper
+│   ├── graph.py                    # Threat pipeline LangGraph
+│   ├── cloud_scan_graph.py         # Cloud Scan Super Agent LangGraph
+│   ├── cloud_scan_state.py         # ScanAgentState TypedDict
 │   └── agents/
-│       ├── ingest.py               # Haiku 4.5
-│       ├── ingest_chunk.py         # Burst mode chunk processor
-│       ├── detect.py               # Sonnet 4.5
-│       ├── validate.py             # Sonnet 4.5 (shadow validator)
-│       ├── classify.py             # Sonnet 4.5 (+ RAG)
-│       ├── hitl.py                 # Human-in-the-loop interrupt
-│       └── report.py               # Opus 4.6
-├── rules/
-│   └── detection.py                # Rule-based detection patterns
-├── models/
-│   ├── log_entry.py
-│   ├── threat.py
-│   └── incident_report.py
-├── data/
-│   └── cve_seeds.json              # CVE data for Pinecone
-├── scripts/
-│   └── seed_pinecone.py            # Seed Pinecone index
-├── sample_logs/
-├── tests/                          # 49 tests
-└── docs/
-    └── API.md                      # Full API documentation
+│       ├── ingest.py               # Haiku 4.5 log parser
+│       ├── detect.py               # Sonnet 4.5 threat detection
+│       ├── validate.py             # Sonnet 4.5 shadow validator
+│       ├── classify.py             # Sonnet 4.5 risk scoring + RAG
+│       ├── report.py               # Opus 4.6 incident reports
+│       ├── cloud_router.py         # Public/private asset routing
+│       ├── active_scanner.py       # Compliance checks for public assets
+│       ├── log_analyzer.py         # Cloud Logging queries for private assets
+│       └── correlation_engine.py   # Scanner + log cross-referencing
+├── frontend/
+│   └── src/
+│       ├── app/(dashboard)/        # All dashboard pages
+│       ├── app/(auth)/login/       # OAuth login
+│       ├── components/             # 16 React components
+│       ├── context/                # AnalysisContext (global state)
+│       └── lib/                    # API client, types, constants
+├── models/                         # Pydantic data models
+├── rules/                          # Rule-based detection patterns
+├── tests/                          # 38+ pytest tests
+├── docs/
+│   ├── API.md                      # REST API reference
+│   ├── ARCHITECTURE.md             # System design document
+│   └── VISION.md                   # Product vision
+└── sample_logs/                    # Test scenarios
 ```
+
+## Docs
+
+- [API Reference](docs/API.md) — REST endpoints, schemas, SSE events
+- [Architecture](docs/ARCHITECTURE.md) — System design, agent pipeline, data flow
+- [Vision](docs/VISION.md) — Product direction and roadmap
