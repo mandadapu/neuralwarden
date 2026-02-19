@@ -1,6 +1,6 @@
 "use client";
 
-import { signOut } from "next-auth/react";
+import { handleSignOut } from "@/app/actions";
 
 interface LogoutModalProps {
   open: boolean;
@@ -42,12 +42,14 @@ export default function LogoutModal({ open, onClose }: LogoutModalProps) {
           >
             Cancel
           </button>
-          <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors cursor-pointer"
-          >
-            Terminate Session
-          </button>
+          <form action={handleSignOut} className="flex-1">
+            <button
+              type="submit"
+              className="w-full px-4 py-2.5 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 transition-colors cursor-pointer"
+            >
+              Terminate Session
+            </button>
+          </form>
         </div>
       </div>
     </div>

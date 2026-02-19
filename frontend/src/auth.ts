@@ -3,7 +3,14 @@ import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  providers: [GitHub, Google],
+  providers: [
+    GitHub({
+      authorization: { params: { prompt: "consent" } },
+    }),
+    Google({
+      authorization: { params: { prompt: "select_account" } },
+    }),
+  ],
   pages: {
     signIn: "/login",
   },
