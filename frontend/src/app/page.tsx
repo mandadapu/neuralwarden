@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAnalysisContext } from "@/context/AnalysisContext";
 import Topbar from "@/components/Topbar";
 import SummaryCards from "@/components/SummaryCards";
@@ -15,9 +15,17 @@ import ThreatDetailPanel from "@/components/ThreatDetailPanel";
 export default function DashboardPage() {
   const [selectedThreatIndex, setSelectedThreatIndex] = useState<number | null>(null);
   const {
-    isLoading, result, error, logText, skipIngest, pipelineProgress, setLogText, runAnalysis, resume,
+    isLoading, result, error, logText, skipIngest, autoAnalyze, pipelineProgress, setLogText, setAutoAnalyze, runAnalysis, resume,
     updateThreat, snoozeThreat, ignoreThreat,
   } = useAnalysisContext();
+
+  // Auto-start analysis when redirected from GCP fetch
+  useEffect(() => {
+    if (autoAnalyze && logText.trim() && !isLoading) {
+      setAutoAnalyze(false);
+      runAnalysis(logText);
+    }
+  }, [autoAnalyze, logText, isLoading, setAutoAnalyze, runAnalysis]);
 
   const threats = result?.classified_threats ?? [];
   const selectedThreat = selectedThreatIndex !== null ? threats[selectedThreatIndex] : null;

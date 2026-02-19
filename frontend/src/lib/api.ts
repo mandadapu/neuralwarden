@@ -111,6 +111,14 @@ export async function getReport(id: string): Promise<Record<string, unknown>> {
   return res.json();
 }
 
+export async function getLatestReport(): Promise<AnalysisResponse | null> {
+  const res = await fetch(`${BASE}/reports/latest`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (!data || !data.status) return null;
+  return data as AnalysisResponse;
+}
+
 // --- Attack generator ---
 
 export interface Scenario {

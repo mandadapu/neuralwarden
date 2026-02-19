@@ -3,8 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import type { AnalysisResponse, ClassifiedThreat } from "@/lib/types";
 import type { StageProgress } from "@/components/PipelineProgress";
-import { analyzeStream, type StreamEvent } from "@/lib/api";
-import { resumeHitl } from "@/lib/api";
+import { analyzeStream, type StreamEvent, getLatestReport, resumeHitl } from "@/lib/api";
 
 interface AnalysisContextType {
   isLoading: boolean;
@@ -12,12 +11,14 @@ interface AnalysisContextType {
   error: string | null;
   logText: string;
   skipIngest: boolean;
+  autoAnalyze: boolean;
   pipelineProgress: StageProgress[];
   snoozedThreats: ClassifiedThreat[];
   ignoredThreats: ClassifiedThreat[];
   solvedThreats: ClassifiedThreat[];
   setLogText: (text: string) => void;
   setSkipIngest: (skip: boolean) => void;
+  setAutoAnalyze: (auto: boolean) => void;
   runAnalysis: (logs: string) => Promise<void>;
   resume: (decision: "approve" | "reject", notes: string) => Promise<void>;
   updateThreat: (threatId: string, updates: { status?: string; risk?: string }) => void;
@@ -37,22 +38,32 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [logText, setLogText] = useState("");
   const [skipIngest, setSkipIngest] = useState(false);
+  const [autoAnalyze, setAutoAnalyze] = useState(false);
   const [pipelineProgress, setPipelineProgress] = useState<StageProgress[]>([]);
   const [snoozedThreats, setSnoozedThreats] = useState<ClassifiedThreat[]>([]);
   const [ignoredThreats, setIgnoredThreats] = useState<ClassifiedThreat[]>([]);
   const [solvedThreats, setSolvedThreats] = useState<ClassifiedThreat[]>([]);
 
-  // Load persisted threat lists on mount (but start with clean logs/results)
+  // Restore last session on mount: try localStorage first, then API
   useEffect(() => {
+    let loaded = false;
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
+        if (parsed.result) { setResult(parsed.result); loaded = true; }
+        if (parsed.logText) setLogText(parsed.logText);
         setSnoozedThreats(parsed.snoozedThreats ?? []);
         setIgnoredThreats(parsed.ignoredThreats ?? []);
         setSolvedThreats(parsed.solvedThreats ?? []);
       }
     } catch {}
+    // If no local results, load latest from API (works in incognito / fresh browser)
+    if (!loaded) {
+      getLatestReport().then((data) => {
+        if (data) setResult(data);
+      }).catch(() => {});
+    }
   }, []);
 
   // Persist on change
@@ -192,8 +203,8 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   return (
     <AnalysisContext.Provider
       value={{
-        isLoading, result, error, logText, skipIngest, pipelineProgress, snoozedThreats, ignoredThreats, solvedThreats,
-        setLogText, setSkipIngest, runAnalysis, resume, updateThreat, snoozeThreat, ignoreThreat, solveThreat, restoreThreat,
+        isLoading, result, error, logText, skipIngest, autoAnalyze, pipelineProgress, snoozedThreats, ignoredThreats, solvedThreats,
+        setLogText, setSkipIngest, setAutoAnalyze, runAnalysis, resume, updateThreat, snoozeThreat, ignoreThreat, solveThreat, restoreThreat,
       }}
     >
       {children}

@@ -45,7 +45,7 @@ def _detect_completed_agent(prev_state: dict, new_state: dict) -> str | None:
 
 def _sse_event(event_type: str, data: dict) -> str:
     """Format an SSE event string."""
-    return json.dumps({"event": event_type, **data})
+    return json.dumps({"event": event_type, **data}, default=str)
 
 
 async def stream_analysis(logs: str, skip_ingest: bool = False) -> AsyncIterator[str]:

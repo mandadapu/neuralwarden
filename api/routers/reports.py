@@ -13,6 +13,18 @@ async def list_reports(limit: int = 50):
     return {"reports": list_analyses(limit=limit)}
 
 
+@router.get("/reports/latest")
+async def get_latest_report():
+    """Get the most recent analysis (full response)."""
+    reports = list_analyses(limit=1)
+    if not reports:
+        return None
+    result = get_analysis(reports[0]["id"])
+    if not result:
+        return None
+    return result.get("full_response_json", {})
+
+
 @router.get("/reports/{analysis_id}")
 async def get_report(analysis_id: str):
     """Get a full analysis by ID."""

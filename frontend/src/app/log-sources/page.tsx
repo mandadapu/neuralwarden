@@ -20,7 +20,7 @@ function getApiBase() {
 
 export default function LogSourcesPage() {
   const router = useRouter();
-  const { setLogText, setSkipIngest } = useAnalysisContext();
+  const { setLogText, setSkipIngest, setAutoAnalyze } = useAnalysisContext();
 
   // File Watcher state
   const [watchDir, setWatchDir] = useState("./watch");
@@ -102,6 +102,7 @@ export default function LogSourcesPage() {
       const result = await fetchGcpLogs(projectId, logFilter, maxEntries, hoursBack);
       setLogText(result.logs);
       setSkipIngest(true);
+      setAutoAnalyze(true);
       setFetchResult(
         `Fetched ${result.entry_count} log entries from project "${result.project_id}". Redirecting to dashboard...`
       );
