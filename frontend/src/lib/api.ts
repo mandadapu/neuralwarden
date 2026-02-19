@@ -219,8 +219,7 @@ export async function fetchGcpLogs(
 export async function listClouds(): Promise<CloudAccount[]> {
   const res = await fetch(`${BASE}/clouds`, { headers: authHeaders() });
   if (!res.ok) throw new Error(`Failed to list clouds: ${res.statusText}`);
-  const data = await res.json();
-  return data.accounts;
+  return res.json();
 }
 
 export async function createCloud(cloud: {
@@ -324,8 +323,7 @@ export async function listCloudIssues(
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to list issues: ${res.statusText}`);
-  const data = await res.json();
-  return data.issues;
+  return res.json();
 }
 
 export async function updateIssueStatus(
@@ -350,8 +348,7 @@ export async function listCloudAssets(
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to list assets: ${res.statusText}`);
-  const data = await res.json();
-  return data.assets;
+  return res.json();
 }
 
 export async function listCloudChecks(
@@ -363,6 +360,5 @@ export async function listCloudChecks(
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to list checks: ${res.statusText}`);
-  const data = await res.json();
-  return data.checks;
+  return res.json();
 }

@@ -64,8 +64,9 @@ def _get_user_email(request: Request) -> str:
 
 
 def _account_with_counts(account: dict) -> dict:
-    """Attach issue_counts to an account dict."""
+    """Attach issue_counts and strip credentials from an account dict."""
     account["issue_counts"] = get_issue_counts(account["id"])
+    account.pop("credentials_json", None)
     return account
 
 
