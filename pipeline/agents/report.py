@@ -9,6 +9,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from models.incident_report import ActionStep, IncidentReport
 from models.threat import ClassifiedThreat
 from pipeline.metrics import AgentTimer
+from pipeline.security import extract_json, sanitize_log_line, validate_report_output, wrap_user_data
 from pipeline.state import PipelineState
 
 MODEL = "claude-opus-4-6"
@@ -70,11 +71,12 @@ def run_report(state: PipelineState) -> dict:
             "affected_systems": ct.affected_systems,
         })
 
-    # Include relevant log samples for timeline reconstruction
+    # Include relevant log samples for timeline reconstruction (sanitized)
     log_samples = []
     for log in parsed_logs[:50]:  # Cap at 50 for context window
         if log.is_valid:
-            log_samples.append(f"[{log.index}] {log.timestamp} {log.source}: {log.raw_text[:200]}")
+            safe_text = sanitize_log_line(log.raw_text[:200])
+            log_samples.append(f"[{log.index}] {log.timestamp} {log.source}: {safe_text}")
 
     try:
         llm = ChatAnthropic(
@@ -84,6 +86,7 @@ def run_report(state: PipelineState) -> dict:
         )
 
         with AgentTimer("report", MODEL) as timer:
+            log_timeline = "\n".join(log_samples)
             response = llm.invoke([
                 SystemMessage(content=SYSTEM_PROMPT),
                 HumanMessage(
@@ -96,18 +99,15 @@ def run_report(state: PipelineState) -> dict:
                         f"- AI detections: {detection_stats.get('ai_detections', 0)}\n"
                         f"- Total threats: {detection_stats.get('total_threats', 0)}\n\n"
                         f"## Classified Threats\n{json.dumps(threat_summary, indent=2)}\n\n"
-                        f"## Log Timeline (samples)\n" + "\n".join(log_samples)
+                        f"## Log Timeline (samples)\n{wrap_user_data(log_timeline, 'log_samples')}"
                     )
                 ),
             ])
             timer.record_usage(response)
 
-        content = response.content
-        if "```" in content:
-            content = content.split("```")[1]
-            if content.startswith("json"):
-                content = content[4:]
-        report_data = json.loads(content.strip())
+        content = extract_json(response.content)
+        report_data = json.loads(content)
+        report_data = validate_report_output(report_data)
 
         # Count by severity
         risk_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}

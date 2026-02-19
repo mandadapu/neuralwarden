@@ -9,6 +9,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from models.log_entry import LogEntry
 from models.threat import Threat
 from pipeline.metrics import AgentTimer
+from pipeline.security import extract_json, validate_threat_output, wrap_user_data
 from pipeline.state import PipelineState
 
 MODEL = "claude-sonnet-4-5-20250929"
@@ -102,19 +103,16 @@ def run_validate(state: PipelineState) -> dict:
                     content=(
                         f"Review this sample of {len(sample)} log entries that were marked as clean "
                         f"(no threats detected). {detected_summary}\n\n"
-                        f"## Clean Log Sample\n{log_text}\n\n"
+                        f"## Clean Log Sample\n{wrap_user_data(log_text, 'clean_log_sample')}\n\n"
                         f"Are there any threats the primary system missed?"
                     )
                 ),
             ])
             timer.record_usage(response)
 
-        content = response.content
-        if "```" in content:
-            content = content.split("```")[1]
-            if content.startswith("json"):
-                content = content[4:]
-        findings_data = json.loads(content.strip())
+        content = extract_json(response.content)
+        findings_data = json.loads(content)
+        findings_data = validate_threat_output(findings_data)
 
         new_threats = []
         validator_findings = []

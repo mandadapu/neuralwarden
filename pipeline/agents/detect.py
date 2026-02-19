@@ -8,6 +8,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from models.log_entry import LogEntry
 from models.threat import Threat
 from pipeline.metrics import AgentTimer
+from pipeline.security import extract_json, validate_threat_output, wrap_user_data
 from pipeline.state import PipelineState
 from rules.detection import run_all_rules
 
@@ -94,7 +95,7 @@ def run_detect(state: PipelineState) -> dict:
                 HumanMessage(
                     content=(
                         f"Analyze these {len(valid_logs)} parsed log entries for threats.\n\n"
-                        f"## Parsed Logs\n{log_text}\n\n"
+                        f"## Parsed Logs\n{wrap_user_data(log_text)}\n\n"
                         f"## Already Detected by Rules\n{rule_text}\n\n"
                         "Find any ADDITIONAL threats that rules missed."
                     )
@@ -102,12 +103,9 @@ def run_detect(state: PipelineState) -> dict:
             ])
             timer.record_usage(response)
 
-        content = response.content
-        if "```" in content:
-            content = content.split("```")[1]
-            if content.startswith("json"):
-                content = content[4:]
-        ai_results = json.loads(content.strip())
+        content = extract_json(response.content)
+        ai_results = json.loads(content)
+        ai_results = validate_threat_output(ai_results)
 
         for entry in ai_results:
             ai_threats.append(

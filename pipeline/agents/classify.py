@@ -7,6 +7,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from models.threat import ClassifiedThreat, Threat
 from pipeline.metrics import AgentTimer
+from pipeline.security import extract_json, validate_classification_output
 from pipeline.state import PipelineState
 from pipeline.vector_store import format_threat_intel_context
 
@@ -102,12 +103,9 @@ def run_classify(state: PipelineState) -> dict:
             ])
             timer.record_usage(response)
 
-        content = response.content
-        if "```" in content:
-            content = content.split("```")[1]
-            if content.startswith("json"):
-                content = content[4:]
-        classifications = json.loads(content.strip())
+        content = extract_json(response.content)
+        classifications = json.loads(content)
+        classifications = validate_classification_output(classifications)
 
         # Build lookup for AI classifications
         class_map = {c["threat_id"]: c for c in classifications}

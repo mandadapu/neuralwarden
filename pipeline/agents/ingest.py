@@ -7,6 +7,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from models.log_entry import LogEntry
 from pipeline.metrics import AgentTimer
+from pipeline.security import extract_json, sanitize_logs, wrap_user_data
 from pipeline.state import PipelineState
 
 MODEL = "claude-haiku-4-5-20251001"
@@ -38,9 +39,10 @@ def run_ingest(state: PipelineState) -> dict:
             "total_count": 0,
         }
 
-    # Batch logs into a single prompt for efficiency
+    # Sanitize and batch logs into a single prompt
+    safe_logs = sanitize_logs(raw_logs)
     numbered_logs = "\n".join(
-        f"[{i}] {line}" for i, line in enumerate(raw_logs)
+        f"[{i}] {line}" for i, line in enumerate(safe_logs)
     )
 
     llm = ChatAnthropic(
@@ -53,17 +55,12 @@ def run_ingest(state: PipelineState) -> dict:
         with AgentTimer("ingest", MODEL) as timer:
             response = llm.invoke([
                 SystemMessage(content=SYSTEM_PROMPT),
-                HumanMessage(content=f"Parse these {len(raw_logs)} log lines:\n\n{numbered_logs}"),
+                HumanMessage(content=f"Parse these {len(raw_logs)} log lines:\n\n{wrap_user_data(numbered_logs)}"),
             ])
             timer.record_usage(response)
 
-        content = response.content
-        # Extract JSON from response (handle markdown code blocks)
-        if "```" in content:
-            content = content.split("```")[1]
-            if content.startswith("json"):
-                content = content[4:]
-        parsed_data = json.loads(content.strip())
+        content = extract_json(response.content)
+        parsed_data = json.loads(content)
 
         parsed_logs: list[LogEntry] = []
         for i, entry in enumerate(parsed_data):
