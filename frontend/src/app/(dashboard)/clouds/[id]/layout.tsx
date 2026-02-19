@@ -107,7 +107,11 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
     if (evt === "discovered") return `Discovered ${scanProgress.total_assets ?? 0} assets`;
     if (evt === "routing") return `Routing ${scanProgress.total_assets ?? 0} assets (${scanProgress.public_count ?? 0} public, ${scanProgress.private_count ?? 0} private)`;
     if (evt === "scanned") return `Scanned ${scanProgress.assets_scanned ?? 0} assets — running threat analysis...`;
-    if (evt === "complete") return `Scan complete: ${scanProgress.asset_count ?? 0} assets, ${scanProgress.issue_count ?? 0} issues found`;
+    if (evt === "complete") {
+      const exploits = scanProgress.active_exploits_detected ?? 0;
+      const base = `Scan complete: ${scanProgress.asset_count ?? 0} assets, ${scanProgress.issue_count ?? 0} issues found`;
+      return exploits > 0 ? `${base} — ${exploits} active exploit${exploits !== 1 ? "s" : ""} detected!` : base;
+    }
     if (evt === "error") return `Error: ${scanProgress.message ?? "Unknown error"}`;
     return `${evt}...`;
   }

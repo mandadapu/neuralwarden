@@ -17,6 +17,7 @@ from pipeline.cloud_scan_state import ScanAgentState
 from pipeline.agents.cloud_router import router_node
 from pipeline.agents.active_scanner import active_scanner_node
 from pipeline.agents.log_analyzer import log_analyzer_node
+from pipeline.agents.correlation_engine import correlate_findings
 
 logger = logging.getLogger(__name__)
 
@@ -91,16 +92,22 @@ def dispatch_agents(state: ScanAgentState) -> list[Send] | str:
 
 
 def aggregate_node(state: ScanAgentState) -> dict:
-    """Merge results from all scanner agents."""
+    """Merge results from all scanner agents and run correlation engine."""
     scanned = state.get("scanned_assets", [])
     public_count = sum(1 for s in scanned if s.get("route") == "active")
-    private_count = sum(1 for s in scanned if s.get("route") == "log")
     scan_type = "full" if public_count > 0 else "cloud_logging_only"
+
+    # Cross-reference scanner findings with log activity
+    scan_issues = state.get("scan_issues", [])
+    log_lines = state.get("log_lines", [])
+    correlated_issues, active_count = correlate_findings(scan_issues, log_lines)
 
     return {
         "scan_status": "scanned",
         "assets_scanned": len(scanned),
         "scan_type": scan_type,
+        "correlated_issues": correlated_issues,
+        "active_exploits_detected": active_count,
     }
 
 

@@ -174,6 +174,7 @@ export interface ScanStreamEvent {
   private_count?: number;
   asset_count?: number;
   issue_count?: number;
+  active_exploits_detected?: number;
   issue_counts?: IssueCounts;
   has_report?: boolean;
   message?: string;

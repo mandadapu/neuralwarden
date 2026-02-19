@@ -48,6 +48,10 @@ class ScanAgentState(TypedDict, total=False):
     report: IncidentReport | None
     agent_metrics: dict[str, dict[str, Any]]
 
+    # ── Correlation ──
+    correlated_issues: list[dict]
+    active_exploits_detected: int
+
     # ── Metadata ──
     error: str | None
     scan_type: str  # "full" or "cloud_logging_only"

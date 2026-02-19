@@ -208,10 +208,11 @@ async def trigger_scan(cloud_id: str):
             # Get final state — last event from stream
             final = event
 
-            # Save results to database
+            # Save results to database — prefer correlated issues over raw
             clear_cloud_issues(cloud_id)
-            issues = final.get("scan_issues", [])
+            issues = final.get("correlated_issues") or final.get("scan_issues", [])
             assets = final.get("discovered_assets", [])
+            active_exploits = final.get("active_exploits_detected", 0)
             if assets:
                 save_cloud_assets(cloud_id, assets)
             if issues:
@@ -227,6 +228,7 @@ async def trigger_scan(cloud_id: str):
                     "scan_type": final.get("scan_type", "unknown"),
                     "asset_count": len(assets),
                     "issue_count": len(issues),
+                    "active_exploits_detected": active_exploits,
                     "issue_counts": get_issue_counts(cloud_id),
                     "has_report": final.get("report") is not None,
                 })
