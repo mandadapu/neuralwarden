@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useAnalysisContext } from "@/context/AnalysisContext";
 import Topbar from "@/components/Topbar";
 import SummaryCards from "@/components/SummaryCards";
-import LogInput from "@/components/LogInput";
 import PipelineProgress from "@/components/PipelineProgress";
 import ThreatsTable from "@/components/ThreatsTable";
 import HitlReviewPanel from "@/components/HitlReviewPanel";
@@ -60,14 +59,6 @@ export default function DashboardPage() {
       <Topbar />
 
       <SummaryCards summary={result?.summary ?? null} />
-
-      <LogInput
-        value={logText}
-        onChange={setLogText}
-        onAnalyze={() => runAnalysis(logText)}
-        isLoading={isLoading}
-        skipIngest={skipIngest}
-      />
 
       {isLoading && pipelineProgress.length > 0 && (
         <PipelineProgress stages={pipelineProgress} />
