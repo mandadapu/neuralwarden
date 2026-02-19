@@ -164,3 +164,17 @@ export interface ScanResult {
   issue_count: number;
   issue_counts: IssueCounts;
 }
+
+export interface ScanStreamEvent {
+  event: string;
+  total_assets?: number;
+  assets_scanned?: number;
+  scan_type?: string;
+  public_count?: number;
+  private_count?: number;
+  asset_count?: number;
+  issue_count?: number;
+  issue_counts?: IssueCounts;
+  has_report?: boolean;
+  message?: string;
+}

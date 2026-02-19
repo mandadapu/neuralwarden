@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import Topbar from "@/components/Topbar";
 import CloudConfigModal from "@/components/CloudConfigModal";
-import { getCloud, scanCloud } from "@/lib/api";
-import type { CloudAccount, ScanResult } from "@/lib/types";
+import { getCloud, scanCloudStream } from "@/lib/api";
+import type { CloudAccount, ScanStreamEvent } from "@/lib/types";
 
 interface CloudContextValue {
   cloud: CloudAccount | null;
@@ -52,7 +52,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
-  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [scanProgress, setScanProgress] = useState<ScanStreamEvent | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
 
   const loadCloud = useCallback(async () => {
@@ -73,11 +73,12 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
 
   async function handleScan() {
     setScanning(true);
-    setScanResult(null);
+    setScanProgress(null);
+    setError(null);
     try {
-      const result = await scanCloud(id);
-      setScanResult(result);
-      // Refresh cloud data after scan
+      await scanCloudStream(id, (event) => {
+        setScanProgress(event);
+      });
       await loadCloud();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Scan failed");
@@ -98,6 +99,21 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
 
   const basePath = `/clouds/${id}`;
   const totalIssues = cloud?.issue_counts?.total ?? 0;
+
+  function progressMessage(): string {
+    if (!scanProgress) return "Starting scan...";
+    const evt = scanProgress.event;
+    if (evt === "starting") return "Initializing scan...";
+    if (evt === "discovered") return `Discovered ${scanProgress.total_assets ?? 0} assets`;
+    if (evt === "routing") return `Routing ${scanProgress.total_assets ?? 0} assets (${scanProgress.public_count ?? 0} public, ${scanProgress.private_count ?? 0} private)`;
+    if (evt === "scanned") return `Scanned ${scanProgress.assets_scanned ?? 0} assets — running threat analysis...`;
+    if (evt === "complete") return `Scan complete: ${scanProgress.asset_count ?? 0} assets, ${scanProgress.issue_count ?? 0} issues found`;
+    if (evt === "error") return `Error: ${scanProgress.message ?? "Unknown error"}`;
+    return `${evt}...`;
+  }
+
+  const isComplete = scanProgress?.event === "complete";
+  const isError = scanProgress?.event === "error";
 
   return (
     <CloudContext.Provider value={{ cloud, loading, refresh: loadCloud }}>
@@ -169,18 +185,38 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
               </div>
             </div>
 
-            {/* Scan result notification */}
-            {scanResult && (
-              <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm flex items-center justify-between">
-                <span>
-                  Scan complete: found {scanResult.asset_count} assets and {scanResult.issue_count} issues across{" "}
-                  {scanResult.scanned_services.length} services.
-                </span>
-                <button onClick={() => setScanResult(null)} className="text-emerald-500 hover:text-emerald-700">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M18 6L6 18M6 6l12 12" />
-                  </svg>
-                </button>
+            {/* Scan progress panel */}
+            {(scanning || scanProgress) && (
+              <div className={`mb-4 p-4 rounded-xl border text-sm flex items-center justify-between ${
+                isError
+                  ? "bg-red-50 border-red-200 text-red-700"
+                  : isComplete
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                  : "bg-blue-50 border-blue-200 text-blue-700"
+              }`}>
+                <div className="flex items-center gap-3">
+                  {scanning && !isComplete && !isError && (
+                    <div className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+                  )}
+                  {isComplete && (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-emerald-600">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
+                  <span>{progressMessage()}</span>
+                  {scanProgress && !isComplete && !isError && scanProgress.public_count !== undefined && (
+                    <span className="ml-2 text-xs opacity-70">
+                      ({scanProgress.public_count} public, {scanProgress.private_count} private)
+                    </span>
+                  )}
+                </div>
+                {(isComplete || isError) && (
+                  <button onClick={() => setScanProgress(null)} className="opacity-60 hover:opacity-100">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
               </div>
             )}
 

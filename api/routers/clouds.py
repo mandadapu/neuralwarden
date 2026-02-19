@@ -152,43 +152,92 @@ async def delete_cloud(cloud_id: str):
 
 @router.post("/{cloud_id}/scan")
 async def trigger_scan(cloud_id: str):
-    """Trigger a compliance scan for a cloud account."""
+    """Trigger a scan via the super agent with SSE streaming."""
+    from sse_starlette.sse import EventSourceResponse
+
     account = get_cloud_account(cloud_id)
     if not account:
         raise HTTPException(status_code=404, detail="Cloud account not found")
-
-    from api.gcp_scanner import run_scan
 
     services = account.get("services", "[]")
     if isinstance(services, str):
         services = json.loads(services)
 
-    result = await asyncio.to_thread(
-        run_scan,
-        account["project_id"],
-        account.get("credentials_json", ""),
-        services,
-    )
+    async def scan_generator():
+        from pipeline.cloud_scan_graph import build_scan_pipeline
 
-    # Clear old issues and save new scan results
-    clear_cloud_issues(cloud_id)
-    if result.get("assets"):
-        save_cloud_assets(cloud_id, result["assets"])
-    if result.get("issues"):
-        save_cloud_issues(cloud_id, result["issues"])
+        graph = build_scan_pipeline()
 
-    # Update last_scan_at
-    update_cloud_account(
-        cloud_id,
-        last_scan_at=datetime.now(timezone.utc).isoformat(),
-    )
+        initial_state = {
+            "cloud_account_id": cloud_id,
+            "project_id": account["project_id"],
+            "credentials_json": account.get("credentials_json", ""),
+            "enabled_services": services,
+            "discovered_assets": [],
+            "public_assets": [],
+            "private_assets": [],
+            "scan_issues": [],
+            "log_lines": [],
+            "scanned_assets": [],
+            "scan_status": "starting",
+            "assets_scanned": 0,
+            "total_assets": 0,
+        }
 
-    return {
-        "scan_type": result.get("scan_type", "unknown"),
-        "scanned_services": result.get("scanned_services", []),
-        "asset_count": result.get("asset_count", 0),
-        "issue_count": result.get("issue_count", 0),
-    }
+        prev_status = ""
+        event = {}
+        try:
+            for event in await asyncio.to_thread(
+                lambda: list(graph.stream(initial_state, stream_mode="values"))
+            ):
+                status = event.get("scan_status", "")
+                if status != prev_status:
+                    prev_status = status
+                    yield {
+                        "data": json.dumps({
+                            "event": status,
+                            "total_assets": event.get("total_assets", 0),
+                            "assets_scanned": event.get("assets_scanned", 0),
+                            "scan_type": event.get("scan_type", ""),
+                            "public_count": len(event.get("public_assets", [])),
+                            "private_count": len(event.get("private_assets", [])),
+                        })
+                    }
+
+            # Get final state — last event from stream
+            final = event
+
+            # Save results to database
+            clear_cloud_issues(cloud_id)
+            issues = final.get("scan_issues", [])
+            assets = final.get("discovered_assets", [])
+            if assets:
+                save_cloud_assets(cloud_id, assets)
+            if issues:
+                save_cloud_issues(cloud_id, issues)
+            update_cloud_account(
+                cloud_id,
+                last_scan_at=datetime.now(timezone.utc).isoformat(),
+            )
+
+            yield {
+                "data": json.dumps({
+                    "event": "complete",
+                    "scan_type": final.get("scan_type", "unknown"),
+                    "asset_count": len(assets),
+                    "issue_count": len(issues),
+                    "issue_counts": get_issue_counts(cloud_id),
+                    "has_report": final.get("report") is not None,
+                })
+            }
+
+        except Exception as e:
+            logger.exception("Scan failed")
+            yield {
+                "data": json.dumps({"event": "error", "message": str(e)})
+            }
+
+    return EventSourceResponse(scan_generator())
 
 
 # --------------- Issues ---------------

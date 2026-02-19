@@ -8,6 +8,7 @@ import type {
   CloudIssue,
   CloudCheck,
   ScanResult,
+  ScanStreamEvent,
 } from "./types";
 
 const BASE =
@@ -272,6 +273,43 @@ export async function scanCloud(id: string): Promise<ScanResult> {
   });
   if (!res.ok) throw new Error(`Scan failed: ${res.statusText}`);
   return res.json();
+}
+
+export async function scanCloudStream(
+  cloudId: string,
+  onEvent: (event: ScanStreamEvent) => void
+): Promise<void> {
+  const res = await fetch(`${BASE}/clouds/${cloudId}/scan`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Scan failed: ${res.statusText}`);
+  if (!res.body) throw new Error("No response body");
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("data: ")) {
+        try {
+          const data = JSON.parse(trimmed.slice(6));
+          onEvent(data);
+        } catch {
+          // skip unparseable lines
+        }
+      }
+    }
+  }
 }
 
 export async function listCloudIssues(
