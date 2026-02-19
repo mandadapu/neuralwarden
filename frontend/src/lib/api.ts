@@ -1,4 +1,14 @@
-import type { AnalysisResponse, ReportSummary, SampleInfo, SampleContent } from "./types";
+import type {
+  AnalysisResponse,
+  ReportSummary,
+  SampleInfo,
+  SampleContent,
+  CloudAccount,
+  CloudAsset,
+  CloudIssue,
+  CloudCheck,
+  ScanResult,
+} from "./types";
 
 const BASE =
   typeof window !== "undefined"
@@ -201,4 +211,120 @@ export async function fetchGcpLogs(
     throw new Error(body.detail || `GCP fetch failed: ${res.statusText}`);
   }
   return res.json();
+}
+
+// --- Cloud Monitoring ---
+
+export async function listClouds(): Promise<CloudAccount[]> {
+  const res = await fetch(`${BASE}/clouds`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Failed to list clouds: ${res.statusText}`);
+  const data = await res.json();
+  return data.accounts;
+}
+
+export async function createCloud(cloud: {
+  name: string;
+  project_id: string;
+  purpose?: string;
+  credentials_json?: string;
+  services?: string[];
+}): Promise<CloudAccount> {
+  const res = await fetch(`${BASE}/clouds`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(cloud),
+  });
+  if (!res.ok) throw new Error(`Failed to create cloud: ${res.statusText}`);
+  return res.json();
+}
+
+export async function getCloud(id: string): Promise<CloudAccount> {
+  const res = await fetch(`${BASE}/clouds/${id}`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Failed to get cloud: ${res.statusText}`);
+  return res.json();
+}
+
+export async function updateCloud(
+  id: string,
+  updates: Partial<Pick<CloudAccount, "name" | "purpose" | "services">> & { credentials_json?: string }
+): Promise<CloudAccount> {
+  const res = await fetch(`${BASE}/clouds/${id}`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) throw new Error(`Failed to update cloud: ${res.statusText}`);
+  return res.json();
+}
+
+export async function deleteCloud(id: string): Promise<void> {
+  const res = await fetch(`${BASE}/clouds/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to delete cloud: ${res.statusText}`);
+}
+
+export async function scanCloud(id: string): Promise<ScanResult> {
+  const res = await fetch(`${BASE}/clouds/${id}/scan`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Scan failed: ${res.statusText}`);
+  return res.json();
+}
+
+export async function listCloudIssues(
+  cloudId: string,
+  status?: string,
+  severity?: string
+): Promise<CloudIssue[]> {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  if (severity) params.set("severity", severity);
+  const res = await fetch(`${BASE}/clouds/${cloudId}/issues?${params}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to list issues: ${res.statusText}`);
+  const data = await res.json();
+  return data.issues;
+}
+
+export async function updateIssueStatus(
+  issueId: string,
+  status: string
+): Promise<void> {
+  const res = await fetch(`${BASE}/clouds/issues/${issueId}`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error(`Failed to update issue: ${res.statusText}`);
+}
+
+export async function listCloudAssets(
+  cloudId: string,
+  assetType?: string
+): Promise<CloudAsset[]> {
+  const params = new URLSearchParams();
+  if (assetType) params.set("asset_type", assetType);
+  const res = await fetch(`${BASE}/clouds/${cloudId}/assets?${params}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to list assets: ${res.statusText}`);
+  const data = await res.json();
+  return data.assets;
+}
+
+export async function listCloudChecks(
+  category?: string
+): Promise<CloudCheck[]> {
+  const params = new URLSearchParams();
+  if (category) params.set("category", category);
+  const res = await fetch(`${BASE}/clouds/checks?${params}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to list checks: ${res.statusText}`);
+  const data = await res.json();
+  return data.checks;
 }
