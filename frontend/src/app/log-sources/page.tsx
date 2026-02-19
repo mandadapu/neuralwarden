@@ -1,13 +1,81 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
 import PageShell from "@/components/PageShell";
 
 const SOURCES = [
   { name: "Firewall Logs", type: "Network", status: "Active", events: "12.4K/day" },
   { name: "SSH Auth Logs", type: "Authentication", status: "Active", events: "3.2K/day" },
   { name: "Syslog (Linux)", type: "System", status: "Active", events: "8.7K/day" },
-  { name: "Web Access Logs", type: "Application", status: "Paused", events: "—" },
+  { name: "Web Access Logs", type: "Application", status: "Paused", events: "---" },
 ];
 
+function getApiBase() {
+  if (typeof window === "undefined") return "http://localhost:8000/api";
+  return `${window.location.protocol}//${window.location.hostname}:8000/api`;
+}
+
 export default function LogSourcesPage() {
+  const [watchDir, setWatchDir] = useState("./watch");
+  const [running, setRunning] = useState(false);
+  const [currentDir, setCurrentDir] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`${getApiBase()}/watcher/status`);
+      if (res.ok) {
+        const data = await res.json();
+        setRunning(data.running);
+        setCurrentDir(data.watch_dir);
+      }
+    } catch {
+      // API not reachable — leave defaults
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStatus();
+  }, [fetchStatus]);
+
+  const handleStart = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${getApiBase()}/watcher/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ watch_dir: watchDir }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRunning(data.running);
+        setCurrentDir(data.watch_dir);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStop = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${getApiBase()}/watcher/stop`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRunning(data.running);
+        setCurrentDir(data.watch_dir);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <PageShell
       title="Log Sources"
@@ -18,6 +86,7 @@ export default function LogSourcesPage() {
         </svg>
       }
     >
+      {/* Sources Table */}
       <div className="mt-6 bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -47,6 +116,62 @@ export default function LogSourcesPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* File Watcher Card */}
+      <div className="mt-6 bg-white rounded-xl border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-base font-semibold text-[#1a1a2e]">File Watcher</h3>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Auto-triggers pipeline analysis when log files appear in a watched directory
+            </p>
+          </div>
+          <span className={`px-2.5 py-1 rounded-md text-xs font-semibold ${
+            running
+              ? "bg-green-50 text-green-700 border border-green-200"
+              : "bg-gray-50 text-gray-500 border border-gray-200"
+          }`}>
+            {running ? "Running" : "Stopped"}
+          </span>
+        </div>
+
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <label htmlFor="watch-dir" className="block text-sm font-medium text-gray-700 mb-1">
+              Watch Directory
+            </label>
+            <input
+              id="watch-dir"
+              type="text"
+              value={watchDir}
+              onChange={(e) => setWatchDir(e.target.value)}
+              disabled={running}
+              placeholder="./watch"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
+            />
+            {currentDir && running && (
+              <p className="text-xs text-gray-400 mt-1">Watching: {currentDir}</p>
+            )}
+          </div>
+          {running ? (
+            <button
+              onClick={handleStop}
+              disabled={loading}
+              className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
+              {loading ? "Stopping..." : "Stop"}
+            </button>
+          ) : (
+            <button
+              onClick={handleStart}
+              disabled={loading || !watchDir.trim()}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {loading ? "Starting..." : "Start"}
+            </button>
+          )}
+        </div>
       </div>
     </PageShell>
   );

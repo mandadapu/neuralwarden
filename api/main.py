@@ -4,12 +4,23 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import os
+
+# LangSmith tracing (optional — enable by setting LANGSMITH_API_KEY)
+if os.getenv("LANGSMITH_API_KEY"):
+    os.environ.setdefault("LANGCHAIN_TRACING_V2", "true")
+    os.environ.setdefault("LANGCHAIN_PROJECT", os.getenv("LANGCHAIN_PROJECT", "neuralwarden-pipeline"))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routers import analyze, hitl, samples
+from api.database import init_db
+from api.routers import analyze, export, generator, hitl, reports, samples, stream, watcher
 
 app = FastAPI(title="NeuralWarden API", version="2.0.0")
+
+# Initialize SQLite database on startup
+init_db()
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,8 +31,13 @@ app.add_middleware(
 )
 
 app.include_router(analyze.router)
+app.include_router(export.router)
+app.include_router(generator.router)
 app.include_router(hitl.router)
+app.include_router(reports.router)
 app.include_router(samples.router)
+app.include_router(stream.router)
+app.include_router(watcher.router)
 
 
 @app.get("/api/health")

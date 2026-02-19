@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { SampleInfo } from "@/lib/types";
-import { listSamples, getSample } from "@/lib/api";
+import { listSamples, getSample, listScenarios, generateLogs, type Scenario } from "@/lib/api";
 
 export default function LogInput({
   value,
@@ -16,10 +16,15 @@ export default function LogInput({
   isLoading: boolean;
 }) {
   const [samples, setSamples] = useState<SampleInfo[]>([]);
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
     listSamples()
       .then(setSamples)
+      .catch(() => {});
+    listScenarios()
+      .then(setScenarios)
       .catch(() => {});
   }, []);
 
@@ -31,6 +36,21 @@ export default function LogInput({
       onChange(sample.content);
     } catch {
       /* ignore */
+    }
+  };
+
+  const handleGenerate = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const scenario = e.target.value;
+    if (!scenario) return;
+    e.target.value = "";
+    setGenerating(true);
+    try {
+      const logs = await generateLogs(scenario, 50, 0.3);
+      onChange(logs);
+    } catch {
+      /* ignore */
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -46,7 +66,7 @@ export default function LogInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
-      <div className="flex items-center gap-3 mt-3">
+      <div className="flex items-center gap-3 mt-3 flex-wrap">
         <select
           className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
           defaultValue=""
@@ -59,6 +79,21 @@ export default function LogInput({
             </option>
           ))}
         </select>
+        {scenarios.length > 0 && (
+          <select
+            className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+            defaultValue=""
+            onChange={handleGenerate}
+            disabled={generating}
+          >
+            <option value="">{generating ? "Generating..." : "Generate Attack..."}</option>
+            {scenarios.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        )}
         <button
           onClick={onAnalyze}
           disabled={isLoading || !value.trim()}
@@ -76,6 +111,12 @@ export default function LogInput({
             "Analyze Threats"
           )}
         </button>
+        <span className="inline-flex items-center gap-1 text-xs text-green-600 ml-1">
+          <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fillRule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clipRule="evenodd" />
+          </svg>
+          PII auto-redacted
+        </span>
       </div>
     </div>
   );

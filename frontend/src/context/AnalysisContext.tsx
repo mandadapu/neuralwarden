@@ -2,13 +2,16 @@
 
 import { createContext, useContext, useState, useCallback, useEffect } from "react";
 import type { AnalysisResponse, ClassifiedThreat } from "@/lib/types";
-import { analyze, resumeHitl } from "@/lib/api";
+import type { StageProgress } from "@/components/PipelineProgress";
+import { analyzeStream, type StreamEvent } from "@/lib/api";
+import { resumeHitl } from "@/lib/api";
 
 interface AnalysisContextType {
   isLoading: boolean;
   result: AnalysisResponse | null;
   error: string | null;
   logText: string;
+  pipelineProgress: StageProgress[];
   snoozedThreats: ClassifiedThreat[];
   ignoredThreats: ClassifiedThreat[];
   solvedThreats: ClassifiedThreat[];
@@ -31,6 +34,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const [result, setResult] = useState<AnalysisResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [logText, setLogText] = useState("");
+  const [pipelineProgress, setPipelineProgress] = useState<StageProgress[]>([]);
   const [snoozedThreats, setSnoozedThreats] = useState<ClassifiedThreat[]>([]);
   const [ignoredThreats, setIgnoredThreats] = useState<ClassifiedThreat[]>([]);
   const [solvedThreats, setSolvedThreats] = useState<ClassifiedThreat[]>([]);
@@ -60,18 +64,45 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, [result, logText, snoozedThreats, ignoredThreats, solvedThreats]);
 
+  const STAGES = ["ingest", "detect", "validate", "classify", "report"];
+
   const runAnalysis = useCallback(async (logs: string) => {
     setIsLoading(true);
     setError(null);
     setSnoozedThreats([]);
     setIgnoredThreats([]);
     setSolvedThreats([]);
+    setPipelineProgress(STAGES.map((s) => ({ stage: s, status: "pending" as const })));
     try {
-      const data = await analyze(logs);
-      if (data.status === "error") {
-        setError(data.error ?? "Unknown error");
-      }
-      setResult(data);
+      await analyzeStream(logs, (event: StreamEvent) => {
+        if (event.event === "agent_start") {
+          setPipelineProgress((prev) =>
+            prev.map((s) =>
+              s.stage === event.stage ? { ...s, status: "running" } : s
+            )
+          );
+        } else if (event.event === "agent_complete") {
+          setPipelineProgress((prev) =>
+            prev.map((s) =>
+              s.stage === event.stage
+                ? { ...s, status: "complete", elapsed_s: event.elapsed_s, cost_usd: event.cost_usd }
+                : s
+            )
+          );
+        } else if (event.event === "complete" || event.event === "hitl_required") {
+          const data = event.response as AnalysisResponse;
+          if (data.status === "error") {
+            setError(data.error ?? "Unknown error");
+          }
+          setResult(data);
+          // Mark all stages complete
+          setPipelineProgress((prev) =>
+            prev.map((s) => (s.status !== "complete" ? { ...s, status: "complete" as const } : s))
+          );
+        } else if (event.event === "error") {
+          setError(event.error ?? "Pipeline error");
+        }
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -159,7 +190,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   return (
     <AnalysisContext.Provider
       value={{
-        isLoading, result, error, logText, snoozedThreats, ignoredThreats, solvedThreats,
+        isLoading, result, error, logText, pipelineProgress, snoozedThreats, ignoredThreats, solvedThreats,
         setLogText, runAnalysis, resume, updateThreat, snoozeThreat, ignoreThreat, solveThreat, restoreThreat,
       }}
     >

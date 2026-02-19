@@ -183,7 +183,17 @@ def run_analysis(logs: str) -> AnalysisResponse:
         # Normal completion
         elapsed = time.time() - start
         classified = result.get("classified_threats", [])
-        return AnalysisResponse(
+
+        # Notify Slack of critical threats
+        from pipeline.notifications import notify_critical_threats
+        critical = [ct for ct in classified if ct.risk == "critical"]
+        if critical:
+            notify_critical_threats(
+                [{"type": ct.type, "risk_score": ct.risk_score, "source_ip": ct.source_ip, "description": ct.description} for ct in critical],
+                report_summary=result.get("report").summary if result.get("report") else "",
+            )
+
+        response = AnalysisResponse(
             thread_id=None,
             status="completed",
             summary=_build_summary(result, len(classified)),
@@ -193,6 +203,16 @@ def run_analysis(logs: str) -> AnalysisResponse:
             agent_metrics=_serialize_metrics(result.get("agent_metrics", {})),
             pipeline_time=elapsed,
         )
+
+        # Persist to report history
+        try:
+            from api.database import save_analysis
+            analysis_id = save_analysis(response.model_dump())
+            response.analysis_id = analysis_id
+        except Exception:
+            pass
+
+        return response
 
     except Exception as e:
         return AnalysisResponse(

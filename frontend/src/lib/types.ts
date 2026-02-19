@@ -64,6 +64,7 @@ export interface Summary {
 }
 
 export interface AnalysisResponse {
+  analysis_id: string | null;
   thread_id: string | null;
   status: "completed" | "hitl_required" | "error";
   summary: Summary;
@@ -84,4 +85,16 @@ export interface SampleContent {
   id: string;
   name: string;
   content: string;
+}
+
+export interface ReportSummary {
+  id: string;
+  created_at: string;
+  status: string;
+  log_count: number;
+  threat_count: number;
+  critical_count: number;
+  pipeline_time: number;
+  pipeline_cost: number;
+  summary: string;
 }

@@ -111,3 +111,33 @@ def validate_report_output(parsed: dict) -> dict:
     if "summary" not in parsed or not isinstance(parsed["summary"], str):
         parsed["summary"] = "Report generated but summary was missing."
     return parsed
+
+
+# ---------------------------------------------------------------------------
+# PII masking
+# ---------------------------------------------------------------------------
+
+# PII patterns for redaction
+_PII_PATTERNS = [
+    # SSN: 123-45-6789 (but NOT IP addresses like 192.168.1.1)
+    (re.compile(r'\b\d{3}-\d{2}-\d{4}\b'), '[SSN-REDACTED]'),
+    # Credit card: 16 digits with optional dashes/spaces
+    (re.compile(r'\b(?:\d{4}[-\s]?){3}\d{4}\b'), '[CC-REDACTED]'),
+    # Email addresses
+    (re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'), '[EMAIL-REDACTED]'),
+    # US Phone: (555) 123-4567, 555-123-4567, +1-555-123-4567
+    # Uses [-\s] separators (not dots) to avoid matching IP addresses
+    (re.compile(r'(?<!\d)(?:\+1[-\s]?)?(?:\(?[2-9]\d{2}\)?[-\s]?)\d{3}[-\s]\d{4}(?!\d)'), '[PHONE-REDACTED]'),
+]
+
+
+def mask_pii(text: str) -> str:
+    """Redact PII patterns (SSN, credit card, email, phone) from text."""
+    for pattern, replacement in _PII_PATTERNS:
+        text = pattern.sub(replacement, text)
+    return text
+
+
+def mask_pii_logs(raw_logs: list[str]) -> list[str]:
+    """Apply PII masking to a batch of raw log lines."""
+    return [mask_pii(line) for line in raw_logs]

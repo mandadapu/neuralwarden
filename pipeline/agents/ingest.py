@@ -7,7 +7,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from models.log_entry import LogEntry
 from pipeline.metrics import AgentTimer
-from pipeline.security import extract_json, sanitize_logs, wrap_user_data
+from pipeline.security import extract_json, mask_pii_logs, sanitize_logs, wrap_user_data
 from pipeline.state import PipelineState
 
 MODEL = "claude-haiku-4-5-20251001"
@@ -41,6 +41,7 @@ def run_ingest(state: PipelineState) -> dict:
 
     # Sanitize and batch logs into a single prompt
     safe_logs = sanitize_logs(raw_logs)
+    safe_logs = mask_pii_logs(safe_logs)
     numbered_logs = "\n".join(
         f"[{i}] {line}" for i, line in enumerate(safe_logs)
     )

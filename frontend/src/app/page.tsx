@@ -5,6 +5,7 @@ import { useAnalysisContext } from "@/context/AnalysisContext";
 import Topbar from "@/components/Topbar";
 import SummaryCards from "@/components/SummaryCards";
 import LogInput from "@/components/LogInput";
+import PipelineProgress from "@/components/PipelineProgress";
 import ThreatsTable from "@/components/ThreatsTable";
 import HitlReviewPanel from "@/components/HitlReviewPanel";
 import CostBreakdown from "@/components/CostBreakdown";
@@ -14,7 +15,7 @@ import ThreatDetailPanel from "@/components/ThreatDetailPanel";
 export default function DashboardPage() {
   const [selectedThreatIndex, setSelectedThreatIndex] = useState<number | null>(null);
   const {
-    isLoading, result, error, logText, setLogText, runAnalysis, resume,
+    isLoading, result, error, logText, pipelineProgress, setLogText, runAnalysis, resume,
     updateThreat, snoozeThreat, ignoreThreat,
   } = useAnalysisContext();
 
@@ -59,6 +60,10 @@ export default function DashboardPage() {
         isLoading={isLoading}
       />
 
+      {isLoading && pipelineProgress.length > 0 && (
+        <PipelineProgress stages={pipelineProgress} />
+      )}
+
       {error && (
         <div className="mx-7 mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
           {error}
@@ -91,7 +96,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <IncidentReport report={result?.report ?? null} />
+      <IncidentReport report={result?.report ?? null} analysisId={result?.analysis_id} />
 
       {selectedThreat && (
         <ThreatDetailPanel

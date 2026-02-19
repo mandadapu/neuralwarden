@@ -89,6 +89,7 @@ class SummaryResponse(BaseModel):
 
 
 class AnalysisResponse(BaseModel):
+    analysis_id: str | None = None
     thread_id: str | None = None
     status: Literal["completed", "hitl_required", "error"] = "completed"
     summary: SummaryResponse = Field(default_factory=SummaryResponse)
@@ -98,6 +99,18 @@ class AnalysisResponse(BaseModel):
     agent_metrics: dict[str, AgentMetricsResponse] = {}
     pipeline_time: float = 0.0
     error: str | None = None
+
+
+class ReportSummaryResponse(BaseModel):
+    id: str
+    created_at: str
+    status: str
+    log_count: int = 0
+    threat_count: int = 0
+    critical_count: int = 0
+    pipeline_time: float = 0.0
+    pipeline_cost: float = 0.0
+    summary: str = ""
 
 
 class SampleInfo(BaseModel):
