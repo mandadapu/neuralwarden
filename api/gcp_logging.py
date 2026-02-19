@@ -132,12 +132,14 @@ def fetch_logs(
         page_size=max_entries,
     )
 
-    lines = []
+    seen: set[str] = set()
+    lines: list[str] = []
     for entry in entries:
         if len(lines) >= max_entries:
             break
         line = _format_entry(entry)
-        if line:
+        if line and line not in seen:
+            seen.add(line)
             lines.append(line)
 
     return lines

@@ -62,7 +62,7 @@ async def stream_analysis(logs: str, skip_ingest: bool = False) -> AsyncIterator
         logs: Raw security log text (newline-separated).
         skip_ingest: If True, parse logs deterministically and skip LLM ingest.
     """
-    raw_logs = [line.strip() for line in logs.strip().split("\n") if line.strip()]
+    raw_logs = list(dict.fromkeys(line.strip() for line in logs.strip().split("\n") if line.strip()))
     if not raw_logs:
         yield _sse_event("complete", {
             "stage": "complete",

@@ -54,35 +54,34 @@ def run_report(state: PipelineState) -> dict:
             )
         }
 
-    # Build context for the report
+    # Compact threat summary — only fields needed for report generation
     threat_summary = []
     for ct in classified_threats:
-        threat_summary.append({
-            "threat_id": ct.threat_id,
+        entry: dict = {
+            "id": ct.threat_id,
             "type": ct.type,
             "risk": ct.risk,
-            "risk_score": ct.risk_score,
-            "confidence": ct.confidence,
-            "mitre_technique": ct.mitre_technique,
-            "mitre_tactic": ct.mitre_tactic,
-            "description": ct.description,
-            "source_ip": ct.source_ip,
-            "business_impact": ct.business_impact,
-            "affected_systems": ct.affected_systems,
-        })
+            "score": ct.risk_score,
+            "desc": ct.description,
+        }
+        if ct.source_ip:
+            entry["src"] = ct.source_ip
+        if ct.mitre_technique:
+            entry["mitre"] = ct.mitre_technique
+        threat_summary.append(entry)
 
-    # Include relevant log samples for timeline reconstruction (sanitized)
+    # Include only 20 log samples for timeline (reduced from 50)
     log_samples = []
-    for log in parsed_logs[:50]:  # Cap at 50 for context window
+    for log in parsed_logs[:20]:
         if log.is_valid:
-            safe_text = sanitize_log_line(log.raw_text[:200])
+            safe_text = sanitize_log_line(log.raw_text[:150])
             log_samples.append(f"[{log.index}] {log.timestamp} {log.source}: {safe_text}")
 
     try:
         llm = ChatAnthropic(
             model=MODEL,
             temperature=0.3,
-            max_tokens=4096,
+            max_tokens=2048,
         )
 
         with AgentTimer("report", MODEL) as timer:

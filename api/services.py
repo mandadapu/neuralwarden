@@ -127,7 +127,7 @@ def _build_summary(result: dict, classified_count: int) -> SummaryResponse:
 
 def run_analysis(logs: str) -> AnalysisResponse:
     """Run the pipeline synchronously and return the response."""
-    raw_logs = [line.strip() for line in logs.strip().split("\n") if line.strip()]
+    raw_logs = list(dict.fromkeys(line.strip() for line in logs.strip().split("\n") if line.strip()))
     if not raw_logs:
         return AnalysisResponse(
             status="completed",

@@ -109,7 +109,7 @@ def run_ingest(state: PipelineState) -> dict:
     llm = ChatAnthropic(
         model=MODEL,
         temperature=0,
-        max_tokens=8192,
+        max_tokens=4096,
     )
 
     try:

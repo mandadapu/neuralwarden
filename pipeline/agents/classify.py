@@ -68,22 +68,20 @@ def run_classify(state: PipelineState) -> dict:
     if not threats:
         return {"classified_threats": []}
 
-    # Format threats for prompt with RAG enrichment
+    # Format threats compactly — only fields the LLM needs for classification
     threat_data = []
     rag_context: dict[str, str] = {}
     for t in threats:
         entry: dict = {
-            "threat_id": t.threat_id,
+            "id": t.threat_id,
             "type": t.type,
-            "confidence": t.confidence,
-            "method": t.method,
-            "description": t.description,
-            "source_ip": t.source_ip,
-            "source_log_count": len(t.source_log_indices),
+            "desc": t.description,
         }
+        if t.source_ip:
+            entry["src"] = t.source_ip
         intel = format_threat_intel_context(t.description, t.type, t.source_ip)
         if intel:
-            entry["threat_intelligence"] = intel
+            entry["intel"] = intel
             rag_context[t.threat_id] = intel
         threat_data.append(entry)
 
@@ -91,7 +89,7 @@ def run_classify(state: PipelineState) -> dict:
         llm = ChatAnthropic(
             model=MODEL,
             temperature=0.1,
-            max_tokens=4096,
+            max_tokens=2048,
         )
 
         with AgentTimer("classify", MODEL) as timer:

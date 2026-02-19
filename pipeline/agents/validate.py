@@ -81,20 +81,26 @@ def run_validate(state: PipelineState) -> dict:
             "validator_missed_count": 0,
         }
 
-    # Format sample logs for the prompt
+    # Format sample logs compactly — only non-empty fields
     log_text_lines = []
     for log in sample:
-        log_text_lines.append(
-            f"[{log.index}] {log.timestamp} | {log.source} | {log.event_type} | "
-            f"src={log.source_ip} dst={log.dest_ip} user={log.user} | {log.details}"
-        )
+        parts = [f"[{log.index}]", log.timestamp, log.source, log.event_type]
+        if log.source_ip:
+            parts.append(f"src={log.source_ip}")
+        if log.dest_ip:
+            parts.append(f"dst={log.dest_ip}")
+        if log.user:
+            parts.append(f"user={log.user}")
+        if log.details:
+            parts.append(log.details[:150])
+        log_text_lines.append(" ".join(parts))
     log_text = "\n".join(log_text_lines)
 
     threats = state.get("threats", [])
     detected_summary = f"{len(threats)} threats already detected by primary pipeline."
 
     try:
-        llm = ChatAnthropic(model=MODEL, temperature=0.2, max_tokens=4096)
+        llm = ChatAnthropic(model=MODEL, temperature=0.2, max_tokens=1024)
 
         with AgentTimer("validate", MODEL) as timer:
             response = llm.invoke([

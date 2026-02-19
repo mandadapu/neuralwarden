@@ -43,10 +43,17 @@ def _format_logs_for_prompt(logs: list[LogEntry]) -> str:
     for log in logs:
         if not log.is_valid:
             continue
-        entries.append(
-            f"[{log.index}] {log.timestamp} | {log.source} | {log.event_type} | "
-            f"src={log.source_ip} dst={log.dest_ip} user={log.user} | {log.details}"
-        )
+        # Compact format: only include non-empty fields
+        parts = [f"[{log.index}]", log.timestamp, log.source, log.event_type]
+        if log.source_ip:
+            parts.append(f"src={log.source_ip}")
+        if log.dest_ip:
+            parts.append(f"dst={log.dest_ip}")
+        if log.user:
+            parts.append(f"user={log.user}")
+        if log.details:
+            parts.append(log.details[:150])  # Cap details to save tokens
+        entries.append(" ".join(parts))
     return "\n".join(entries)
 
 
@@ -83,7 +90,7 @@ def run_detect(state: PipelineState) -> dict:
         llm = ChatAnthropic(
             model=MODEL,
             temperature=0.2,
-            max_tokens=4096,
+            max_tokens=2048,
         )
 
         log_text = _format_logs_for_prompt(valid_logs)
