@@ -146,7 +146,7 @@ export default function AgentsPage() {
 
   return (
     <PageShell
-      title="Agents"
+      title="Agent Orchestration"
       description={`${AGENTS.length} AI agents powering the security analysis pipeline`}
       icon={
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
