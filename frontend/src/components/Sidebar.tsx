@@ -29,7 +29,7 @@ export default function Sidebar() {
       );
       setCloudIssueCount(totalIssues);
     }).catch(() => {});
-  }, [session?.user?.email]);
+  }, [session?.user?.email, pathname]);
 
   const feedCount = pipelineThreatCount + cloudIssueCount;
 

@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { listCloudIssues, updateIssueStatus } from "@/lib/api";
 import type { CloudIssue } from "@/lib/types";
 import RemediationModal from "@/components/RemediationModal";
+import { useCloudContext } from "./layout";
 
 const SEVERITY_STYLES: Record<string, string> = {
   critical: "bg-red-100 text-red-700",
@@ -58,6 +59,7 @@ function DocIcon() {
 export default function IssuesTab() {
   const params = useParams();
   const cloudId = params.id as string;
+  const { scanVersion } = useCloudContext();
 
   const [issues, setIssues] = useState<CloudIssue[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +72,7 @@ export default function IssuesTab() {
 
   useEffect(() => {
     loadIssues();
-  }, [cloudId]);
+  }, [cloudId, scanVersion]);
 
   // Close dropdown on outside click
   useEffect(() => {

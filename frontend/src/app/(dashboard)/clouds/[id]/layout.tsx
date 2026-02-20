@@ -13,12 +13,15 @@ interface CloudContextValue {
   cloud: CloudAccount | null;
   loading: boolean;
   refresh: () => void;
+  /** Increments after each scan completes — child pages can watch this to refetch. */
+  scanVersion: number;
 }
 
 const CloudContext = createContext<CloudContextValue>({
   cloud: null,
   loading: true,
   refresh: () => {},
+  scanVersion: 0,
 });
 
 export function useCloudContext() {
@@ -59,6 +62,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
   const [lastScanLogId, setLastScanLogId] = useState<string | null>(null);
   const [showScanLog, setShowScanLog] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
+  const [scanVersion, setScanVersion] = useState(0);
 
   const loadCloud = useCallback(async () => {
     try {
@@ -90,6 +94,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
         }
       });
       await loadCloud();
+      setScanVersion((v) => v + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Scan failed");
     } finally {
@@ -130,7 +135,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
   const isError = scanProgress?.event === "error";
 
   return (
-    <CloudContext.Provider value={{ cloud, loading, refresh: loadCloud }}>
+    <CloudContext.Provider value={{ cloud, loading, refresh: loadCloud, scanVersion }}>
       <div className="px-7 py-6">
         {/* Loading */}
         {loading && !cloud && (
