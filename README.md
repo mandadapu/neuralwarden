@@ -1,14 +1,37 @@
 # NeuralWarden — AI-Powered Cloud Security Platform
 
-An agentic cloud security platform that combines **static vulnerability scanning**, **behavioral log analysis**, and **threat correlation** to detect active exploits across GCP infrastructure. Built with **LangGraph**, **Anthropic Claude**, **Next.js 16**, and **FastAPI**.
+An agentic cloud security platform that runs a fully **autonomous defense loop** — from asset discovery to vulnerability scanning, behavioral log analysis, threat correlation, MITRE ATT&CK mapping, incident reporting, and automated remediation. Built with **LangGraph**, **Anthropic Claude**, **Next.js 16**, and **FastAPI**.
 
-## What It Does
+## The Autonomous Defense Loop
 
-1. **Connects to your GCP project** — discovers VMs, firewalls, buckets, Cloud SQL
-2. **Routes assets intelligently** — public assets get active compliance scans, private assets get log-based analysis
-3. **Correlates findings** — cross-references scanner vulnerabilities with log activity to detect active exploits (e.g., open SSH port + brute force logs = active breach)
-4. **Maps to MITRE ATT&CK** — every correlated finding gets tactic/technique IDs
-5. **Generates incident reports** — prioritized action plans with business impact
+```
+  1. DISCOVER          2. ROUTE             3. INVESTIGATE
+  ┌──────────┐      ┌──────────┐      ┌────────────────────┐
+  │ Discovery│─────▶│  Router  │─────▶│ Active Scanner     │ (public assets)
+  │   Node   │      │   Node   │      │ Log Analyzer       │ (private assets)
+  └──────────┘      └──────────┘      └─────────┬──────────┘
+       │                                         │
+       │  Maps your GCP            Parallel       │  Compliance checks
+       │  environment              fan-out        │  + Cloud Logging queries
+       │                                         │
+       ▼                                         ▼
+  4. CORRELATE         5. REASON            6. REMEDIATE
+  ┌──────────┐      ┌──────────────┐      ┌──────────────┐
+  │Correlation│────▶│Threat Pipeline│────▶│ Remediation  │
+  │  Engine   │     │ (6 LLM agents)│     │  Generator   │
+  └──────────┘     └──────────────┘      └──────────────┘
+       │                  │                      │
+       │  Weakness +      │  Detect, Validate    │  gcloud scripts
+       │  Attack =        │  Classify, HITL      │  per issue with
+       │  Active Exploit  │  Report              │  copy/download
+```
+
+1. **Discovery Node** — maps the environment (VMs, firewalls, buckets, Cloud SQL, service accounts)
+2. **Router Node** — intelligence-based triage, routes public assets to active scanning and private assets to log analysis
+3. **Specialized Workers** — parallel investigation: compliance checks on public-facing assets, Cloud Logging queries on private assets
+4. **Correlation Engine** — connects the "weakness" to the "attack" by cross-referencing scanner vulnerabilities with live log activity
+5. **Threat Pipeline** — 6 LLM-powered agents for detection, validation, MITRE ATT&CK classification, human-in-the-loop review, and executive reporting
+6. **Remediation Generator** — produces parameterized `gcloud` fix scripts for every detected issue, ready to copy or download as `.sh`
 
 ## Architecture
 
@@ -16,9 +39,9 @@ An agentic cloud security platform that combines **static vulnerability scanning
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  Next.js 16 Frontend (port 3000)                                            │
 │  ┌──────────┐  ┌──────────────┐  ┌──────────────────┐  ┌───────────────┐   │
-│  │ Sidebar  │  │ Threat Feed  │  │ Cloud Detail     │  │ Configure     │   │
-│  │ (11 nav  │  │ + Summary    │  │ SSE Scan Progress│  │ Modal         │   │
-│  │  items)  │  │   Cards      │  │ Issues/Assets/VMs│  │ Creds/Services│   │
+│  │ Sidebar  │  │ Threat Feed  │  │ Cloud Detail     │  │ AutoFix       │   │
+│  │ (11 nav  │  │ + Summary    │  │ SSE Scan Progress│  │ Dashboard     │   │
+│  │  items)  │  │   Cards      │  │ Issues/Assets/VMs│  │ + Fix Modal   │   │
 │  └──────────┘  └──────────────┘  └──────────────────┘  └───────────────┘   │
 │  Auth: Auth.js v5 (Google OAuth)  │  State: React Context + localStorage   │
 └────────────────────────────────────┬────────────────────────────────────────┘
@@ -31,37 +54,44 @@ An agentic cloud security platform that combines **static vulnerability scanning
 │  │  Discovery → Router → ┬─ Active Scanner (public) ─┐→ Aggregate     │   │
 │  │                       └─ Log Analyzer (private)  ──┘  + Correlate   │   │
 │  │                                                          │           │   │
-│  │                                                    Threat Pipeline   │   │
-│  │                                              Detect→Validate→Classify│   │
-│  │                                                    →HITL→Report     │   │
+│  │                                        Remediation ← Threat Pipeline │   │
+│  │                                        Generator    Detect→Validate  │   │
+│  │                                                     →Classify→HITL   │   │
+│  │                                                     →Report          │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
-│  SQLite: cloud_accounts, cloud_issues, cloud_assets (per-user isolation)   │
+│  ┌─── Scan Execution Logs ─────────────────────────────────────────────┐   │
+│  │  Per-service timing · Success/failure tracking · Historical logs    │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  SQLite: cloud_accounts, cloud_issues, cloud_assets, scan_logs             │
+│          (per-user isolation via X-User-Email)                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 11 AI Agents
+## 12 AI Agents
+
+### Cloud Scan Super Agent (6 agents — deterministic, $0 LLM cost)
+
+| # | Agent | Purpose |
+|---|-------|---------|
+| 1 | **Discovery** | Enumerates GCP assets across 5 services (Compute, Storage, Firewall, Cloud SQL, Cloud Logging) |
+| 2 | **Router** | Routes public assets to active scanning, private assets to log-based analysis |
+| 3 | **Active Scanner** | 10 compliance checks (GCP_001–010) on public-facing assets |
+| 4 | **Log Analyzer** | Queries Cloud Logging for brute force, data exfiltration, privilege escalation signals |
+| 5 | **Correlation Engine** | Cross-references scanner + log findings to detect active exploits with MITRE mapping |
+| 6 | **Remediation Generator** | Maps rule_codes to parameterized `gcloud` fix scripts (6 templates) |
 
 ### Threat Pipeline (6 agents — LLM-powered)
 
 | # | Agent | Model | Purpose |
 |---|-------|-------|---------|
-| 1 | **Ingest** | Haiku 4.5 | Parse raw logs into structured entries |
-| 2 | **Detect** | Sonnet 4.5 | Rule-based + AI threat detection |
-| 3 | **Validate** | Sonnet 4.5 | Shadow-check 5% of "clean" logs |
-| 4 | **Classify** | Sonnet 4.5 | Risk scoring + MITRE ATT&CK + RAG |
-| 5 | **HITL Gate** | — | Human-in-the-loop review for critical threats |
-| 6 | **Report** | Opus 4.6 | Incident reports with action plans |
-
-### Cloud Scan Super Agent (5 agents — deterministic, $0 cost)
-
-| # | Agent | Purpose |
-|---|-------|---------|
-| 7 | **Discovery** | Enumerates GCP assets (VMs, buckets, firewalls, SQL) |
-| 8 | **Router** | Routes assets to active scan (public) or log analysis (private) |
-| 9 | **Active Scanner** | Compliance checks on public-facing assets |
-| 10 | **Log Analyzer** | Queries Cloud Logging for behavioral signals |
-| 11 | **Correlation Engine** | Cross-references scanner + log findings to detect active exploits |
+| 7 | **Ingest** | Haiku 4.5 | Parse raw logs into structured entries |
+| 8 | **Detect** | Sonnet 4.5 | Rule-based + AI threat detection |
+| 9 | **Validate** | Sonnet 4.5 | Shadow-check 5% of "clean" logs |
+| 10 | **Classify** | Sonnet 4.5 | Risk scoring + MITRE ATT&CK + RAG, prioritizes correlated evidence |
+| 11 | **HITL Gate** | — | Human-in-the-loop review for critical threats |
+| 12 | **Report** | Opus 4.6 | Incident reports with Active Incidents section and action plans |
 
 ### Correlation Intelligence Matrix
 
@@ -70,6 +100,31 @@ An agentic cloud security platform that combines **static vulnerability scanning
 | GCP_002 (Open SSH) | Failed password, Invalid user | Brute Force in Progress | T1110 |
 | GCP_004 (Public Bucket) | AnonymousAccess, GetObject | Data Exfiltration | T1530 |
 | GCP_006 (Default SA) | CreateServiceAccountKey | Privilege Escalation | T1078.004 |
+
+### Remediation Templates
+
+Every issue with a matching rule_code gets a ready-to-run `gcloud` script generated automatically after each scan. No LLM cost — pure template-based generation.
+
+| Rule Code | Fix | Script |
+|---|---|---|
+| `gcp_002` | Restrict SSH firewall to trusted CIDRs | `gcloud compute firewall-rules update {asset} --source-ranges=...` |
+| `gcp_004` | Remove public access from GCS bucket | `gcloud storage buckets update gs://{asset} --public-access-prevention=enforced` |
+| `gcp_006` | Migrate from default service account | Multi-step: create custom SA, grant roles, update instance |
+| `log_001` | Investigate high error rate | `gcloud logging read 'severity>=ERROR' --project=... --limit=50` |
+| `log_002` | Enable audit logging | Fetch auth failures + enable Data Access audit logging |
+| `log_003` | Deploy Cloud Armor WAF rules | Create security policy + block recon paths |
+
+Scripts include `#!/bin/bash` headers, `set -euo pipefail`, contextual comments, and safety notes. Users can **copy to clipboard** or **download as `.sh`** from the Fix modal.
+
+### Scan Execution Logs
+
+Every scan run produces a structured execution log capturing:
+- **Per-service timing** — how long each service (compute, storage, cloud_logging) took
+- **Success/failure status** — which services succeeded, failed, or were skipped
+- **Asset and issue counts** — per-service breakdown
+- **Timestamped log entries** — detailed trace of scan operations
+
+Scan logs are accessible via "View Scan Log" after each scan and from the historical **Scan Logs** tab.
 
 ## Setup
 
@@ -94,6 +149,19 @@ cp .env.example .env
 #   OPENAI_API_KEY     (for RAG embeddings)
 #   PINECONE_API_KEY   (for RAG vector store)
 ```
+
+### GCP Service Account
+
+To scan a GCP project, create a service account with these roles:
+
+| Role | Purpose |
+|------|---------|
+| `roles/compute.viewer` | Discover VMs, firewalls, networks |
+| `roles/storage.objectViewer` | Discover Cloud Storage buckets |
+| `roles/logging.viewer` | Query Cloud Logging for behavioral signals |
+| `roles/cloudasset.viewer` | Optional — Cloud Asset Inventory |
+
+Download the JSON key and paste it into the **Configure** modal in the app.
 
 ## Usage
 
@@ -129,11 +197,11 @@ python main.py sample_logs/mixed_threats.txt --hitl
 | `/snoozed` | **Snoozed** | Deferred threats with restore action |
 | `/ignored` | **Ignored** | False positives / accepted risk |
 | `/solved` | **Solved** | Resolved threats |
-| `/autofix` | **AutoFix** | Automated remediation stats |
+| `/autofix` | **AutoFix** | Live remediation dashboard — available fixes, applied, skipped counts + issue table with "View Fix" |
 | `/clouds` | **Clouds** | Connected GCP accounts with issue counts |
 | `/clouds/connect` | **Connect** | Add new GCP project with service account |
-| `/clouds/[id]` | **Cloud Detail** | SSE scan progress, issues, assets, VMs, checks |
-| `/agents` | **Agents** | 11 pipeline agents with status |
+| `/clouds/[id]` | **Cloud Detail** | SSE scan progress, issues with Fix button, assets, VMs, checks, scan logs |
+| `/agents` | **Agents** | 12 pipeline agents with status |
 | `/mitre` | **MITRE ATT&CK** | Tactics and techniques reference |
 | `/threat-intel` | **Threat Intel** | Pinecone vector DB threat feed |
 | `/reports` | **Reports** | Generated incident reports with PDF export |
@@ -153,12 +221,12 @@ Each user authenticates via Google OAuth. Cloud accounts, issues, and assets are
 neuralwarden/
 ├── api/
 │   ├── main.py                     # FastAPI app (CORS, routers)
-│   ├── cloud_database.py           # Cloud accounts/issues/assets CRUD
+│   ├── cloud_database.py           # Cloud accounts/issues/assets/scan_logs CRUD
 │   ├── gcp_scanner.py              # GCP asset discovery + compliance checks
 │   ├── gcp_logging.py              # Cloud Logging client + deterministic parser
 │   └── routers/
 │       ├── analyze.py              # POST /api/analyze (threat pipeline)
-│       ├── clouds.py               # Cloud CRUD + SSE scan + issues/assets
+│       ├── clouds.py               # Cloud CRUD + SSE scan + issues/assets/scan-logs
 │       ├── hitl.py                 # Human-in-the-loop resume
 │       └── ...
 ├── pipeline/
@@ -174,12 +242,13 @@ neuralwarden/
 │       ├── cloud_router.py         # Public/private asset routing
 │       ├── active_scanner.py       # Compliance checks for public assets
 │       ├── log_analyzer.py         # Cloud Logging queries for private assets
-│       └── correlation_engine.py   # Scanner + log cross-referencing
+│       ├── correlation_engine.py   # Scanner + log cross-referencing
+│       └── remediation_generator.py # Deterministic gcloud fix scripts
 ├── frontend/
 │   └── src/
-│       ├── app/(dashboard)/        # All dashboard pages
+│       ├── app/(dashboard)/        # All dashboard pages (incl. autofix, scan-logs)
 │       ├── app/(auth)/login/       # OAuth login
-│       ├── components/             # 16 React components
+│       ├── components/             # React components (RemediationModal, ScanLogModal, ...)
 │       ├── context/                # AnalysisContext (global state)
 │       └── lib/                    # API client, types, constants
 ├── models/                         # Pydantic data models
