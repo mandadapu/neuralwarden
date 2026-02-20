@@ -77,11 +77,8 @@ def probe_credential_access(
         try:
             from google.cloud.compute_v1 import InstancesClient
             client = InstancesClient(credentials=credentials)
-            # aggregated_list is the cheapest call — stops after first zone
-            for _zone, scope in client.aggregated_list(
-                project=project_id, max_results=1
-            ):
-                break
+            for _zone, _scope in client.aggregated_list(project=project_id):
+                break  # one iteration is enough to prove access
             results["compute"] = {"accessible": True, "detail": "Compute Engine API accessible"}
             accessible_services.append("compute")
         except Exception as exc:
@@ -94,8 +91,8 @@ def probe_credential_access(
         try:
             from google.cloud.compute_v1 import FirewallsClient
             client = FirewallsClient(credentials=credentials)
-            for _fw in client.list(project=project_id, max_results=1):
-                break
+            for _fw in client.list(project=project_id):
+                break  # one iteration is enough to prove access
             results["firewall"] = {"accessible": True, "detail": "Firewall rules accessible"}
             accessible_services.append("firewall")
         except Exception as exc:

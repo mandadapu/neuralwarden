@@ -267,11 +267,15 @@ export default function ConnectCloudPage() {
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2">
                         <code className="text-xs font-mono px-1.5 py-0.5 bg-[#262c34] text-[#00e68a] rounded">roles/viewer</code>
-                        <span className="text-xs text-[#8b949e]">Compute, Storage, Firewall, Project metadata</span>
+                        <span className="text-xs text-[#8b949e]">Compute VMs, Firewall rules, Project metadata</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <code className="text-xs font-mono px-1.5 py-0.5 bg-[#262c34] text-[#00e68a] rounded">roles/logging.viewer</code>
                         <span className="text-xs text-[#8b949e]">Cloud Logging entries</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <code className="text-xs font-mono px-1.5 py-0.5 bg-[#262c34] text-[#00e68a] rounded">roles/storage.objectViewer</code>
+                        <span className="text-xs text-[#8b949e]">GCS buckets and object access</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <code className="text-xs font-mono px-1.5 py-0.5 bg-[#262c34] text-[#00e68a] rounded">roles/iam.securityReviewer</code>
