@@ -189,8 +189,8 @@ export default function CloudsPage() {
                 <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Name</th>
                 <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Purpose</th>
                 <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Project ID</th>
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Assets</th>
                 <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Issues</th>
-                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Ignored</th>
                 <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Last Scan</th>
                 <th className="text-right text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Actions</th>
               </tr>
@@ -218,10 +218,10 @@ export default function CloudsPage() {
                     <code className="text-xs text-[#8b949e] bg-[#262c34] px-2 py-0.5 rounded font-mono">{cloud.project_id}</code>
                   </td>
                   <td className="px-5 py-3.5">
-                    <IssueBadges counts={cloud.issue_counts} />
+                    <span className="text-sm font-medium text-[#c9d1d9]">{cloud.asset_counts?.total ?? 0}</span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="text-sm text-[#8b949e]">0</span>
+                    <IssueBadges counts={cloud.issue_counts} />
                   </td>
                   <td className="px-5 py-3.5">
                     <span className="text-sm text-[#8b949e]">{relativeTime(cloud.last_scan_at)}</span>

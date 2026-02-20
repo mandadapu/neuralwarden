@@ -276,6 +276,26 @@ def list_cloud_assets(account_id: str, asset_type: str = "") -> list[dict]:
         conn.close()
 
 
+def get_asset_counts(account_id: str) -> dict:
+    """Count assets by type for an account."""
+    conn = _get_conn()
+    try:
+        rows = conn.execute(
+            """SELECT asset_type, COUNT(*) as cnt
+               FROM cloud_assets
+               WHERE cloud_account_id = ?
+               GROUP BY asset_type""",
+            (account_id,),
+        ).fetchall()
+        by_type = {r["asset_type"]: r["cnt"] for r in rows}
+        return {
+            "total": sum(by_type.values()),
+            "by_type": by_type,
+        }
+    finally:
+        conn.close()
+
+
 # ── Cloud issues CRUD ───────────────────────────────────────────────
 
 

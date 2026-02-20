@@ -121,6 +121,7 @@ export interface CloudAccount {
   created_at: string;
   status: string;
   issue_counts?: IssueCounts;
+  asset_counts?: { total: number; by_type: Record<string, number> };
 }
 
 export interface CloudAsset {
