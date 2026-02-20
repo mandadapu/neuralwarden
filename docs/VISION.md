@@ -4,14 +4,20 @@
 
 Replace reactive, manual security workflows with an AI-driven defense platform that **automatically discovers, scans, correlates, and responds** to threats across cloud infrastructure — making enterprise-grade security accessible to teams of any size.
 
+## The Name
+
+**Neural** — the Correlation Engine and Claude Sonnet reasoning layer that doesn't just see data, but *understands* the relationship between a vulnerability and a log event. It thinks, not just scans.
+
+**Warden** — the autonomous guardian that watches over your cloud infrastructure 24/7, closing the loop from detection to remediation without waiting for a human to act.
+
 ## Core Thesis
 
 Most security tools stop at static analysis: they find the "open window." NeuralWarden goes three layers deeper:
 
-1. **Static Analysis** — finds the open window (vulnerability scanning)
-2. **Behavioral Analysis** — sees the burglar climbing in (log-based threat detection)
-3. **Correlation** — connects the two automatically (active exploit detection)
-4. **Agentic Response** — writes the police report and locks the door (incident reports + remediation)
+1. **Neural Discovery** — maps the attack surface autonomously (asset discovery)
+2. **Agentic Analysis** — parallel workers investigate every resource (compliance + behavioral signals)
+3. **Neural Correlation** — connects the vulnerability to the attack (active exploit detection via the Neural Core)
+4. **Automated Wardenship** — writes the police report and locks the door (incident reports + remediation scripts)
 
 ## Architecture Principles
 
@@ -30,15 +36,18 @@ Typical analysis cost: **$0.01–0.05** per run.
 ### Multi-Tenant by Default
 Per-user data isolation via OAuth identity. Every cloud account, issue, and asset is scoped to `user_email`. Supports both SaaS (multi-tenant) and self-hosted (single-tenant) deployment.
 
-### Intelligence Over Volume
-The Correlation Engine is the key differentiator. Rather than presenting a flat list of vulnerabilities, it cross-references static findings with behavioral signals to surface **active exploits** — the 2% of findings that actually matter.
+### The Neural Core — Intelligence Over Volume
+The Correlation Engine is the "Neural" in NeuralWarden. Rather than presenting a flat list of vulnerabilities, it cross-references static findings with behavioral signals to surface **active exploits** — the 2% of findings that actually matter. It doesn't just see data; it understands the *relationship* between a vulnerability and a log event.
+
+### The Neural Engine — Claude Sonnet for Reasoning
+Claude Sonnet serves as the Neural Engine for high-reasoning classification. When the Correlation Engine threads evidence into the Classify Agent, Sonnet reasons over the correlated findings: escalating severity to CRITICAL, generating remediation gcloud commands, and explaining *why* the vulnerability and behavior together indicate active exploitation.
 
 ### Deterministic First, LLM Second
-Correlation follows a two-layer strategy. The deterministic Correlation Engine ($0) matches scanner rule codes to log patterns via an intelligence matrix — fast, reliable, and free. The LLM layer (Classify Agent) then reasons over the correlated evidence: escalating severity, generating remediation commands, and explaining *why* the vulnerability and behavior together indicate active exploitation. This ensures the expensive model only adds reasoning, not pattern matching.
+Correlation follows a two-layer strategy. The deterministic Correlation Engine ($0) matches scanner rule codes to log patterns via an intelligence matrix — fast, reliable, and free. The LLM layer (Classify Agent powered by Sonnet) then reasons over the correlated evidence. This ensures the expensive model only adds reasoning, not pattern matching.
 
 ## Current Capabilities (v2.1)
 
-### Cloud Scan Super Agent (runs first)
+### NeuralWarden Core — Cloud Scan Super Agent (runs first)
 - 6-agent LangGraph pipeline: Discovery → Router → Active Scanner / Log Analyzer (parallel) → Correlation Engine → Remediation Generator
 - GCP asset discovery: Compute Engine, Cloud Storage, Firewall Rules, Cloud SQL, Resource Manager
 - Public/private asset routing based on metadata inspection
@@ -49,7 +58,7 @@ Correlation follows a two-layer strategy. The deterministic Correlation Engine (
 - Remediation Generator: parameterized gcloud command templates per rule code
 - Real-time SSE streaming for scan progress
 
-### Threat Pipeline (fed by Cloud Scan)
+### Neural Engine — Threat Pipeline (fed by Cloud Scan)
 - 6-agent LangGraph pipeline: Ingest → Detect → Validate → Classify → HITL → Report
 - 5 rule-based detection patterns (brute force, port scan, privilege escalation, data exfil, lateral movement)
 - AI-powered novel threat detection via Sonnet

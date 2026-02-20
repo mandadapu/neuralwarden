@@ -1,6 +1,11 @@
-# NeuralWarden — AI-Powered Cloud Security Platform
+# NeuralWarden: Autonomous Multi-Agent Cloud Defense
 
 An agentic cloud security platform that runs a fully **autonomous defense loop** — from asset discovery to vulnerability scanning, behavioral log analysis, threat correlation, MITRE ATT&CK mapping, incident reporting, and automated remediation. Built with **LangGraph**, **Anthropic Claude**, **Next.js 16**, and **FastAPI**.
+
+**Three pillars:**
+- **Neural Discovery** — maps your cloud attack surface autonomously across Compute, Storage, Firewall, SQL, and IAM
+- **Agentic Analysis** — parallel workers investigate every resource with compliance checks and behavioral log queries
+- **Automated Wardenship** — closes the loop with correlation-driven severity escalation and ready-to-run remediation scripts
 
 ## The Autonomous Defense Loop
 
@@ -29,8 +34,8 @@ An agentic cloud security platform that runs a fully **autonomous defense loop**
 1. **Discovery Node** — maps the environment (VMs, firewalls, buckets, Cloud SQL, service accounts)
 2. **Router Node** — intelligence-based triage, routes public assets to active scanning and private assets to log analysis
 3. **Specialized Workers** — parallel investigation: compliance checks on public-facing assets, Cloud Logging queries on private assets
-4. **Correlation Engine** — connects the "weakness" to the "attack" by cross-referencing scanner vulnerabilities with live log activity
-5. **Threat Pipeline** — 6 LLM-powered agents for detection, validation, MITRE ATT&CK classification, human-in-the-loop review, and executive reporting
+4. **Correlation Engine (Neural Core)** — the reasoning heart of NeuralWarden; connects the "weakness" to the "attack" by cross-referencing scanner vulnerabilities with live log activity, then threads evidence into the LLM layer for severity escalation
+5. **Threat Pipeline (Neural Engine)** — 6 LLM-powered agents using Claude Sonnet as the reasoning engine for detection, validation, MITRE ATT&CK classification, human-in-the-loop review, and executive reporting
 6. **Remediation Generator** — produces parameterized `gcloud` fix scripts for every detected issue, ready to copy or download as `.sh`
 
 ## Architecture
@@ -79,10 +84,12 @@ An agentic cloud security platform that runs a fully **autonomous defense loop**
 | 2 | **Router** | Routes public assets to active scanning, private assets to log-based analysis |
 | 3 | **Active Scanner** | 10 compliance checks (GCP_001–010) on public-facing assets |
 | 4 | **Log Analyzer** | Queries Cloud Logging for brute force, data exfiltration, privilege escalation signals |
-| 5 | **Correlation Engine** | Cross-references scanner + log findings to detect active exploits with MITRE mapping. Returns evidence samples (up to 5 log lines) threaded into the Threat Pipeline for LLM reasoning |
+| 5 | **Correlation Engine** (Neural Core) | The reasoning heart of NeuralWarden — cross-references scanner + log findings to detect active exploits with MITRE mapping. Returns evidence samples (up to 5 log lines) threaded into the Threat Pipeline for LLM reasoning |
 | 6 | **Remediation Generator** | Maps rule_codes to parameterized `gcloud` fix scripts (6 templates) |
 
-### Threat Pipeline (6 agents — LLM-powered)
+### Threat Pipeline — Neural Engine (6 agents — LLM-powered)
+
+Claude Sonnet serves as the Neural Engine for high-reasoning classification and threat detection.
 
 | # | Agent | Model | Purpose |
 |---|-------|-------|---------|
