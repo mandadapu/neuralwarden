@@ -15,6 +15,8 @@ COPY api/ ./api/
 COPY pipeline/ ./pipeline/
 COPY models/ ./models/
 COPY rules/ ./rules/
+COPY scripts/ ./scripts/
+COPY sample_logs/ ./sample_logs/
 
 RUN pip install --no-cache-dir ".[gcp]"
 
