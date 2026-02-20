@@ -33,9 +33,23 @@ Per-user data isolation via OAuth identity. Every cloud account, issue, and asse
 ### Intelligence Over Volume
 The Correlation Engine is the key differentiator. Rather than presenting a flat list of vulnerabilities, it cross-references static findings with behavioral signals to surface **active exploits** — the 2% of findings that actually matter.
 
-## Current Capabilities (v2.0)
+### Deterministic First, LLM Second
+Correlation follows a two-layer strategy. The deterministic Correlation Engine ($0) matches scanner rule codes to log patterns via an intelligence matrix — fast, reliable, and free. The LLM layer (Classify Agent) then reasons over the correlated evidence: escalating severity, generating remediation commands, and explaining *why* the vulnerability and behavior together indicate active exploitation. This ensures the expensive model only adds reasoning, not pattern matching.
 
-### Threat Pipeline
+## Current Capabilities (v2.1)
+
+### Cloud Scan Super Agent (runs first)
+- 6-agent LangGraph pipeline: Discovery → Router → Active Scanner / Log Analyzer (parallel) → Correlation Engine → Remediation Generator
+- GCP asset discovery: Compute Engine, Cloud Storage, Firewall Rules, Cloud SQL, Resource Manager
+- Public/private asset routing based on metadata inspection
+- Compliance checks: open SSH (GCP_002), public buckets (GCP_004), default service accounts (GCP_006)
+- Cloud Logging queries for behavioral signals
+- Correlation Engine with intelligence matrix mapping scanner findings to log patterns
+- Correlated evidence collection: up to 5 log samples per finding with matched patterns and MITRE mappings
+- Remediation Generator: parameterized gcloud command templates per rule code
+- Real-time SSE streaming for scan progress
+
+### Threat Pipeline (fed by Cloud Scan)
 - 6-agent LangGraph pipeline: Ingest → Detect → Validate → Classify → HITL → Report
 - 5 rule-based detection patterns (brute force, port scan, privilege escalation, data exfil, lateral movement)
 - AI-powered novel threat detection via Sonnet
@@ -43,15 +57,8 @@ The Correlation Engine is the key differentiator. Rather than presenting a flat 
 - RAG enrichment via Pinecone threat intel
 - Human-in-the-loop review for critical threats
 - MITRE ATT&CK mapping for all classified threats
-
-### Cloud Scan Super Agent
-- 5-agent LangGraph pipeline: Discovery → Router → Active Scanner / Log Analyzer → Correlation Engine
-- GCP asset discovery: Compute Engine, Cloud Storage, Firewall Rules, Cloud SQL, Resource Manager
-- Public/private asset routing based on metadata inspection
-- Compliance checks: open SSH (GCP_002), public buckets (GCP_004), default service accounts (GCP_006)
-- Cloud Logging queries for behavioral signals
-- Correlation Engine with intelligence matrix mapping scanner findings to log patterns
-- Real-time SSE streaming for scan progress
+- **Correlation-aware Classify Agent**: when correlated evidence is present, injects severity escalation rules, remediation gcloud commands, and MITRE mapping from evidence into the LLM prompt
+- **Active Incidents reporting**: Report Agent leads executive summary with correlated active exploits when evidence is threaded from Cloud Scan
 
 ### Dashboard
 - OAuth login (Google)
@@ -60,7 +67,8 @@ The Correlation Engine is the key differentiator. Rather than presenting a flat 
 - Threat detail panel with remediation guidance
 - Snooze/ignore/solve workflow
 - Incident report generation with PDF export
-- Agent status and cost breakdown
+- Agents page with interactive SVG data flow diagram and 3-column card grid with collapsible groups
+- 12 agents across 2 pipelines with execution-order numbering
 
 ## Roadmap
 
@@ -69,9 +77,9 @@ The Correlation Engine is the key differentiator. Rather than presenting a flat 
 - **Azure Support** — VMs, Blob Storage, NSGs, Azure SQL
 - **Scheduled Scans** — cron-based recurring scans with drift detection
 - **Slack/PagerDuty Alerts** — notify on active exploit detection
+- **AutoFix Agent** — execute Remediation Generator scripts with user approval (gcloud commands already generated)
 
 ### Medium-term
-- **AutoFix Agent** — generate and apply Terraform/gcloud remediation commands
 - **Compliance Frameworks** — CIS Benchmarks, SOC 2, ISO 27001 mapping
 - **Multi-Cloud Correlation** — cross-reference findings across AWS + GCP + Azure
 - **Team Collaboration** — shared workspaces, role-based access, audit trail
