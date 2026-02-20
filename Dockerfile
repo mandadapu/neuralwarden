@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml ./
 COPY api/ ./api/
 COPY pipeline/ ./pipeline/
+COPY models/ ./models/
+COPY rules/ ./rules/
 
 RUN pip install --no-cache-dir ".[gcp]"
 
