@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="60 30 392 452" width="512" height="512">
+  <defs>
+    <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e68a"/>
+      <stop offset="100%" stop-color="#00b8d4"/>
+    </linearGradient>
+    <linearGradient id="ng" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00ffaa"/>
+      <stop offset="100%" stop-color="#00e68a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Shield outline -->
+  <path d="
+    M 256 52
+    L 420 130
+    L 420 280
+    Q 420 380 256 462
+    Q 92 380 92 280
+    L 92 130
+    Z
+  " fill="none" stroke="url(#sg)" stroke-width="10" stroke-linejoin="round"/>
+
+  <!-- Neural connections -->
+  <g stroke="url(#sg)" stroke-width="3" opacity="0.55" stroke-linecap="round">
+    <line x1="256" y1="140" x2="180" y2="230"/>
+    <line x1="256" y1="140" x2="332" y2="230"/>
+    <line x1="256" y1="140" x2="256" y2="220"/>
+    <line x1="180" y1="230" x2="256" y2="220"/>
+    <line x1="256" y1="220" x2="332" y2="230"/>
+    <line x1="180" y1="230" x2="332" y2="230"/>
+    <line x1="180" y1="230" x2="160" y2="320"/>
+    <line x1="180" y1="230" x2="256" y2="330"/>
+    <line x1="332" y1="230" x2="352" y2="320"/>
+    <line x1="332" y1="230" x2="256" y2="330"/>
+    <line x1="256" y1="220" x2="160" y2="320"/>
+    <line x1="256" y1="220" x2="352" y2="320"/>
+    <line x1="160" y1="320" x2="256" y2="400"/>
+    <line x1="352" y1="320" x2="256" y2="400"/>
+    <line x1="256" y1="330" x2="256" y2="400"/>
+    <line x1="160" y1="320" x2="352" y2="320"/>
+    <line x1="160" y1="320" x2="256" y2="330"/>
+    <line x1="352" y1="320" x2="256" y2="330"/>
+  </g>
+
+  <!-- Nodes -->
+  <g>
+    <circle cx="256" cy="140" r="15" fill="url(#ng)"/>
+    <circle cx="180" cy="230" r="12" fill="url(#ng)"/>
+    <circle cx="256" cy="220" r="13" fill="url(#ng)"/>
+    <circle cx="332" cy="230" r="12" fill="url(#ng)"/>
+    <circle cx="160" cy="320" r="12" fill="url(#ng)"/>
+    <circle cx="256" cy="330" r="13" fill="url(#ng)"/>
+    <circle cx="352" cy="320" r="12" fill="url(#ng)"/>
+    <circle cx="256" cy="400" r="15" fill="url(#ng)"/>
+  </g>
+</svg>

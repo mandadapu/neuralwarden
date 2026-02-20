@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e68a"/>
+      <stop offset="100%" stop-color="#00b8d4"/>
+    </linearGradient>
+    <linearGradient id="nodeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00ffaa"/>
+      <stop offset="100%" stop-color="#00e68a"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background circle (optional, for dark contexts) -->
+  <circle cx="256" cy="256" r="248" fill="#0d1117"/>
+  <circle cx="256" cy="256" r="245" fill="none" stroke="#1c2128" stroke-width="2"/>
+
+  <!-- Shield outline - angular modern shape -->
+  <path d="
+    M 256 52
+    L 420 130
+    L 420 280
+    Q 420 380 256 462
+    Q 92 380 92 280
+    L 92 130
+    Z
+  " fill="none" stroke="url(#shieldGrad)" stroke-width="8" stroke-linejoin="round" opacity="0.9"/>
+
+  <!-- Inner shield trace (subtle depth) -->
+  <path d="
+    M 256 80
+    L 396 148
+    L 396 272
+    Q 396 362 256 436
+    Q 116 362 116 272
+    L 116 148
+    Z
+  " fill="none" stroke="url(#shieldGrad)" stroke-width="2" opacity="0.25"/>
+
+  <!-- Neural network connections (lines between nodes) -->
+  <g stroke="url(#shieldGrad)" stroke-width="2.5" opacity="0.6" stroke-linecap="round">
+    <!-- Top node to middle layer -->
+    <line x1="256" y1="140" x2="180" y2="230"/>
+    <line x1="256" y1="140" x2="332" y2="230"/>
+    <line x1="256" y1="140" x2="256" y2="220"/>
+
+    <!-- Middle layer interconnections -->
+    <line x1="180" y1="230" x2="256" y2="220"/>
+    <line x1="256" y1="220" x2="332" y2="230"/>
+    <line x1="180" y1="230" x2="332" y2="230"/>
+
+    <!-- Middle to lower layer -->
+    <line x1="180" y1="230" x2="160" y2="320"/>
+    <line x1="180" y1="230" x2="256" y2="330"/>
+    <line x1="332" y1="230" x2="352" y2="320"/>
+    <line x1="332" y1="230" x2="256" y2="330"/>
+    <line x1="256" y1="220" x2="160" y2="320"/>
+    <line x1="256" y1="220" x2="352" y2="320"/>
+
+    <!-- Lower to bottom node -->
+    <line x1="160" y1="320" x2="256" y2="400"/>
+    <line x1="352" y1="320" x2="256" y2="400"/>
+    <line x1="256" y1="330" x2="256" y2="400"/>
+
+    <!-- Cross connections for density -->
+    <line x1="160" y1="320" x2="352" y2="320"/>
+    <line x1="160" y1="320" x2="256" y2="330"/>
+    <line x1="352" y1="320" x2="256" y2="330"/>
+  </g>
+
+  <!-- Neural network nodes (circles at intersections) -->
+  <g filter="url(#glow)">
+    <!-- Top node (sentinel) -->
+    <circle cx="256" cy="140" r="14" fill="url(#nodeGrad)"/>
+    <circle cx="256" cy="140" r="7" fill="#0d1117"/>
+
+    <!-- Middle layer -->
+    <circle cx="180" cy="230" r="11" fill="url(#nodeGrad)"/>
+    <circle cx="180" cy="230" r="5" fill="#0d1117"/>
+
+    <circle cx="256" cy="220" r="12" fill="url(#nodeGrad)"/>
+    <circle cx="256" cy="220" r="6" fill="#0d1117"/>
+
+    <circle cx="332" cy="230" r="11" fill="url(#nodeGrad)"/>
+    <circle cx="332" cy="230" r="5" fill="#0d1117"/>
+
+    <!-- Lower layer -->
+    <circle cx="160" cy="320" r="11" fill="url(#nodeGrad)"/>
+    <circle cx="160" cy="320" r="5" fill="#0d1117"/>
+
+    <circle cx="256" cy="330" r="12" fill="url(#nodeGrad)"/>
+    <circle cx="256" cy="330" r="6" fill="#0d1117"/>
+
+    <circle cx="352" cy="320" r="11" fill="url(#nodeGrad)"/>
+    <circle cx="352" cy="320" r="5" fill="#0d1117"/>
+
+    <!-- Bottom node (anchor) -->
+    <circle cx="256" cy="400" r="14" fill="url(#nodeGrad)"/>
+    <circle cx="256" cy="400" r="7" fill="#0d1117"/>
+  </g>
+</svg>

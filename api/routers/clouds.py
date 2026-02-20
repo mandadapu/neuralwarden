@@ -24,6 +24,7 @@ from api.cloud_database import (
     list_cloud_issues,
     list_all_user_issues,
     update_cloud_issue_status,
+    update_cloud_issue_severity,
     get_issue_counts,
     get_asset_counts,
     list_cloud_assets,
@@ -60,6 +61,10 @@ class UpdateCloudRequest(BaseModel):
 
 class UpdateIssueStatusRequest(BaseModel):
     status: str  # todo, in_progress, ignored, resolved
+
+
+class UpdateIssueSeverityRequest(BaseModel):
+    severity: str  # critical, high, medium, low
 
 
 # --------------- helpers ---------------
@@ -493,6 +498,13 @@ async def update_issue(issue_id: str, body: UpdateIssueStatusRequest):
     """Update the status of a single issue."""
     update_cloud_issue_status(issue_id, body.status)
     return {"id": issue_id, "status": body.status}
+
+
+@router.patch("/issues/{issue_id}/severity")
+async def update_issue_severity(issue_id: str, body: UpdateIssueSeverityRequest):
+    """Update the severity of a single issue."""
+    update_cloud_issue_severity(issue_id, body.severity)
+    return {"id": issue_id, "severity": body.severity}
 
 
 # --------------- Assets ---------------

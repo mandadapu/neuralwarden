@@ -367,6 +367,18 @@ export async function updateIssueStatus(
   if (!res.ok) throw new Error(`Failed to update issue: ${res.statusText}`);
 }
 
+export async function updateIssueSeverity(
+  issueId: string,
+  severity: string
+): Promise<void> {
+  const res = await fetch(`${BASE}/clouds/issues/${issueId}/severity`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify({ severity }),
+  });
+  if (!res.ok) throw new Error(`Failed to update severity: ${res.statusText}`);
+}
+
 export async function listCloudAssets(
   cloudId: string,
   assetType?: string

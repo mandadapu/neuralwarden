@@ -398,6 +398,19 @@ def update_cloud_issue_status(issue_id: str, status: str) -> None:
         conn.close()
 
 
+def update_cloud_issue_severity(issue_id: str, severity: str) -> None:
+    """Update the severity of a single issue."""
+    conn = get_conn()
+    try:
+        conn.execute(
+            adapt_sql("UPDATE cloud_issues SET severity = ? WHERE id = ?"),
+            (severity, issue_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def clear_cloud_issues(account_id: str) -> None:
     """Delete all issues for an account."""
     conn = get_conn()
