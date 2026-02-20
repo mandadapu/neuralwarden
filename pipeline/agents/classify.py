@@ -40,6 +40,27 @@ Respond with a JSON array. Each object must have these exact fields:
 
 IMPORTANT: Only output the JSON array, nothing else."""
 
+CORRELATION_ADDENDUM = """
+
+## CORRELATION CONTEXT — ACTIVE EXPLOITS
+The following vulnerabilities have been matched with active log evidence.
+These represent ACTIVE EXPLOITS, not theoretical risks.
+
+{evidence_json}
+
+### SEVERITY ESCALATION RULES
+- If a finding appears in the correlation context above, FORCE ESCALATE its severity to CRITICAL.
+- For correlated findings, include an immediate remediation gcloud command in business_impact.
+- Map correlated activity to the specific MITRE ATT&CK Tactic from the evidence.
+- Set remediation_priority to 1 for ALL correlated findings.
+
+### OUTPUT REQUIREMENTS FOR CORRELATED FINDINGS
+For each correlated finding you MUST include:
+- In business_impact: explain WHY the vulnerability and log behavior together indicate active exploitation
+- In mitre_technique/mitre_tactic: use the values from correlation evidence
+- In affected_systems: include the asset name from correlation evidence
+"""
+
 
 def _fallback_classify(threat: Threat, priority: int) -> ClassifiedThreat:
     """Fallback classification when AI fails: assign MEDIUM risk."""
@@ -92,12 +113,20 @@ def run_classify(state: PipelineState) -> dict:
             max_tokens=2048,
         )
 
+        # Build the human message
+        base_content = f"Classify these {len(threats)} detected threats:\n\n{json.dumps(threat_data, indent=2)}"
+
+        # Enrich with correlation evidence if available
+        correlated_evidence = state.get("correlated_evidence", [])
+        if correlated_evidence:
+            base_content += CORRELATION_ADDENDUM.format(
+                evidence_json=json.dumps(correlated_evidence, indent=2)
+            )
+
         with AgentTimer("classify", MODEL) as timer:
             response = llm.invoke([
                 SystemMessage(content=SYSTEM_PROMPT),
-                HumanMessage(
-                    content=f"Classify these {len(threats)} detected threats:\n\n{json.dumps(threat_data, indent=2)}"
-                ),
+                HumanMessage(content=base_content),
             ])
             timer.record_usage(response)
 
