@@ -178,4 +178,52 @@ export interface ScanStreamEvent {
   issue_counts?: IssueCounts;
   has_report?: boolean;
   message?: string;
+  scan_log_id?: string;
+}
+
+// ── Scan Logs ──
+
+export interface ScanLogServiceDetail {
+  status: "success" | "error" | "skipped";
+  duration_seconds: number;
+  asset_count: number;
+  issue_count: number;
+  error: string | null;
+}
+
+export interface ScanLogSummary {
+  scan_type: string;
+  services_attempted: string[];
+  services_succeeded: string[];
+  services_failed: string[];
+  total_asset_count: number;
+  total_issue_count: number;
+  duration_seconds: number;
+  service_details: Record<string, ScanLogServiceDetail>;
+  active_exploits_detected: number;
+}
+
+export interface ScanLogEntry {
+  ts: string;
+  level: "info" | "error" | "warning";
+  message: string;
+}
+
+export interface ScanLog {
+  id: string;
+  cloud_account_id: string;
+  started_at: string;
+  completed_at: string | null;
+  status: "running" | "success" | "partial" | "error";
+  summary_json: string;
+  log_entries_json: string;
+}
+
+export interface ScanLogListItem {
+  id: string;
+  cloud_account_id: string;
+  started_at: string;
+  completed_at: string | null;
+  status: "running" | "success" | "partial" | "error";
+  summary_json: string;
 }

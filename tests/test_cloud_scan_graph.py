@@ -25,12 +25,14 @@ def test_discover_assets_parses_metadata_json():
             },
         ],
         "issues": [],
+        "scan_log": {"services_attempted": ["compute"]},
     }
     with patch("api.gcp_scanner.run_scan", return_value=mock_result):
-        assets = _discover_assets("proj", "{}", ["compute"])
+        assets, scan_log = _discover_assets("proj", "{}", ["compute"])
         assert assets[0]["metadata"]["source_ranges"] == ["0.0.0.0/0"]
         assert "metadata_json" not in assets[0]  # should be removed
         assert "accessConfigs" in assets[1]["metadata"]["networkInterfaces"][0]
+        assert scan_log["services_attempted"] == ["compute"]
 
 
 def test_run_cloud_scan_with_mock_discovery():
@@ -42,7 +44,7 @@ def test_run_cloud_scan_with_mock_discovery():
          "metadata": {"networkInterfaces": [{"networkIP": "10.0.0.1"}]}},
     ]
 
-    with patch("pipeline.cloud_scan_graph._discover_assets", return_value=mock_assets):
+    with patch("pipeline.cloud_scan_graph._discover_assets", return_value=(mock_assets, {})):
         with patch("pipeline.agents.log_analyzer._fetch_asset_logs", return_value=[]):
             result = run_cloud_scan(
                 cloud_account_id="test-id",
@@ -57,7 +59,7 @@ def test_run_cloud_scan_with_mock_discovery():
 
 def test_run_cloud_scan_no_assets():
     """Scan with no assets still completes."""
-    with patch("pipeline.cloud_scan_graph._discover_assets", return_value=[]):
+    with patch("pipeline.cloud_scan_graph._discover_assets", return_value=([], {})):
         result = run_cloud_scan(
             cloud_account_id="test-id",
             project_id="empty-proj",
@@ -86,7 +88,7 @@ def test_correlation_engine_e2e():
         "2025-01-01 WARNING allow-ssh: Connection closed by authenticating user root",
     ]
 
-    with patch("pipeline.cloud_scan_graph._discover_assets", return_value=mock_assets):
+    with patch("pipeline.cloud_scan_graph._discover_assets", return_value=(mock_assets, {})):
         with patch("pipeline.agents.log_analyzer._fetch_asset_logs", return_value=brute_force_logs):
             result = run_cloud_scan(
                 cloud_account_id="test-id",

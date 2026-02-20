@@ -9,6 +9,8 @@ import type {
   CloudCheck,
   ScanResult,
   ScanStreamEvent,
+  ScanLog,
+  ScanLogListItem,
 } from "./types";
 
 const BASE =
@@ -360,5 +362,29 @@ export async function listCloudChecks(
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to list checks: ${res.statusText}`);
+  return res.json();
+}
+
+// --- Scan Logs ---
+
+export async function listScanLogs(
+  cloudId: string,
+  limit = 20
+): Promise<ScanLogListItem[]> {
+  const res = await fetch(`${BASE}/clouds/${cloudId}/scan-logs?limit=${limit}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to list scan logs: ${res.statusText}`);
+  return res.json();
+}
+
+export async function getScanLog(
+  cloudId: string,
+  logId: string
+): Promise<ScanLog> {
+  const res = await fetch(`${BASE}/clouds/${cloudId}/scan-logs/${logId}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to get scan log: ${res.statusText}`);
   return res.json();
 }

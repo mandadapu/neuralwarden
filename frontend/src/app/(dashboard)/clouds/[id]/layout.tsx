@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import Topbar from "@/components/Topbar";
 import CloudConfigModal from "@/components/CloudConfigModal";
+import ScanLogModal from "@/components/ScanLogModal";
 import { getCloud, scanCloudStream } from "@/lib/api";
 import type { CloudAccount, ScanStreamEvent } from "@/lib/types";
 
@@ -40,6 +41,7 @@ const TABS = [
   { label: "Assets", href: "/assets" },
   { label: "Virtual Machines", href: "/virtual-machines" },
   { label: "Checks", href: "/checks" },
+  { label: "Scan Logs", href: "/scan-logs" },
 ];
 
 export default function CloudDetailLayout({ children }: { children: React.ReactNode }) {
@@ -54,6 +56,8 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
   const [scanning, setScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState<ScanStreamEvent | null>(null);
   const [configOpen, setConfigOpen] = useState(false);
+  const [lastScanLogId, setLastScanLogId] = useState<string | null>(null);
+  const [showScanLog, setShowScanLog] = useState(false);
 
   const loadCloud = useCallback(async () => {
     try {
@@ -74,10 +78,14 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
   async function handleScan() {
     setScanning(true);
     setScanProgress(null);
+    setLastScanLogId(null);
     setError(null);
     try {
       await scanCloudStream(id, (event) => {
         setScanProgress(event);
+        if (event.event === "complete" && event.scan_log_id) {
+          setLastScanLogId(event.scan_log_id);
+        }
       });
       await loadCloud();
     } catch (err) {
@@ -208,6 +216,14 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
                     </svg>
                   )}
                   <span>{progressMessage()}</span>
+                  {isComplete && lastScanLogId && (
+                    <button
+                      onClick={() => setShowScanLog(true)}
+                      className="ml-2 text-xs font-medium text-emerald-700 underline underline-offset-2 hover:text-emerald-900 transition-colors"
+                    >
+                      View Scan Log
+                    </button>
+                  )}
                   {scanProgress && !isComplete && !isError && scanProgress.public_count !== undefined && (
                     <span className="ml-2 text-xs opacity-70">
                       ({scanProgress.public_count} public, {scanProgress.private_count} private)
@@ -264,6 +280,16 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
           onClose={() => setConfigOpen(false)}
           onSave={handleConfigSave}
           onDelete={handleConfigDelete}
+        />
+      )}
+
+      {/* Scan log modal */}
+      {lastScanLogId && (
+        <ScanLogModal
+          cloudId={id}
+          logId={lastScanLogId}
+          open={showScanLog}
+          onClose={() => setShowScanLog(false)}
         />
       )}
     </CloudContext.Provider>

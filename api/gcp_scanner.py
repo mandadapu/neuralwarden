@@ -12,6 +12,8 @@ import json
 import logging
 import os
 import tempfile
+import time
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -429,7 +431,7 @@ def run_scan(
     exist, run that scanner.  Always runs ``cloud_logging``.
 
     Returns a result dict with scan_type, scanned_services, assets,
-    issues, and counts.
+    issues, counts, and a ``scan_log`` key with per-service details.
     """
     if services is None:
         services = ["cloud_logging"]
@@ -440,46 +442,142 @@ def run_scan(
     all_issues: List[Dict[str, Any]] = []
     scanned: List[str] = []
 
+    # ── Scan log capture ──
+    service_details: Dict[str, Dict[str, Any]] = {}
+    log_entries: List[Dict[str, str]] = []
+    scan_start = time.monotonic()
+    scan_start_ts = datetime.now(timezone.utc).isoformat()
+
+    def _log(level: str, message: str) -> None:
+        log_entries.append({
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "level": level,
+            "message": message,
+        })
+
+    _log("info", f"Scan started for project {project_id}")
+    _log("info", f"Requested services: {', '.join(services)}")
+    _log("info", f"Available libraries: {', '.join(available)}")
+
     credentials = None
     if credentials_json:
         try:
             credentials = _make_credentials(credentials_json)
+            _log("info", "Credentials loaded successfully")
         except Exception as exc:
             logger.warning("Could not create GCP credentials: %s", exc)
+            _log("error", f"Credential loading failed: {exc}")
 
     # ---- Compute (firewall + instances) ----
     if "compute" in services and "compute" in available and credentials:
+        _log("info", "[compute] Started scanning")
+        svc_start = time.monotonic()
         try:
             assets, issues = _scan_compute(project_id, credentials)
             all_assets.extend(assets)
             all_issues.extend(issues)
             scanned.append("compute")
+            elapsed = round(time.monotonic() - svc_start, 2)
+            service_details["compute"] = {
+                "status": "success", "duration_seconds": elapsed,
+                "asset_count": len(assets), "issue_count": len(issues), "error": None,
+            }
+            _log("info", f"[compute] Completed: {len(assets)} assets, {len(issues)} issues ({elapsed}s)")
         except Exception as exc:
+            elapsed = round(time.monotonic() - svc_start, 2)
+            service_details["compute"] = {
+                "status": "error", "duration_seconds": elapsed,
+                "asset_count": 0, "issue_count": 0, "error": str(exc),
+            }
+            _log("error", f"[compute] Failed: {exc}")
             logger.warning("Compute scan failed: %s", exc)
+    elif "compute" in services:
+        reason = "library not installed" if "compute" not in available else "no credentials"
+        _log("warning", f"[compute] Skipped: {reason}")
+        service_details["compute"] = {
+            "status": "skipped", "duration_seconds": 0,
+            "asset_count": 0, "issue_count": 0, "error": reason,
+        }
 
     # ---- Storage ----
     if "storage" in services and "storage" in available and credentials:
+        _log("info", "[storage] Started scanning")
+        svc_start = time.monotonic()
         try:
             assets, issues = _scan_storage(project_id, credentials)
             all_assets.extend(assets)
             all_issues.extend(issues)
             scanned.append("storage")
+            elapsed = round(time.monotonic() - svc_start, 2)
+            service_details["storage"] = {
+                "status": "success", "duration_seconds": elapsed,
+                "asset_count": len(assets), "issue_count": len(issues), "error": None,
+            }
+            _log("info", f"[storage] Completed: {len(assets)} assets, {len(issues)} issues ({elapsed}s)")
         except Exception as exc:
+            elapsed = round(time.monotonic() - svc_start, 2)
+            service_details["storage"] = {
+                "status": "error", "duration_seconds": elapsed,
+                "asset_count": 0, "issue_count": 0, "error": str(exc),
+            }
+            _log("error", f"[storage] Failed: {exc}")
             logger.warning("Storage scan failed: %s", exc)
+    elif "storage" in services:
+        reason = "library not installed" if "storage" not in available else "no credentials"
+        _log("warning", f"[storage] Skipped: {reason}")
+        service_details["storage"] = {
+            "status": "skipped", "duration_seconds": 0,
+            "asset_count": 0, "issue_count": 0, "error": reason,
+        }
 
     # ---- Cloud Logging (always attempted) ----
     if credentials_json:
+        _log("info", "[cloud_logging] Started scanning")
+        svc_start = time.monotonic()
         try:
             assets, issues = _scan_cloud_logging(project_id, credentials_json)
             all_assets.extend(assets)
             all_issues.extend(issues)
             scanned.append("cloud_logging")
+            elapsed = round(time.monotonic() - svc_start, 2)
+            service_details["cloud_logging"] = {
+                "status": "success", "duration_seconds": elapsed,
+                "asset_count": len(assets), "issue_count": len(issues), "error": None,
+            }
+            _log("info", f"[cloud_logging] Completed: {len(assets)} assets, {len(issues)} issues ({elapsed}s)")
         except Exception as exc:
+            elapsed = round(time.monotonic() - svc_start, 2)
+            service_details["cloud_logging"] = {
+                "status": "error", "duration_seconds": elapsed,
+                "asset_count": 0, "issue_count": 0, "error": str(exc),
+            }
+            _log("error", f"[cloud_logging] Failed: {exc}")
             logger.warning("Cloud Logging scan failed: %s", exc)
 
     # Determine scan_type
     non_logging_services = [s for s in scanned if s != "cloud_logging"]
     scan_type = "full" if non_logging_services else "cloud_logging_only"
+
+    # ── Build scan log summary ──
+    total_duration = round(time.monotonic() - scan_start, 2)
+    services_attempted = list(service_details.keys())
+    services_succeeded = [s for s, d in service_details.items() if d["status"] == "success"]
+    services_failed = [s for s, d in service_details.items() if d["status"] == "error"]
+
+    _log("info", f"Scan complete: {len(all_assets)} assets, {len(all_issues)} issues ({total_duration}s)")
+
+    scan_log: Dict[str, Any] = {
+        "scan_type": scan_type,
+        "services_attempted": services_attempted,
+        "services_succeeded": services_succeeded,
+        "services_failed": services_failed,
+        "total_asset_count": len(all_assets),
+        "total_issue_count": len(all_issues),
+        "duration_seconds": total_duration,
+        "service_details": service_details,
+        "log_entries": log_entries,
+        "started_at": scan_start_ts,
+    }
 
     return {
         "scan_type": scan_type,
@@ -488,4 +586,5 @@ def run_scan(
         "issues": all_issues,
         "asset_count": len(all_assets),
         "issue_count": len(all_issues),
+        "scan_log": scan_log,
     }

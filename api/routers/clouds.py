@@ -25,6 +25,10 @@ from api.cloud_database import (
     get_issue_counts,
     list_cloud_assets,
     list_cloud_checks,
+    create_scan_log,
+    complete_scan_log,
+    list_scan_logs,
+    get_scan_log,
 )
 
 logger = logging.getLogger(__name__)
@@ -222,6 +226,43 @@ async def trigger_scan(cloud_id: str):
                 last_scan_at=datetime.now(timezone.utc).isoformat(),
             )
 
+            # ── Save scan log ──
+            scan_log_id = None
+            try:
+                scan_log_data = final.get("scan_log_data", {})
+                started_at = scan_log_data.get(
+                    "started_at", datetime.now(timezone.utc).isoformat()
+                )
+                scan_log_id = create_scan_log(cloud_id, started_at)
+
+                services_failed = scan_log_data.get("services_failed", [])
+                services_succeeded = scan_log_data.get("services_succeeded", [])
+                if not services_succeeded and services_failed:
+                    log_status = "error"
+                elif services_failed:
+                    log_status = "partial"
+                else:
+                    log_status = "success"
+
+                summary = {
+                    k: v
+                    for k, v in scan_log_data.items()
+                    if k not in ("log_entries", "started_at")
+                }
+                summary["active_exploits_detected"] = active_exploits
+
+                complete_scan_log(
+                    log_id=scan_log_id,
+                    status=log_status,
+                    completed_at=datetime.now(timezone.utc).isoformat(),
+                    summary_json=json.dumps(summary),
+                    log_entries_json=json.dumps(
+                        scan_log_data.get("log_entries", [])
+                    ),
+                )
+            except Exception:
+                logger.warning("Failed to save scan log", exc_info=True)
+
             yield {
                 "data": json.dumps({
                     "event": "complete",
@@ -231,16 +272,54 @@ async def trigger_scan(cloud_id: str):
                     "active_exploits_detected": active_exploits,
                     "issue_counts": get_issue_counts(cloud_id),
                     "has_report": final.get("report") is not None,
+                    "scan_log_id": scan_log_id,
                 })
             }
 
         except Exception as e:
             logger.exception("Scan failed")
+            # Save error scan log
+            try:
+                err_log_id = create_scan_log(
+                    cloud_id, datetime.now(timezone.utc).isoformat()
+                )
+                complete_scan_log(
+                    log_id=err_log_id,
+                    status="error",
+                    completed_at=datetime.now(timezone.utc).isoformat(),
+                    summary_json=json.dumps({"error": str(e)}),
+                    log_entries_json="[]",
+                )
+            except Exception:
+                logger.warning("Failed to save error scan log")
             yield {
                 "data": json.dumps({"event": "error", "message": str(e)})
             }
 
     return EventSourceResponse(scan_generator())
+
+
+# --------------- Scan Logs ---------------
+
+
+@router.get("/{cloud_id}/scan-logs")
+async def list_scan_logs_endpoint(
+    cloud_id: str, limit: int = Query(20, ge=1, le=100)
+):
+    """List recent scan logs for a cloud account."""
+    account = get_cloud_account(cloud_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Cloud account not found")
+    return list_scan_logs(cloud_id, limit=limit)
+
+
+@router.get("/{cloud_id}/scan-logs/{log_id}")
+async def get_scan_log_endpoint(cloud_id: str, log_id: str):
+    """Get full scan log detail."""
+    log = get_scan_log(log_id)
+    if not log or log["cloud_account_id"] != cloud_id:
+        raise HTTPException(status_code=404, detail="Scan log not found")
+    return log
 
 
 # --------------- Issues ---------------

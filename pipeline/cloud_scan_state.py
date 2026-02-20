@@ -52,6 +52,9 @@ class ScanAgentState(TypedDict, total=False):
     correlated_issues: list[dict]
     active_exploits_detected: int
 
+    # ── Scan log ──
+    scan_log_data: dict
+
     # ── Metadata ──
     error: str | None
     scan_type: str  # "full" or "cloud_logging_only"

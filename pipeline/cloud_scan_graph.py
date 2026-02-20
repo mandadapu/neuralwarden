@@ -25,11 +25,15 @@ logger = logging.getLogger(__name__)
 # -- Discovery Node --
 
 
-def _discover_assets(project_id: str, credentials_json: str, services: list[str]) -> list[dict]:
+def _discover_assets(
+    project_id: str, credentials_json: str, services: list[str]
+) -> tuple[list[dict], dict]:
     """Discover GCP assets using the existing scanner's discovery functions.
 
     Parses metadata_json into a metadata dict for each asset so the router
     and scanner agents can inspect structured metadata directly.
+
+    Returns (assets, scan_log_data).
     """
     from api.gcp_scanner import run_scan
     result = run_scan(project_id, credentials_json, services)
@@ -43,12 +47,12 @@ def _discover_assets(project_id: str, credentials_json: str, services: list[str]
         except (json.JSONDecodeError, TypeError):
             asset["metadata"] = {}
 
-    return assets
+    return assets, result.get("scan_log", {})
 
 
 def discovery_node(state: ScanAgentState) -> dict:
     """Enumerate all GCP assets for the project."""
-    assets = _discover_assets(
+    assets, scan_log_data = _discover_assets(
         state["project_id"],
         state.get("credentials_json", ""),
         state.get("enabled_services", ["cloud_logging"]),
@@ -56,6 +60,7 @@ def discovery_node(state: ScanAgentState) -> dict:
     return {
         "discovered_assets": assets,
         "scan_status": "discovered",
+        "scan_log_data": scan_log_data,
     }
 
 

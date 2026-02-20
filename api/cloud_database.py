@@ -86,6 +86,19 @@ CREATE TABLE IF NOT EXISTS cloud_checks (
 )
 """
 
+_CREATE_SCAN_LOGS = """
+CREATE TABLE IF NOT EXISTS scan_logs (
+    id TEXT PRIMARY KEY,
+    cloud_account_id TEXT NOT NULL,
+    started_at TEXT NOT NULL,
+    completed_at TEXT,
+    status TEXT NOT NULL DEFAULT 'running',
+    summary_json TEXT DEFAULT '{}',
+    log_entries_json TEXT DEFAULT '[]',
+    FOREIGN KEY (cloud_account_id) REFERENCES cloud_accounts(id)
+)
+"""
+
 
 def init_cloud_tables() -> None:
     """Create all cloud monitoring tables if they don't exist."""
@@ -95,6 +108,7 @@ def init_cloud_tables() -> None:
         conn.execute(_CREATE_CLOUD_ASSETS)
         conn.execute(_CREATE_CLOUD_ISSUES)
         conn.execute(_CREATE_CLOUD_CHECKS)
+        conn.execute(_CREATE_SCAN_LOGS)
         conn.commit()
     finally:
         conn.close()
@@ -194,9 +208,10 @@ def update_cloud_account(account_id: str, **fields) -> None:
 
 
 def delete_cloud_account(account_id: str) -> None:
-    """Delete an account and cascade-delete its assets and issues."""
+    """Delete an account and cascade-delete its assets, issues, and scan logs."""
     conn = _get_conn()
     try:
+        conn.execute("DELETE FROM scan_logs WHERE cloud_account_id = ?", (account_id,))
         conn.execute("DELETE FROM cloud_issues WHERE cloud_account_id = ?", (account_id,))
         conn.execute("DELETE FROM cloud_assets WHERE cloud_account_id = ?", (account_id,))
         conn.execute("DELETE FROM cloud_accounts WHERE id = ?", (account_id,))
@@ -406,5 +421,77 @@ def list_cloud_checks(provider: str = "gcp", category: str = "") -> list[dict]:
         query += " ORDER BY rule_code"
         rows = conn.execute(query, params).fetchall()
         return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+
+# ── Scan logs CRUD ─────────────────────────────────────────────────
+
+
+def create_scan_log(cloud_account_id: str, started_at: str) -> str:
+    """Create a scan log entry in 'running' state. Returns the log ID."""
+    log_id = str(uuid.uuid4())
+    conn = _get_conn()
+    try:
+        conn.execute(
+            """INSERT INTO scan_logs
+               (id, cloud_account_id, started_at, status)
+               VALUES (?, ?, ?, 'running')""",
+            (log_id, cloud_account_id, started_at),
+        )
+        conn.commit()
+        return log_id
+    finally:
+        conn.close()
+
+
+def complete_scan_log(
+    log_id: str,
+    status: str,
+    completed_at: str,
+    summary_json: str,
+    log_entries_json: str,
+) -> None:
+    """Finalize a scan log with results."""
+    conn = _get_conn()
+    try:
+        conn.execute(
+            """UPDATE scan_logs
+               SET status = ?, completed_at = ?,
+                   summary_json = ?, log_entries_json = ?
+               WHERE id = ?""",
+            (status, completed_at, summary_json, log_entries_json, log_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def list_scan_logs(cloud_account_id: str, limit: int = 20) -> list[dict]:
+    """List recent scan logs for an account, newest first (no log entries)."""
+    conn = _get_conn()
+    try:
+        rows = conn.execute(
+            """SELECT id, cloud_account_id, started_at, completed_at,
+                      status, summary_json
+               FROM scan_logs
+               WHERE cloud_account_id = ?
+               ORDER BY started_at DESC
+               LIMIT ?""",
+            (cloud_account_id, limit),
+        ).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+
+def get_scan_log(log_id: str) -> dict | None:
+    """Get full scan log detail including log entries."""
+    conn = _get_conn()
+    try:
+        row = conn.execute(
+            "SELECT * FROM scan_logs WHERE id = ?", (log_id,)
+        ).fetchone()
+        return dict(row) if row else None
     finally:
         conn.close()
