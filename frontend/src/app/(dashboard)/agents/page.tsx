@@ -85,7 +85,7 @@ function AgentGroup({
   agents: Agent[];
   startIndex: number;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const meta = GROUP_META[group];
 
   return (
