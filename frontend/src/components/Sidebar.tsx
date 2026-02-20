@@ -15,7 +15,7 @@ export default function Sidebar() {
   return (
     <aside className="w-[250px] min-w-[250px] min-h-screen bg-sidebar text-gray-400 text-sm flex flex-col">
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2.5 px-5 py-4.5">
+      <Link href="/feed" className="flex items-center gap-2.5 px-5 py-4.5">
         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-blue-400 flex items-center justify-center">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -34,7 +34,7 @@ export default function Sidebar() {
 
       {/* Primary nav */}
       <nav className="px-2 space-y-0.5">
-        <NavItem href="/" icon={<GridIcon />} label="Feed" active={pathname === "/"} count={feedCount > 0 ? String(feedCount) : undefined} />
+        <NavItem href="/feed" icon={<GridIcon />} label="Feed" active={pathname === "/feed"} count={feedCount > 0 ? String(feedCount) : undefined} />
         <NavItem href="/snoozed" icon={<ClockIcon />} label="Snoozed" active={pathname === "/snoozed"} count={snoozedCount > 0 ? String(snoozedCount) : undefined} />
         <NavItem href="/ignored" icon={<XIcon />} label="Ignored" active={pathname === "/ignored"} badge={String(ignoredCount)} />
         <NavItem href="/solved" icon={<CheckIcon />} label="Solved" active={pathname === "/solved"} count={solvedCount > 0 ? String(solvedCount) : undefined} />

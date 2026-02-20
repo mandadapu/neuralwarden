@@ -22,6 +22,3 @@ body {
   font-family: var(--font-sans);
 }
 
-footer {
-  display: none !important;
-}
