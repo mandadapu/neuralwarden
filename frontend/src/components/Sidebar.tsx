@@ -25,18 +25,8 @@ export default function Sidebar() {
 
   return (
     <aside className="w-[250px] min-w-[250px] min-h-screen bg-sidebar text-gray-400 text-sm flex flex-col">
-      {/* Logo */}
-      <Link href="/feed" className="flex items-center gap-2.5 px-5 py-4.5">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00e68a]/20 to-[#009952]/10 border border-[#00e68a]/20 flex items-center justify-center">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
-        </div>
-        <span className="text-[#00e68a] text-base font-bold tracking-tight">NeuralWarden</span>
-      </Link>
-
       {/* Account selector */}
-      <div className="mx-3 mb-4 px-3 py-2.5 bg-[#00e68a]/5 border border-[#30363d] rounded-lg flex items-center justify-between cursor-pointer">
+      <div className="mx-3 mt-4 mb-4 px-3 py-2.5 bg-[#00e68a]/5 border border-[#30363d] rounded-lg flex items-center justify-between cursor-pointer">
         <span className="text-[#8b949e] text-[13px] font-medium">Security Pipeline v2</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
           <path d="M6 9l6 6 6-6" />
