@@ -45,19 +45,20 @@ export default function DashboardPage() {
   const [cloudThreats, setCloudThreats] = useState<ClassifiedThreat[]>([]);
   const {
     isLoading, result, error, logText, skipIngest, autoAnalyze, pipelineProgress, setLogText, setAutoAnalyze, runAnalysis, resume,
-    updateThreat, snoozeThreat, ignoreThreat,
+    updateThreat, snoozeThreat, ignoreThreat, loadLatestReport,
   } = useAnalysisContext();
 
-  // Fetch cloud scan issues
+  // Fetch cloud scan issues and refresh latest report on mount
   useEffect(() => {
     if (!session?.user?.email) return;
     setApiUserEmail(session.user.email);
+    loadLatestReport();
     listAllCloudIssues().then((issues) => {
       // Filter out resolved issues (solved/ignored) — show todo + in_progress
       issues = issues.filter((i) => i.status === "todo" || i.status === "in_progress");
       setCloudThreats(issues.map(cloudIssueToThreat));
     }).catch(() => {});
-  }, [session?.user?.email]);
+  }, [session?.user?.email, loadLatestReport]);
 
   // Auto-start analysis when redirected from GCP fetch
   useEffect(() => {

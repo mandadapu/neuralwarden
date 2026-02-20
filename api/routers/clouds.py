@@ -268,14 +268,50 @@ async def trigger_scan(cloud_id: str):
                 from pipeline.agents.remediation_generator import generate_remediation
                 generate_remediation(issues, project_id=account["project_id"])
 
+            inserted = 0
             if issues:
-                save_cloud_issues(cloud_id, issues)
+                inserted = save_cloud_issues(cloud_id, issues)
             if assets:
                 save_cloud_assets(cloud_id, assets)
             update_cloud_account(
                 cloud_id,
                 last_scan_at=datetime.now(timezone.utc).isoformat(),
             )
+
+            # ── Save threat pipeline results if new issues were found ──
+            if inserted > 0:
+                classified = final.get("classified_threats", [])
+                report = final.get("report")
+                agent_metrics = final.get("agent_metrics", {})
+                pipeline_time = final.get("pipeline_time", 0.0)
+
+                # Build AnalysisResponse-shaped dict for save_analysis
+                severity_counts = {}
+                for iss in issues:
+                    sev = iss.get("severity", "medium")
+                    severity_counts[sev] = severity_counts.get(sev, 0) + 1
+
+                response_data = {
+                    "status": "completed",
+                    "summary": {
+                        "total_threats": len(issues),
+                        "severity_counts": severity_counts,
+                        "auto_ignored": 0,
+                        "total_logs": len(final.get("log_lines", [])),
+                        "logs_cleared": 0,
+                    },
+                    "classified_threats": classified,
+                    "report": report,
+                    "agent_metrics": agent_metrics,
+                    "pipeline_time": pipeline_time,
+                }
+
+                try:
+                    from api.database import save_analysis
+                    user_email = account.get("user_email", "")
+                    save_analysis(response_data, user_email=user_email)
+                except Exception:
+                    logger.warning("Failed to save scan analysis report", exc_info=True)
 
             # ── Save scan log ──
             scan_log_id = None

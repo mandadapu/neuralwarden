@@ -27,6 +27,7 @@ interface AnalysisContextType {
   ignoreThreat: (threatId: string) => void;
   solveThreat: (threatId: string) => void;
   restoreThreat: (threatId: string, from: "snoozed" | "ignored" | "solved") => void;
+  loadLatestReport: () => Promise<void>;
 }
 
 const AnalysisContext = createContext<AnalysisContextType | null>(null);
@@ -64,14 +65,20 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
+  // Load latest analysis from server
+  const loadLatestReport = useCallback(async () => {
+    try {
+      const data = await getLatestReport();
+      if (data) setResult(data);
+    } catch {}
+  }, []);
+
   // Load latest analysis from server once user session is available
   useEffect(() => {
     if (!session?.user?.email) return;
     setApiUserEmail(session.user.email);
-    getLatestReport().then((data) => {
-      if (data) setResult(data);
-    }).catch(() => {});
-  }, [session?.user?.email]);
+    loadLatestReport();
+  }, [session?.user?.email, loadLatestReport]);
 
   // Persist local-only state (result loads from server, logText no longer needed)
   useEffect(() => {
@@ -211,7 +218,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     <AnalysisContext.Provider
       value={{
         isLoading, result, error, logText, skipIngest, autoAnalyze, pipelineProgress, snoozedThreats, ignoredThreats, solvedThreats,
-        setLogText, setSkipIngest, setAutoAnalyze, runAnalysis, resume, updateThreat, snoozeThreat, ignoreThreat, solveThreat, restoreThreat,
+        setLogText, setSkipIngest, setAutoAnalyze, runAnalysis, resume, updateThreat, snoozeThreat, ignoreThreat, solveThreat, restoreThreat, loadLatestReport,
       }}
     >
       {children}
