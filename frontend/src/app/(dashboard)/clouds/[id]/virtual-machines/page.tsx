@@ -125,7 +125,7 @@ export default function VirtualMachinesTab() {
           </svg>
           Scan VMs
         </button>
-        <button className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 text-sm font-medium text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
+        <button className="inline-flex items-center gap-2 px-4 py-2 border border-[#122a1e] text-sm font-medium text-[#8a9a90] rounded-lg hover:bg-[#0a1a14] transition-colors">
           Disconnect VMs
         </button>
       </div>
@@ -147,34 +147,34 @@ export default function VirtualMachinesTab() {
       {/* Empty state */}
       {!loading && !error && vmRows.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
+          <div className="w-14 h-14 rounded-2xl bg-[#0c1e18] flex items-center justify-center mb-4">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3a5548" strokeWidth="1.5">
               <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
               <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">No virtual machines found</h3>
-          <p className="text-sm text-gray-500">Run a scan to discover compute instances.</p>
+          <h3 className="text-lg font-semibold text-white mb-1">No virtual machines found</h3>
+          <p className="text-sm text-[#5a7068]">Run a scan to discover compute instances.</p>
         </div>
       )}
 
       {/* VM table */}
       {!loading && !error && vmRows.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-[#081510] rounded-xl border border-[#122a1e] overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3">Name</th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3">Open Issues</th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3">Ignored</th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3">Severity</th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3">Purpose</th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3">Last Scan</th>
+              <tr className="bg-[#0a1a14] border-b border-[#122a1e]">
+                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Name</th>
+                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Open Issues</th>
+                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Ignored</th>
+                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Severity</th>
+                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Purpose</th>
+                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Last Scan</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[#0e1e16]">
               {vmRows.map((row) => (
-                <tr key={row.asset.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={row.asset.id} className="hover:bg-[#0a1a14] transition-colors">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
@@ -184,18 +184,18 @@ export default function VirtualMachinesTab() {
                         </svg>
                       </div>
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{row.asset.name}</div>
-                        <div className="text-xs text-gray-400">{row.zone}</div>
+                        <div className="text-sm font-medium text-white">{row.asset.name}</div>
+                        <div className="text-xs text-[#3a5548]">{row.zone}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className={`text-sm font-medium ${row.openIssues > 0 ? "text-red-600" : "text-gray-500"}`}>
+                    <span className={`text-sm font-medium ${row.openIssues > 0 ? "text-red-600" : "text-[#5a7068]"}`}>
                       {row.openIssues}
                     </span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="text-sm text-gray-500">{row.ignoredIssues}</span>
+                    <span className="text-sm text-[#5a7068]">{row.ignoredIssues}</span>
                   </td>
                   <td className="px-5 py-3.5">
                     {row.highestSeverity ? (
@@ -203,14 +203,14 @@ export default function VirtualMachinesTab() {
                         {row.highestSeverity}
                       </span>
                     ) : (
-                      <span className="text-sm text-gray-400">—</span>
+                      <span className="text-sm text-[#3a5548]">—</span>
                     )}
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="text-sm text-gray-600 capitalize">{row.purpose}</span>
+                    <span className="text-sm text-[#8a9a90] capitalize">{row.purpose}</span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="text-sm text-gray-500">{relativeTime(row.lastScan)}</span>
+                    <span className="text-sm text-[#5a7068]">{relativeTime(row.lastScan)}</span>
                   </td>
                 </tr>
               ))}

@@ -17,7 +17,7 @@ export default function HitlReviewPanel({
   if (threats.length === 0) return null;
 
   return (
-    <div className="mx-7 my-4 p-5 bg-red-50 border-2 border-red-600 rounded-xl">
+    <div className="mx-7 my-4 p-5 bg-red-950/20 border-2 border-red-600 rounded-xl">
       <div className="flex items-center gap-2 text-red-600 font-bold text-base mb-3">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
@@ -31,13 +31,13 @@ export default function HitlReviewPanel({
         {threats.map((pt) => (
           <div
             key={pt.threat_id}
-            className="p-3 bg-white rounded-lg border border-red-300"
+            className="p-3 bg-[#081510] rounded-lg border border-red-500/30"
           >
-            <div className="font-semibold text-red-900">
+            <div className="font-semibold text-red-400">
               {pt.type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
             </div>
-            <div className="text-sm text-gray-700 mt-1">{pt.description}</div>
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-sm text-[#c0d0c8] mt-1">{pt.description}</div>
+            <div className="text-xs text-[#5a7068] mt-1">
               IP: {pt.source_ip || "N/A"} | MITRE: {pt.mitre_technique || "N/A"} | Score:{" "}
               {pt.risk_score.toFixed(1)}/10
             </div>
@@ -49,7 +49,7 @@ export default function HitlReviewPanel({
       </div>
 
       <textarea
-        className="w-full border border-gray-200 rounded-lg p-3 text-sm text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-red-300 mb-3"
+        className="w-full border border-[#122a1e] rounded-lg p-3 text-sm text-[#c0d0c8] bg-[#0a1a14] resize-none focus:outline-none focus:ring-2 focus:ring-red-500/30 mb-3"
         rows={2}
         placeholder="Optional reviewer notes..."
         value={notes}

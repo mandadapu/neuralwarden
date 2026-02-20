@@ -65,7 +65,7 @@ export default function DashboardPage() {
       )}
 
       {error && (
-        <div className="mx-7 mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+        <div className="mx-7 mb-4 p-4 bg-red-950/20 border border-red-500/30 rounded-xl text-red-400 text-sm">
           {error}
         </div>
       )}
@@ -91,7 +91,7 @@ export default function DashboardPage() {
       )}
 
       {result?.status === "hitl_required" && (
-        <div className="mx-7 mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-800 text-sm italic">
+        <div className="mx-7 mb-4 p-4 bg-yellow-950/20 border border-yellow-500/30 rounded-xl text-yellow-400 text-sm italic">
           Awaiting human review of critical threats before generating report...
         </div>
       )}

@@ -108,21 +108,21 @@ export default function ThreatDetailPanel({
         role="dialog"
         aria-modal="true"
         aria-label={`Threat detail: ${typeName}`}
-        className={`fixed top-0 right-0 h-full w-full sm:w-[480px] bg-white shadow-[-4px_0_24px_rgba(0,0,0,0.08)] border-l border-gray-200 z-50 flex flex-col transition-transform duration-300 ease-in-out ${isVisible ? "translate-x-0" : "translate-x-full"}`}
+        className={`fixed top-0 right-0 h-full w-full sm:w-[480px] bg-[#081510] shadow-[-4px_0_24px_rgba(0,0,0,0.4)] border-l border-[#122a1e] z-50 flex flex-col transition-transform duration-300 ease-in-out ${isVisible ? "translate-x-0" : "translate-x-full"}`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#122a1e]">
           <div className="flex items-center gap-3">
             <button
               onClick={handleClose}
               aria-label="Close panel"
-              className="p-1 rounded-md hover:bg-gray-100 transition-colors"
+              className="p-1 rounded-md hover:bg-[#0c1e18] transition-colors"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5a7068" strokeWidth="2">
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>
             </button>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" className="cursor-pointer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a5548" strokeWidth="2" className="cursor-pointer">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
               <polyline points="15 3 21 3 21 9" />
               <line x1="10" y1="14" x2="21" y2="3" />
@@ -133,7 +133,7 @@ export default function ThreatDetailPanel({
           <div className="relative" ref={actionsRef}>
             <button
               onClick={() => { setActionsOpen(!actionsOpen); setSeverityOpen(false); }}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-[#0f172a] text-white text-[13px] font-medium rounded-lg hover:bg-[#1e293b] transition-colors"
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-[#00e68a] text-[#040a07] text-[13px] font-medium rounded-lg hover:bg-[#00cc7a] transition-colors"
             >
               Actions
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -142,8 +142,8 @@ export default function ThreatDetailPanel({
             </button>
 
             {actionsOpen && (
-              <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-gray-200 rounded-xl shadow-lg z-60 py-1 overflow-hidden">
-                <div className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100">
+              <div className="absolute right-0 top-full mt-1 w-56 bg-[#081510] border border-[#122a1e] rounded-xl shadow-lg z-60 py-1 overflow-hidden">
+                <div className="px-4 py-2.5 text-xs font-semibold text-[#5a7068] uppercase tracking-wider border-b border-[#0e1e16]">
                   Actions
                 </div>
                 <ActionItem
@@ -187,7 +187,7 @@ export default function ThreatDetailPanel({
                     onClick={() => setSeverityOpen(!severityOpen)}
                   />
                   {severityOpen && (
-                    <div className="absolute left-full top-0 ml-1 w-40 bg-white border border-gray-200 rounded-xl shadow-lg py-1">
+                    <div className="absolute left-full top-0 ml-1 w-40 bg-[#081510] border border-[#122a1e] rounded-xl shadow-lg py-1">
                       {(["critical", "high", "medium", "low"] as const).map((level) => (
                         <button
                           key={level}
@@ -196,14 +196,14 @@ export default function ThreatDetailPanel({
                             setActionsOpen(false);
                             setSeverityOpen(false);
                           }}
-                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 transition-colors ${ct.risk === level ? "font-semibold" : ""}`}
+                          className={`w-full text-left px-4 py-2 text-sm hover:bg-[#0a1a14] flex items-center gap-2 transition-colors ${ct.risk === level ? "font-semibold" : ""}`}
                         >
                           <span
                             className="w-2 h-2 rounded-full"
                             style={{ background: SEVERITY_COLORS[level] }}
                           />
                           {level.charAt(0).toUpperCase() + level.slice(1)}
-                          {ct.risk === level && <span className="text-xs text-gray-400 ml-auto">current</span>}
+                          {ct.risk === level && <span className="text-xs text-[#3a5548] ml-auto">current</span>}
                         </button>
                       ))}
                     </div>
@@ -215,20 +215,20 @@ export default function ThreatDetailPanel({
         </div>
 
         {/* Threat identity */}
-        <div className="px-5 py-4 border-b border-gray-200">
+        <div className="px-5 py-4 border-b border-[#122a1e]">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
                 <ThreatTypeIcon type={ct.type} />
-                <h2 className="text-base font-bold text-[#1a1a2e]">{typeName}</h2>
+                <h2 className="text-base font-bold text-white">{typeName}</h2>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <SeverityBadge risk={ct.risk} />
-                <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-[#0c1e18] text-[#8a9a90] border border-[#122a1e]">
                   {methodLabel}
                 </span>
                 {ct.mitre_technique && (
-                  <span className="px-2 py-0.5 rounded-md text-xs font-mono font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                  <span className="px-2 py-0.5 rounded-md text-xs font-mono font-medium bg-[#0c1e18] text-[#8a9a90] border border-[#122a1e]">
                     {ct.mitre_technique}
                   </span>
                 )}
@@ -239,7 +239,7 @@ export default function ThreatDetailPanel({
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-200 px-5">
+        <div className="flex border-b border-[#122a1e] px-5">
           {(["overview", "activity", "tasks"] as Tab[]).map((tab) => (
             <button
               key={tab}
@@ -247,7 +247,7 @@ export default function ThreatDetailPanel({
               className={`px-4 py-3 text-[13px] font-medium transition-colors relative ${
                 activeTab === tab
                   ? "text-primary font-semibold"
-                  : "text-gray-500 hover:text-gray-700"
+                  : "text-[#5a7068] hover:text-[#c0d0c8]"
               }`}
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -263,34 +263,34 @@ export default function ThreatDetailPanel({
           {activeTab === "overview" ? (
             <div className="px-5">
               {/* TL;DR */}
-              <div className="py-4 border-b border-gray-100">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">TL;DR</h3>
-                <p className="text-sm text-gray-700 leading-relaxed">{ct.description}</p>
+              <div className="py-4 border-b border-[#0e1e16]">
+                <h3 className="text-xs font-semibold text-[#5a7068] uppercase tracking-wider mb-2">TL;DR</h3>
+                <p className="text-sm text-[#c0d0c8] leading-relaxed">{ct.description}</p>
               </div>
 
               {/* Business Impact */}
-              <div className="py-4 border-b border-gray-100">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Business Impact</h3>
-                <p className="text-sm text-gray-700 leading-relaxed">
-                  {ct.business_impact || <span className="italic text-gray-400">No business impact assessment available</span>}
+              <div className="py-4 border-b border-[#0e1e16]">
+                <h3 className="text-xs font-semibold text-[#5a7068] uppercase tracking-wider mb-2">Business Impact</h3>
+                <p className="text-sm text-[#c0d0c8] leading-relaxed">
+                  {ct.business_impact || <span className="italic text-[#3a5548]">No business impact assessment available</span>}
                 </p>
               </div>
 
               {/* MITRE ATT&CK */}
               {(ct.mitre_technique || ct.mitre_tactic) && (
-                <div className="py-4 border-b border-gray-100">
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">MITRE ATT&CK</h3>
+                <div className="py-4 border-b border-[#0e1e16]">
+                  <h3 className="text-xs font-semibold text-[#5a7068] uppercase tracking-wider mb-2">MITRE ATT&CK</h3>
                   <div className="space-y-1.5">
                     {ct.mitre_technique && (
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="text-gray-500">Technique:</span>
-                        <span className="font-mono text-xs bg-gray-50 px-1.5 py-0.5 rounded border border-gray-200">{ct.mitre_technique}</span>
+                        <span className="text-[#5a7068]">Technique:</span>
+                        <span className="font-mono text-xs bg-[#0a1a14] px-1.5 py-0.5 rounded border border-[#122a1e]">{ct.mitre_technique}</span>
                       </div>
                     )}
                     {ct.mitre_tactic && (
                       <div className="flex items-center gap-2 text-sm">
-                        <span className="text-gray-500">Tactic:</span>
-                        <span className="font-mono text-xs bg-gray-50 px-1.5 py-0.5 rounded border border-gray-200">{ct.mitre_tactic}</span>
+                        <span className="text-[#5a7068]">Tactic:</span>
+                        <span className="font-mono text-xs bg-[#0a1a14] px-1.5 py-0.5 rounded border border-[#122a1e]">{ct.mitre_tactic}</span>
                       </div>
                     )}
                   </div>
@@ -298,15 +298,15 @@ export default function ThreatDetailPanel({
               )}
 
               {/* How do I fix it? */}
-              <div className="py-4 border-b border-gray-100">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">How do I fix it?</h3>
+              <div className="py-4 border-b border-[#0e1e16]">
+                <h3 className="text-xs font-semibold text-[#5a7068] uppercase tracking-wider mb-2">How do I fix it?</h3>
                 <ol className="space-y-2.5">
                   {remediation.map((step, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center mt-0.5">
                         {i + 1}
                       </span>
-                      <span className="text-sm text-gray-700 leading-relaxed">{step}</span>
+                      <span className="text-sm text-[#c0d0c8] leading-relaxed">{step}</span>
                     </li>
                   ))}
                 </ol>
@@ -314,13 +314,13 @@ export default function ThreatDetailPanel({
 
               {/* Affected Systems */}
               {ct.affected_systems.length > 0 && (
-                <div className="py-4 border-b border-gray-100">
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Affected Systems</h3>
+                <div className="py-4 border-b border-[#0e1e16]">
+                  <h3 className="text-xs font-semibold text-[#5a7068] uppercase tracking-wider mb-2">Affected Systems</h3>
                   <div className="flex flex-wrap gap-2">
                     {ct.affected_systems.map((sys, i) => (
                       <span
                         key={i}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 rounded-lg text-xs text-gray-700 border border-gray-200"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0a1a14] rounded-lg text-xs text-[#c0d0c8] border border-[#122a1e]"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
                           <rect x="2" y="2" width="20" height="8" rx="2" />
@@ -335,7 +335,7 @@ export default function ThreatDetailPanel({
 
               {/* Source Details */}
               <div className="py-4">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Source Details</h3>
+                <h3 className="text-xs font-semibold text-[#5a7068] uppercase tracking-wider mb-3">Source Details</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <DetailItem label="Source IP" value={ct.source_ip || "N/A"} />
                   <DetailItem label="Detection" value={methodLabel} />
@@ -344,8 +344,8 @@ export default function ThreatDetailPanel({
                 </div>
                 {ct.source_log_indices.length > 0 && (
                   <div className="mt-3">
-                    <span className="text-xs text-gray-500">Log lines: </span>
-                    <span className="font-mono text-xs text-gray-600">
+                    <span className="text-xs text-[#5a7068]">Log lines: </span>
+                    <span className="font-mono text-xs text-[#8a9a90]">
                       {ct.source_log_indices.join(", ")}
                     </span>
                   </div>
@@ -353,7 +353,7 @@ export default function ThreatDetailPanel({
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+            <div className="flex flex-col items-center justify-center h-64 text-[#3a5548]">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-2">
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 6v6l4 2" />
@@ -364,15 +364,15 @@ export default function ThreatDetailPanel({
         </div>
 
         {/* Footer navigation */}
-        <div className="border-t border-gray-200 bg-white px-5 py-3 flex items-center justify-between">
+        <div className="border-t border-[#122a1e] bg-[#081510] px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <button
               onClick={() => onNavigate(currentIndex - 1)}
               disabled={currentIndex === 0}
               aria-label="Previous threat"
-              className={`p-1.5 rounded-md border border-gray-200 transition-colors ${currentIndex === 0 ? "opacity-30 cursor-not-allowed" : "hover:bg-gray-50 cursor-pointer"}`}
+              className={`p-1.5 rounded-md border border-[#122a1e] transition-colors ${currentIndex === 0 ? "opacity-30 cursor-not-allowed" : "hover:bg-[#0a1a14] cursor-pointer"}`}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a7068" strokeWidth="2">
                 <path d="M15 18l-6-6 6-6" />
               </svg>
             </button>
@@ -380,14 +380,14 @@ export default function ThreatDetailPanel({
               onClick={() => onNavigate(currentIndex + 1)}
               disabled={currentIndex === threats.length - 1}
               aria-label="Next threat"
-              className={`p-1.5 rounded-md border border-gray-200 transition-colors ${currentIndex === threats.length - 1 ? "opacity-30 cursor-not-allowed" : "hover:bg-gray-50 cursor-pointer"}`}
+              className={`p-1.5 rounded-md border border-[#122a1e] transition-colors ${currentIndex === threats.length - 1 ? "opacity-30 cursor-not-allowed" : "hover:bg-[#0a1a14] cursor-pointer"}`}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a7068" strokeWidth="2">
                 <path d="M9 18l6-6-6-6" />
               </svg>
             </button>
           </div>
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-[#5a7068]">
             Threat {currentIndex + 1} of {threats.length}
           </span>
         </div>
@@ -410,12 +410,12 @@ function ActionItem({
   return (
     <button
       onClick={onClick}
-      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
+      className="w-full text-left px-4 py-2.5 text-sm text-[#c0d0c8] hover:bg-[#0a1a14] flex items-center gap-3 transition-colors"
     >
-      <span className="text-gray-400">{icon}</span>
+      <span className="text-[#3a5548]">{icon}</span>
       {label}
       {hasSubmenu && (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" className="ml-auto">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3a5548" strokeWidth="2" className="ml-auto">
           <path d="M9 18l6-6-6-6" />
         </svg>
       )}
@@ -425,9 +425,9 @@ function ActionItem({
 
 function DetailItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
-      <div className="text-[11px] text-gray-400 mb-0.5">{label}</div>
-      <div className="text-sm text-gray-700 font-medium">{value}</div>
+    <div className="bg-[#0a1a14] rounded-lg px-3 py-2 border border-[#0e1e16]">
+      <div className="text-[11px] text-[#3a5548] mb-0.5">{label}</div>
+      <div className="text-sm text-[#c0d0c8] font-medium">{value}</div>
     </div>
   );
 }

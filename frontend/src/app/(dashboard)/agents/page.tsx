@@ -44,7 +44,7 @@ function AgentCard({ agent, index }: { agent: Agent; index: number }) {
   const groupColor = GROUP_META[agent.group]?.color ?? "#2563eb";
 
   return (
-    <div className="group bg-white rounded-2xl border border-gray-200/80 p-5 flex flex-col justify-between hover:shadow-md hover:border-gray-300 transition-all duration-200 min-h-[170px]">
+    <div className="group bg-[#081510] rounded-2xl border border-[#122a1e]/80 p-5 flex flex-col justify-between hover:shadow-md hover:border-[#1a3020] transition-all duration-200 min-h-[170px]">
       <div>
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
@@ -54,7 +54,7 @@ function AgentCard({ agent, index }: { agent: Agent; index: number }) {
             >
               {index}
             </span>
-            <h3 className="font-semibold text-[#1a1a2e] text-[15px] leading-tight">{agent.name}</h3>
+            <h3 className="font-semibold text-white text-[15px] leading-tight">{agent.name}</h3>
           </div>
           <span className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${
             agent.status === "Ready"
@@ -64,10 +64,10 @@ function AgentCard({ agent, index }: { agent: Agent; index: number }) {
             {agent.status}
           </span>
         </div>
-        <p className="text-[13px] text-gray-500 leading-relaxed">{agent.role}</p>
+        <p className="text-[13px] text-[#5a7068] leading-relaxed">{agent.role}</p>
       </div>
-      <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-        <span className="text-[11px] font-mono text-gray-400">{agent.model}</span>
+      <div className="mt-4 pt-3 border-t border-[#0e1e16] flex items-center justify-between">
+        <span className="text-[11px] font-mono text-[#3a5548]">{agent.model}</span>
         <span
           className="w-2 h-2 rounded-full animate-pulse"
           style={{ background: groupColor }}
@@ -90,11 +90,11 @@ function AgentGroup({
   const meta = GROUP_META[group];
 
   return (
-    <div className="rounded-2xl border border-gray-200/60 bg-white/50 overflow-hidden">
+    <div className="rounded-2xl border border-[#122a1e]/60 bg-[#081510]/50 overflow-hidden">
       {/* Collapsible header */}
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50/80 transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between px-6 py-4 hover:bg-[#0a1a14]/80 transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3">
           <span
@@ -102,15 +102,15 @@ function AgentGroup({
             style={{ background: meta?.color ?? "#2563eb" }}
           />
           <div className="text-left">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#3a5548]">
               {agents.length} Agents
             </span>
-            <h2 className="text-base font-bold text-[#1a1a2e] -mt-0.5">{group}</h2>
+            <h2 className="text-base font-bold text-white -mt-0.5">{group}</h2>
           </div>
         </div>
         <div className="flex items-center gap-3">
           {meta?.description && (
-            <span className="text-xs text-gray-400 hidden md:block">{meta.description}</span>
+            <span className="text-xs text-[#3a5548] hidden md:block">{meta.description}</span>
           )}
           <svg
             width="18"
@@ -119,7 +119,7 @@ function AgentGroup({
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
-            className={`text-gray-400 transition-transform duration-200 ${open ? "rotate-0" : "-rotate-90"}`}
+            className={`text-[#3a5548] transition-transform duration-200 ${open ? "rotate-0" : "-rotate-90"}`}
           >
             <path d="M6 9l6 6 6-6" />
           </svg>

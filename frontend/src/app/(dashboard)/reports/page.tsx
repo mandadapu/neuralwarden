@@ -29,45 +29,45 @@ export default function ReportsPage() {
       }
     >
       {loading ? (
-        <div className="mt-6 bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <p className="text-gray-400 text-sm">Loading reports...</p>
+        <div className="mt-6 bg-[#081510] rounded-xl border border-[#122a1e] p-12 text-center">
+          <p className="text-[#3a5548] text-sm">Loading reports...</p>
         </div>
       ) : reports.length === 0 ? (
-        <div className="mt-6 bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <p className="text-gray-400 text-sm">
+        <div className="mt-6 bg-[#081510] rounded-xl border border-[#122a1e] p-12 text-center">
+          <p className="text-[#3a5548] text-sm">
             No saved reports yet. Run an analysis from the Feed to generate your first report.
           </p>
         </div>
       ) : (
-        <div className="mt-6 bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="mt-6 bg-[#081510] rounded-xl border border-[#122a1e] overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b-2 border-gray-200">
-                <th className="text-left px-5 py-3.5 font-semibold text-gray-700">Date</th>
-                <th className="text-left px-5 py-3.5 font-semibold text-gray-700">Status</th>
-                <th className="text-left px-5 py-3.5 font-semibold text-gray-700">Logs</th>
-                <th className="text-left px-5 py-3.5 font-semibold text-gray-700">Threats</th>
-                <th className="text-left px-5 py-3.5 font-semibold text-gray-700">Critical</th>
-                <th className="text-left px-5 py-3.5 font-semibold text-gray-700">Time</th>
-                <th className="text-left px-5 py-3.5 font-semibold text-gray-700">Cost</th>
-                <th className="text-center px-5 py-3.5 font-semibold text-gray-700">PDF</th>
+              <tr className="border-b-2 border-[#122a1e]">
+                <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Date</th>
+                <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Status</th>
+                <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Logs</th>
+                <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Threats</th>
+                <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Critical</th>
+                <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Time</th>
+                <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Cost</th>
+                <th className="text-center px-5 py-3.5 font-semibold text-[#c0d0c8]">PDF</th>
               </tr>
             </thead>
             <tbody>
               {reports.map((r) => (
                 <tr
                   key={r.id}
-                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="border-b border-[#0e1e16] hover:bg-[#0a1a14] transition-colors cursor-pointer"
                   onClick={() => setExpanded(expanded === r.id ? null : r.id)}
                 >
-                  <td className="px-5 py-3.5 text-gray-800">
+                  <td className="px-5 py-3.5 text-[#c0d0c8]">
                     {new Date(r.created_at).toLocaleString()}
                   </td>
                   <td className="px-5 py-3.5">
                     <span
                       className={`px-2 py-0.5 rounded-md text-xs font-semibold ${
                         r.status === "completed"
-                          ? "bg-green-50 text-green-700 border border-green-200"
+                          ? "bg-[#0a1a14] text-green-700 border border-green-200"
                           : r.status === "error"
                           ? "bg-red-50 text-red-700 border border-red-200"
                           : "bg-yellow-50 text-yellow-700 border border-yellow-200"
@@ -76,23 +76,23 @@ export default function ReportsPage() {
                       {r.status}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5 text-gray-600">{r.log_count}</td>
-                  <td className="px-5 py-3.5 text-gray-600">{r.threat_count}</td>
+                  <td className="px-5 py-3.5 text-[#8a9a90]">{r.log_count}</td>
+                  <td className="px-5 py-3.5 text-[#8a9a90]">{r.threat_count}</td>
                   <td className="px-5 py-3.5">
                     {r.critical_count > 0 ? (
                       <span className="text-red-600 font-bold">{r.critical_count}</span>
                     ) : (
-                      <span className="text-gray-400">0</span>
+                      <span className="text-[#3a5548]">0</span>
                     )}
                   </td>
-                  <td className="px-5 py-3.5 text-gray-600">{r.pipeline_time.toFixed(1)}s</td>
-                  <td className="px-5 py-3.5 text-gray-600">
+                  <td className="px-5 py-3.5 text-[#8a9a90]">{r.pipeline_time.toFixed(1)}s</td>
+                  <td className="px-5 py-3.5 text-[#8a9a90]">
                     ${r.pipeline_cost.toFixed(4)}
                   </td>
                   <td className="px-5 py-3.5 text-center">
                     <button
                       title="Download PDF report"
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-gray-100 text-gray-500 hover:text-gray-800 transition-colors"
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-[#0c1e18] text-[#5a7068] hover:text-[#c0d0c8] transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         const base = `${window.location.protocol}//${window.location.hostname}:8000/api`;

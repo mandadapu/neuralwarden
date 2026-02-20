@@ -39,9 +39,9 @@ export default function RemediationModal({ issue, open, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+      <div className="bg-[#081510] rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#0e1e16]">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary">
@@ -49,13 +49,13 @@ export default function RemediationModal({ issue, open, onClose }: Props) {
               </svg>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Remediation Script</h2>
-              <p className="text-xs text-gray-500">{issue.rule_code} &middot; {issue.location}</p>
+              <h2 className="text-lg font-bold text-white">Remediation Script</h2>
+              <p className="text-xs text-[#5a7068]">{issue.rule_code} &middot; {issue.location}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-[#3a5548] hover:text-[#8a9a90] transition-colors"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6L6 18M6 6l12 12" />
@@ -64,12 +64,12 @@ export default function RemediationModal({ issue, open, onClose }: Props) {
         </div>
 
         {/* Issue info */}
-        <div className="px-6 py-3 border-b border-gray-100 flex items-center gap-3">
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${SEVERITY_STYLES[issue.severity] ?? "bg-gray-100 text-gray-600"}`}>
+        <div className="px-6 py-3 border-b border-[#0e1e16] flex items-center gap-3">
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${SEVERITY_STYLES[issue.severity] ?? "bg-[#0c1e18] text-[#8a9a90]"}`}>
             {issue.severity}
           </span>
-          <span className="text-sm text-gray-700 font-medium">{issue.title}</span>
-          <span className="text-xs text-gray-400 ml-auto">{issue.fix_time}</span>
+          <span className="text-sm text-[#c0d0c8] font-medium">{issue.title}</span>
+          <span className="text-xs text-[#3a5548] ml-auto">{issue.fix_time}</span>
         </div>
 
         {/* Script */}
@@ -80,14 +80,14 @@ export default function RemediationModal({ issue, open, onClose }: Props) {
         </div>
 
         {/* Actions */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-          <p className="text-xs text-gray-400 max-w-md">
+        <div className="px-6 py-4 border-t border-[#0e1e16] flex items-center justify-between">
+          <p className="text-xs text-[#3a5548] max-w-md">
             Review this script carefully before running. Replace placeholder values (YOUR_OFFICE_IP, PROJECT_ID, etc.) with actual values.
           </p>
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}
-              className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-600"
+              className="inline-flex items-center gap-1.5 px-3 py-2 border border-[#122a1e] rounded-lg hover:bg-[#0a1a14] transition-colors text-sm font-medium text-[#8a9a90]"
             >
               {copied ? (
                 <>

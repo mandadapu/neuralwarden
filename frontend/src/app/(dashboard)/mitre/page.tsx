@@ -22,16 +22,16 @@ export default function MitrePage() {
     >
       <div className="mt-6 space-y-3">
         {TACTICS.map((tactic) => (
-          <div key={tactic.id} className="bg-white rounded-xl border border-gray-200 p-5">
+          <div key={tactic.id} className="bg-[#081510] rounded-xl border border-[#122a1e] p-5">
             <div className="flex items-center gap-2 mb-3">
               <span className="font-mono text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">{tactic.id}</span>
-              <h3 className="font-semibold text-[#1a1a2e]">{tactic.name}</h3>
+              <h3 className="font-semibold text-white">{tactic.name}</h3>
             </div>
             <div className="space-y-1.5">
               {tactic.techniques.map((t) => (
-                <div key={t} className="text-sm text-gray-600 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" />
-                  <span className="font-mono text-xs text-gray-500">{t.split(" — ")[0]}</span>
+                <div key={t} className="text-sm text-[#8a9a90] flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#1a3020] flex-shrink-0" />
+                  <span className="font-mono text-xs text-[#5a7068]">{t.split(" — ")[0]}</span>
                   <span>{t.split(" — ")[1]}</span>
                 </div>
               ))}

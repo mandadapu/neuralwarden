@@ -20,8 +20,8 @@ export default function PageShell({
             {icon}
           </div>
           <div>
-            <h1 className="text-xl font-bold text-[#1a1a2e]">{title}</h1>
-            <p className="text-sm text-gray-500">{description}</p>
+            <h1 className="text-xl font-bold text-white">{title}</h1>
+            <p className="text-sm text-[#5a7068]">{description}</p>
           </div>
         </div>
         {children}

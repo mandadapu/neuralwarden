@@ -57,12 +57,12 @@ export default function LogInput({
   };
 
   return (
-    <div className="mx-7 mb-5 bg-white border border-gray-200 rounded-xl p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
+    <div className="mx-7 mb-5 bg-[#081510] border border-[#122a1e] rounded-xl p-5">
+      <label className="block text-sm font-medium text-[#c0d0c8] mb-2">
         Paste Security Logs
       </label>
       <textarea
-        className="w-full border border-gray-200 rounded-lg p-3 text-[13px] font-mono text-gray-800 resize-y focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+        className="w-full border border-[#122a1e] rounded-lg p-3 text-[13px] font-mono text-[#c0d0c8] resize-y focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
         rows={6}
         placeholder={"Paste security logs here, load a sample, or fetch from GCP Cloud Logging (Log Sources page)...\n\nExample:\n2026-02-19T04:14:58Z WARNING cloud_run_revision/archcelerate: GET /wp-admin/setup-config.php status=404 src=172.71.184.229"}
         value={value}
@@ -70,7 +70,7 @@ export default function LogInput({
       />
       <div className="flex items-center gap-3 mt-3 flex-wrap">
         <select
-          className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="border border-[#122a1e] rounded-lg px-3 py-2.5 text-sm text-[#c0d0c8] bg-[#081510] focus:outline-none focus:ring-2 focus:ring-primary/30"
           defaultValue=""
           onChange={handleSampleChange}
         >
@@ -83,7 +83,7 @@ export default function LogInput({
         </select>
         {scenarios.length > 0 && (
           <select
-            className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="border border-[#122a1e] rounded-lg px-3 py-2.5 text-sm text-[#c0d0c8] bg-[#081510] focus:outline-none focus:ring-2 focus:ring-primary/30"
             defaultValue=""
             onChange={handleGenerate}
             disabled={generating}
@@ -120,7 +120,7 @@ export default function LogInput({
           PII auto-redacted
         </span>
         {skipIngest && (
-          <span className="inline-flex items-center gap-1 text-xs text-blue-600 ml-1 bg-blue-50 border border-blue-200 rounded-md px-2 py-0.5 font-medium">
+          <span className="inline-flex items-center gap-1 text-xs text-[#00e68a] ml-1 bg-[#00e68a]/10 border border-[#00e68a]/30 rounded-md px-2 py-0.5 font-medium">
             <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
             </svg>

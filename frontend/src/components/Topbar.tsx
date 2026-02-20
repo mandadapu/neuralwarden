@@ -19,8 +19,8 @@ export default function Topbar() {
 
   return (
     <>
-      <div className="flex items-center justify-between px-7 py-4 bg-white border-b border-gray-200">
-        <div className="text-xl font-medium text-[#1a1a2e]">
+      <div className="flex items-center justify-between px-7 py-4 bg-[#081510] border-b border-[#122a1e]">
+        <div className="text-xl font-medium text-white">
           Hello, {userName.split(" ")[0]}!
         </div>
         <div className="flex items-center gap-4.5">
@@ -29,18 +29,18 @@ export default function Topbar() {
             height="20"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#6b7280"
+            stroke="#3a5548"
             strokeWidth="2"
-            className="cursor-pointer"
+            className="cursor-pointer hover:stroke-[#00e68a] transition-colors"
           >
             <circle cx="11" cy="11" r="8" />
             <path d="M21 21l-4.35-4.35" />
           </svg>
-          <span className="text-gray-500 text-sm cursor-pointer">Docs</span>
+          <span className="text-[#5a7068] text-sm cursor-pointer hover:text-[#00e68a] transition-colors">Docs</span>
 
           <button
             onClick={() => setShowLogout(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-semibold uppercase tracking-wider hover:bg-red-50 transition-colors cursor-pointer"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-red-500/30 text-red-400 text-xs font-semibold uppercase tracking-wider hover:bg-red-500/10 transition-colors cursor-pointer"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -54,11 +54,11 @@ export default function Topbar() {
             <img
               src={userImage}
               alt={userName}
-              className="w-9 h-9 rounded-full cursor-pointer"
+              className="w-9 h-9 rounded-full cursor-pointer border border-[#122a1e]"
               referrerPolicy="no-referrer"
             />
           ) : (
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-blue-400 flex items-center justify-center text-white font-semibold text-[13px] cursor-pointer">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#00e68a]/20 to-[#009952]/10 border border-[#00e68a]/20 flex items-center justify-center text-[#00e68a] font-semibold text-[13px] cursor-pointer">
               {initials}
             </div>
           )}

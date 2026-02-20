@@ -27,7 +27,7 @@ export function useCloudContext() {
 
 function GcpBadge() {
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-full uppercase">
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#00e68a]/10 text-[#00e68a] text-xs font-semibold rounded-full uppercase">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
         <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" fill="#4285F4" opacity="0.3" stroke="#4285F4" strokeWidth="1.5" />
       </svg>
@@ -150,20 +150,20 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
             {/* Header */}
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
-                <Link href="/clouds" className="text-gray-400 hover:text-gray-600 transition-colors">
+                <Link href="/clouds" className="text-[#3a5548] hover:text-[#8a9a90] transition-colors">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M19 12H5M12 19l-7-7 7-7" />
                   </svg>
                 </Link>
                 <div>
                   <div className="flex items-center gap-3">
-                    <h1 className="text-xl font-bold text-[#1a1a2e]">{cloud.name}</h1>
+                    <h1 className="text-xl font-bold text-white">{cloud.name}</h1>
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full">
                       {totalIssues} issue{totalIssues !== 1 ? "s" : ""}
                     </span>
                     <GcpBadge />
                   </div>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-[#5a7068]">
                     {cloud.project_id} &middot; {cloud.purpose}
                   </p>
                 </div>
@@ -171,7 +171,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setConfigOpen(true)}
-                  className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-gray-500 hover:text-gray-700 text-sm font-medium"
+                  className="inline-flex items-center gap-2 px-3 py-2 border border-[#122a1e] rounded-lg hover:bg-[#0a1a14] transition-colors text-[#5a7068] hover:text-[#c0d0c8] text-sm font-medium"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="12" cy="12" r="3" />
@@ -241,7 +241,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
             )}
 
             {/* Tab navigation */}
-            <div className="border-b border-gray-200 mb-6">
+            <div className="border-b border-[#122a1e] mb-6">
               <nav className="flex gap-0 -mb-px">
                 {TABS.map((tab) => {
                   const tabHref = `${basePath}${tab.href}`;
@@ -256,7 +256,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
                       className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
                         isActive
                           ? "border-primary text-primary"
-                          : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                          : "border-transparent text-[#5a7068] hover:text-[#c0d0c8] hover:border-[#1a3020]"
                       }`}
                     >
                       {tab.label}

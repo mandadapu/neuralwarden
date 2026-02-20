@@ -15,27 +15,27 @@ export default function ThreatIntelPage() {
         </svg>
       }
     >
-      <div className="mt-6 bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="mt-6 bg-[#081510] rounded-xl border border-[#122a1e] overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b-2 border-gray-200">
-              <th className="text-left px-5 py-3.5 font-semibold text-gray-700">Feed</th>
-              <th className="text-left px-5 py-3.5 font-semibold text-gray-700">Type</th>
-              <th className="text-left px-5 py-3.5 font-semibold text-gray-700">Status</th>
-              <th className="text-left px-5 py-3.5 font-semibold text-gray-700">Entries</th>
+            <tr className="border-b-2 border-[#122a1e]">
+              <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Feed</th>
+              <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Type</th>
+              <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Status</th>
+              <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Entries</th>
             </tr>
           </thead>
           <tbody>
             {FEEDS.map((f) => (
-              <tr key={f.name} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                <td className="px-5 py-3.5 font-medium text-[#1a1a2e]">{f.name}</td>
-                <td className="px-5 py-3.5 text-gray-600">{f.type}</td>
+              <tr key={f.name} className="border-b border-[#0e1e16] hover:bg-[#0a1a14] transition-colors">
+                <td className="px-5 py-3.5 font-medium text-white">{f.name}</td>
+                <td className="px-5 py-3.5 text-[#8a9a90]">{f.type}</td>
                 <td className="px-5 py-3.5">
-                  <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+                  <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-[#0a1a14] text-green-700 border border-green-200">
                     {f.status}
                   </span>
                 </td>
-                <td className="px-5 py-3.5 text-gray-600">{f.entries}</td>
+                <td className="px-5 py-3.5 text-[#8a9a90]">{f.entries}</td>
               </tr>
             ))}
           </tbody>

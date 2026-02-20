@@ -106,17 +106,17 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="relative bg-[#081510] rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-100">
+        <div className="px-6 py-5 border-b border-[#0e1e16]">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Configure Cloud</h2>
-              <p className="text-sm text-gray-500 mt-0.5">Update credentials, services, and cloud settings.</p>
+              <h2 className="text-lg font-bold text-white">Configure Cloud</h2>
+              <p className="text-sm text-[#5a7068] mt-0.5">Update credentials, services, and cloud settings.</p>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-1.5 text-[#3a5548] hover:text-[#8a9a90] rounded-lg hover:bg-[#0c1e18] transition-colors"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M18 6L6 18M6 6l12 12" />
@@ -129,22 +129,22 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
         <div className="px-6 py-5 space-y-5">
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Cloud Name</label>
+            <label className="block text-sm font-medium text-[#c0d0c8] mb-1.5">Cloud Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              className="w-full px-4 py-2.5 border border-[#122a1e] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
 
           {/* Purpose */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Purpose</label>
+            <label className="block text-sm font-medium text-[#c0d0c8] mb-1.5">Purpose</label>
             <select
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              className="w-full px-4 py-2.5 border border-[#122a1e] rounded-lg text-sm bg-[#081510] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             >
               {PURPOSES.map((p) => (
                 <option key={p} value={p}>
@@ -156,10 +156,10 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
 
           {/* Service Account Credentials */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Service Account Credentials</label>
-            <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg mb-2">
+            <label className="block text-sm font-medium text-[#c0d0c8] mb-1.5">Service Account Credentials</label>
+            <div className="flex items-center gap-2 p-3 bg-[#0a1a14] rounded-lg mb-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="text-sm text-gray-600">Connected &middot; {cloud.project_id}</span>
+              <span className="text-sm text-[#8a9a90]">Connected &middot; {cloud.project_id}</span>
             </div>
             {!showCredentials ? (
               <button
@@ -179,17 +179,17 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
                   onChange={(e) => setCredentials(e.target.value)}
                   placeholder="Paste new service account JSON key..."
                   rows={6}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+                  className="w-full px-4 py-2.5 border border-[#122a1e] rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
                 />
-                <p className="text-xs text-gray-400 mt-1">Leave empty to keep existing credentials.</p>
+                <p className="text-xs text-[#3a5548] mt-1">Leave empty to keep existing credentials.</p>
               </div>
             )}
           </div>
 
           {/* Services */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Scan Services</label>
-            <p className="text-xs text-gray-400 mb-2">Select which GCP services to scan. Cloud Logging is always enabled.</p>
+            <label className="block text-sm font-medium text-[#c0d0c8] mb-1.5">Scan Services</label>
+            <p className="text-xs text-[#3a5548] mb-2">Select which GCP services to scan. Cloud Logging is always enabled.</p>
             <div className="space-y-2">
               {AVAILABLE_SERVICES.map((svc) => {
                 const checked = services.includes(svc.id);
@@ -200,7 +200,7 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
                     className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                       checked
                         ? "border-primary/30 bg-primary/5"
-                        : "border-gray-200 hover:bg-gray-50"
+                        : "border-[#122a1e] hover:bg-[#0a1a14]"
                     } ${isRequired ? "opacity-80" : ""}`}
                   >
                     <input
@@ -208,11 +208,11 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
                       checked={checked}
                       disabled={isRequired}
                       onChange={() => toggleService(svc.id)}
-                      className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary/20"
+                      className="w-4 h-4 text-primary rounded border-[#1a3020] focus:ring-primary/20"
                     />
-                    <span className="text-sm text-gray-700">{svc.label}</span>
+                    <span className="text-sm text-[#c0d0c8]">{svc.label}</span>
                     {isRequired && (
-                      <span className="text-[10px] text-gray-400 font-medium uppercase">Required</span>
+                      <span className="text-[10px] text-[#3a5548] font-medium uppercase">Required</span>
                     )}
                   </label>
                 );
@@ -229,7 +229,7 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-[#0e1e16] flex items-center justify-between">
           {/* Delete */}
           <button
             onClick={handleDelete}
@@ -255,7 +255,7 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-[#8a9a90] border border-[#122a1e] rounded-lg hover:bg-[#0a1a14] transition-colors"
             >
               Cancel
             </button>

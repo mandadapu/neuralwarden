@@ -16,9 +16,9 @@ export default function SummaryCards({ summary }: { summary: Summary | null }) {
   return (
     <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-4 px-7 py-5">
       {/* Open Issues */}
-      <div className="bg-white rounded-xl p-5 border border-gray-200">
+      <div className="bg-[#081510] rounded-xl p-5 border border-[#122a1e]">
         {/* Severity bar */}
-        <div className="flex h-2 rounded overflow-hidden bg-gray-100 mb-3.5">
+        <div className="flex h-2 rounded overflow-hidden bg-[#0c1e18] mb-3.5">
           {total > 0 &&
             barSegments.map(([level, count]) => (
               <div
@@ -31,8 +31,8 @@ export default function SummaryCards({ summary }: { summary: Summary | null }) {
             ))}
         </div>
         <div className="flex items-baseline gap-2 mb-2">
-          <span className="text-3xl font-bold text-[#1a1a2e]">{total}</span>
-          <span className="text-sm text-gray-500">Open Issues</span>
+          <span className="text-3xl font-bold text-white">{total}</span>
+          <span className="text-sm text-[#5a7068]">Open Issues</span>
         </div>
         <div className="flex flex-wrap gap-3">
           {barSegments.map(([level, count]) => (
@@ -41,7 +41,7 @@ export default function SummaryCards({ summary }: { summary: Summary | null }) {
                 className="w-2 h-2 rounded-full inline-block"
                 style={{ background: SEVERITY_COLORS[level] }}
               />
-              <span className="text-xs text-gray-500">{count}</span>
+              <span className="text-xs text-[#5a7068]">{count}</span>
             </span>
           ))}
         </div>
@@ -86,7 +86,7 @@ function StatCard({
   sub: string;
 }) {
   return (
-    <div className="bg-white rounded-xl p-5 border border-gray-200">
+    <div className="bg-[#081510] rounded-xl p-5 border border-[#122a1e]">
       <div className="flex items-center gap-2 mb-2">
         <div
           className="w-[22px] h-[22px] rounded-full flex items-center justify-center"
@@ -94,10 +94,10 @@ function StatCard({
         >
           <div className="w-[9px] h-[9px] rounded-full" style={{ background: dotColor }} />
         </div>
-        <span className="text-sm text-gray-500">{label}</span>
+        <span className="text-sm text-[#5a7068]">{label}</span>
       </div>
-      <div className="text-3xl font-bold text-[#1a1a2e]">{value}</div>
-      <div className="text-xs text-gray-400 mt-1">{sub}</div>
+      <div className="text-3xl font-bold text-white">{value}</div>
+      <div className="text-xs text-[#3a5548] mt-1">{sub}</div>
     </div>
   );
 }
