@@ -31,13 +31,13 @@ export default function HitlReviewPanel({
         {threats.map((pt) => (
           <div
             key={pt.threat_id}
-            className="p-3 bg-[#081510] rounded-lg border border-red-500/30"
+            className="p-3 bg-[#1c2128] rounded-lg border border-red-500/30"
           >
             <div className="font-semibold text-red-400">
               {pt.type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
             </div>
-            <div className="text-sm text-[#c0d0c8] mt-1">{pt.description}</div>
-            <div className="text-xs text-[#5a7068] mt-1">
+            <div className="text-sm text-[#e6edf3] mt-1">{pt.description}</div>
+            <div className="text-xs text-[#8b949e] mt-1">
               IP: {pt.source_ip || "N/A"} | MITRE: {pt.mitre_technique || "N/A"} | Score:{" "}
               {pt.risk_score.toFixed(1)}/10
             </div>
@@ -49,7 +49,7 @@ export default function HitlReviewPanel({
       </div>
 
       <textarea
-        className="w-full border border-[#122a1e] rounded-lg p-3 text-sm text-[#c0d0c8] bg-[#0a1a14] resize-none focus:outline-none focus:ring-2 focus:ring-red-500/30 mb-3"
+        className="w-full border border-[#30363d] rounded-lg p-3 text-sm text-[#e6edf3] bg-[#21262d] resize-none focus:outline-none focus:ring-2 focus:ring-red-500/30 mb-3"
         rows={2}
         placeholder="Optional reviewer notes..."
         value={notes}

@@ -16,9 +16,9 @@ export default function SummaryCards({ summary }: { summary: Summary | null }) {
   return (
     <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-4 px-7 py-5">
       {/* Open Issues */}
-      <div className="bg-[#081510] rounded-xl p-5 border border-[#122a1e]">
+      <div className="bg-[#1c2128] rounded-xl p-5 border border-[#30363d]">
         {/* Severity bar */}
-        <div className="flex h-2 rounded overflow-hidden bg-[#0c1e18] mb-3.5">
+        <div className="flex h-2 rounded overflow-hidden bg-[#262c34] mb-3.5">
           {total > 0 &&
             barSegments.map(([level, count]) => (
               <div
@@ -32,7 +32,7 @@ export default function SummaryCards({ summary }: { summary: Summary | null }) {
         </div>
         <div className="flex items-baseline gap-2 mb-2">
           <span className="text-3xl font-bold text-white">{total}</span>
-          <span className="text-sm text-[#5a7068]">Open Issues</span>
+          <span className="text-sm text-[#8b949e]">Open Issues</span>
         </div>
         <div className="flex flex-wrap gap-3">
           {barSegments.map(([level, count]) => (
@@ -41,7 +41,7 @@ export default function SummaryCards({ summary }: { summary: Summary | null }) {
                 className="w-2 h-2 rounded-full inline-block"
                 style={{ background: SEVERITY_COLORS[level] }}
               />
-              <span className="text-xs text-[#5a7068]">{count}</span>
+              <span className="text-xs text-[#8b949e]">{count}</span>
             </span>
           ))}
         </div>
@@ -86,7 +86,7 @@ function StatCard({
   sub: string;
 }) {
   return (
-    <div className="bg-[#081510] rounded-xl p-5 border border-[#122a1e]">
+    <div className="bg-[#1c2128] rounded-xl p-5 border border-[#30363d]">
       <div className="flex items-center gap-2 mb-2">
         <div
           className="w-[22px] h-[22px] rounded-full flex items-center justify-center"
@@ -94,10 +94,10 @@ function StatCard({
         >
           <div className="w-[9px] h-[9px] rounded-full" style={{ background: dotColor }} />
         </div>
-        <span className="text-sm text-[#5a7068]">{label}</span>
+        <span className="text-sm text-[#8b949e]">{label}</span>
       </div>
       <div className="text-3xl font-bold text-white">{value}</div>
-      <div className="text-xs text-[#3a5548] mt-1">{sub}</div>
+      <div className="text-xs text-[#8b949e] mt-1">{sub}</div>
     </div>
   );
 }

@@ -20,35 +20,35 @@ export default function IgnoredPage() {
     >
       <div className="mt-6">
         {ignoredThreats.length === 0 ? (
-          <div className="bg-[#081510] rounded-xl border border-[#122a1e] p-12 text-center">
-            <p className="text-[#3a5548] text-sm">No ignored findings. Mark threats as ignored from the Feed to manage noise.</p>
+          <div className="bg-[#1c2128] rounded-xl border border-[#30363d] p-12 text-center">
+            <p className="text-[#8b949e] text-sm">No ignored findings. Mark threats as ignored from the Feed to manage noise.</p>
           </div>
         ) : (
-          <div className="bg-[#081510] rounded-xl border border-[#122a1e] overflow-hidden">
+          <div className="bg-[#1c2128] rounded-xl border border-[#30363d] overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b-2 border-[#122a1e]">
-                  <th className="text-left px-4 py-3.5 font-semibold text-[#c0d0c8] w-[50px]">Type</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-[#c0d0c8]">Name</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-[#c0d0c8]">Severity</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-[#c0d0c8]">Source IP</th>
-                  <th className="text-left px-4 py-3.5 font-semibold text-[#c0d0c8] w-[100px]">Action</th>
+                <tr className="border-b-2 border-[#30363d]">
+                  <th className="text-left px-4 py-3.5 font-semibold text-[#e6edf3] w-[50px]">Type</th>
+                  <th className="text-left px-4 py-3.5 font-semibold text-[#e6edf3]">Name</th>
+                  <th className="text-left px-4 py-3.5 font-semibold text-[#e6edf3]">Severity</th>
+                  <th className="text-left px-4 py-3.5 font-semibold text-[#e6edf3]">Source IP</th>
+                  <th className="text-left px-4 py-3.5 font-semibold text-[#e6edf3] w-[100px]">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {ignoredThreats.map((ct) => (
-                  <tr key={ct.threat_id} className="border-b border-[#0e1e16] hover:bg-[#0a1a14] transition-colors">
+                  <tr key={ct.threat_id} className="border-b border-[#262c34] hover:bg-[#21262d] transition-colors">
                     <td className="px-4 py-3.5"><ThreatTypeIcon type={ct.type} /></td>
                     <td className="px-4 py-3.5">
                       <div className="font-medium text-white text-[13px]">
                         {ct.type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                       </div>
-                      <div className="text-[#5a7068] text-xs mt-0.5">
+                      <div className="text-[#8b949e] text-xs mt-0.5">
                         {ct.description.length > 90 ? ct.description.slice(0, 90) + "..." : ct.description}
                       </div>
                     </td>
                     <td className="px-4 py-3.5"><SeverityBadge risk={ct.risk} /></td>
-                    <td className="px-4 py-3.5 text-[#8a9a90] text-[13px]">{ct.source_ip || "N/A"}</td>
+                    <td className="px-4 py-3.5 text-[#c9d1d9] text-[13px]">{ct.source_ip || "N/A"}</td>
                     <td className="px-4 py-3.5">
                       <button
                         onClick={() => restoreThreat(ct.threat_id, "ignored")}

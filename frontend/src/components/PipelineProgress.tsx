@@ -23,7 +23,7 @@ export default function PipelineProgress({
   if (!stages.length) return null;
 
   return (
-    <div className="mx-7 mb-5 bg-[#081510] border border-[#122a1e] rounded-xl p-5">
+    <div className="mx-7 mb-5 bg-[#1c2128] border border-[#30363d] rounded-xl p-5">
       <div className="flex items-center justify-between">
         {stages.map((s, i) => (
           <div key={s.stage} className="flex items-center flex-1 last:flex-none">
@@ -34,8 +34,8 @@ export default function PipelineProgress({
                   s.status === "complete"
                     ? "bg-primary text-white"
                     : s.status === "running"
-                    ? "bg-primary/20 text-primary ring-2 ring-primary ring-offset-[#040a07] animate-pulse"
-                    : "bg-[#0c1e18] text-[#3a5548]"
+                    ? "bg-primary/20 text-primary ring-2 ring-primary ring-offset-[#0d1117] animate-pulse"
+                    : "bg-[#262c34] text-[#8b949e]"
                 }`}
               >
                 {s.status === "complete" ? (
@@ -52,13 +52,13 @@ export default function PipelineProgress({
                     ? "text-primary"
                     : s.status === "running"
                     ? "text-primary"
-                    : "text-[#3a5548]"
+                    : "text-[#8b949e]"
                 }`}
               >
                 {STAGE_LABELS[s.stage] ?? s.stage}
               </span>
               {s.status === "complete" && s.elapsed_s !== undefined && (
-                <span className="text-[10px] text-[#3a5548]">
+                <span className="text-[10px] text-[#8b949e]">
                   {s.elapsed_s.toFixed(1)}s
                   {s.cost_usd ? ` / $${s.cost_usd.toFixed(4)}` : ""}
                 </span>
@@ -68,7 +68,7 @@ export default function PipelineProgress({
             {i < stages.length - 1 && (
               <div
                 className={`flex-1 h-0.5 mx-2 transition-all duration-300 ${
-                  s.status === "complete" ? "bg-primary" : "bg-[#122a1e]"
+                  s.status === "complete" ? "bg-primary" : "bg-[#30363d]"
                 }`}
               />
             )}

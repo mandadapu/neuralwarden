@@ -119,7 +119,7 @@ function PillarCard({
       {/* Glow border on hover */}
       <div className="absolute -inset-px rounded-2xl bg-gradient-to-b from-[#00e68a]/0 to-[#00e68a]/0 group-hover:from-[#00e68a]/20 group-hover:to-transparent transition-all duration-500" />
 
-      <div className="relative bg-[#081510]/80 backdrop-blur-sm border border-[#122a1e] rounded-2xl p-7 h-full transition-all duration-500 group-hover:border-[#00e68a]/20 group-hover:bg-[#081510]">
+      <div className="relative bg-[#1c2128]/80 backdrop-blur-sm border border-[#30363d] rounded-2xl p-7 h-full transition-all duration-500 group-hover:border-[#00e68a]/20 group-hover:bg-[#1c2128]">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-[#00e68a]/[0.07] border border-[#00e68a]/10 flex items-center justify-center text-[#00e68a]">
             {icon}
@@ -134,7 +134,7 @@ function PillarCard({
         >
           {title}
         </h3>
-        <p className="text-[13px] text-[#5a7068] leading-relaxed">
+        <p className="text-[13px] text-[#8b949e] leading-relaxed">
           {description}
         </p>
       </div>
@@ -155,12 +155,12 @@ function AgentNode({
     <div className="flex items-center gap-2">
       <div
         className={`w-2 h-2 rounded-full ${
-          active ? "bg-[#00e68a] shadow-[0_0_8px_rgba(0,230,138,0.5)]" : "bg-[#122a1e]"
+          active ? "bg-[#00e68a] shadow-[0_0_8px_rgba(0,230,138,0.5)]" : "bg-[#30363d]"
         }`}
       />
       <span
         className={`text-xs font-medium ${
-          active ? "text-[#00e68a]" : "text-[#3a5548]"
+          active ? "text-[#00e68a]" : "text-[#8b949e]"
         }`}
       >
         {label}
@@ -186,7 +186,7 @@ function LandingContent() {
       className="min-h-screen flex flex-col relative"
       style={{
         background:
-          "linear-gradient(180deg, #040a07 0%, #071210 40%, #050d09 100%)",
+          "linear-gradient(180deg, #0d1117 0%, #161b22 40%, #0d1117 100%)",
       }}
     >
       {/* Keyframe animations */}
@@ -248,7 +248,7 @@ function LandingContent() {
               </svg>
             </div>
             {/* Status indicator */}
-            <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#040a07]" />
+            <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0d1117]" />
           </div>
           <span
             className="text-white text-base font-medium tracking-tight"
@@ -259,7 +259,7 @@ function LandingContent() {
         </div>
 
         <div className="flex items-center gap-4">
-          <span className="hidden md:inline text-xs text-[#3a5548] font-mono">
+          <span className="hidden md:inline text-xs text-[#8b949e] font-mono">
             v2.1 — operational
           </span>
           <button
@@ -314,7 +314,7 @@ function LandingContent() {
 
         {/* Subheading */}
         <p
-          className="text-center text-[#5a7068] text-lg md:text-xl max-w-2xl mb-10 leading-relaxed"
+          className="text-center text-[#8b949e] text-lg md:text-xl max-w-2xl mb-10 leading-relaxed"
           style={{
             fontFamily: "'DM Sans', sans-serif",
             animation: mounted ? "fadeUp 0.7s 0.45s both" : "none",
@@ -336,7 +336,7 @@ function LandingContent() {
             style={{
               fontFamily: "'DM Sans', sans-serif",
               background: "linear-gradient(135deg, #00e68a, #009952)",
-              color: "#040a07",
+              color: "#0d1117",
             }}
           >
             <span className="relative z-10">Start Scanning</span>
@@ -346,7 +346,7 @@ function LandingContent() {
             href="https://github.com/mandadapu/neuralwarden"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-sm font-medium text-[#5a7068] hover:text-white border border-[#122a1e] hover:border-[#1a3a26] transition-all duration-300"
+            className="flex items-center gap-2 px-6 py-3.5 rounded-xl text-sm font-medium text-[#8b949e] hover:text-white border border-[#30363d] hover:border-[#3d444d] transition-all duration-300"
             style={{ fontFamily: "'DM Sans', sans-serif" }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -362,11 +362,11 @@ function LandingContent() {
           style={{ animation: mounted ? "fadeUp 0.7s 0.65s both" : "none" }}
         >
           <StatItem value="12" label="AI Agents" delay={0.7} />
-          <div className="w-px h-8 bg-[#122a1e]" />
+          <div className="w-px h-8 bg-[#30363d]" />
           <StatItem value="$0" label="Scan Cost" delay={0.8} />
-          <div className="w-px h-8 bg-[#122a1e]" />
+          <div className="w-px h-8 bg-[#30363d]" />
           <StatItem value="6" label="GCP Services" delay={0.9} />
-          <div className="w-px h-8 bg-[#122a1e]" />
+          <div className="w-px h-8 bg-[#30363d]" />
           <StatItem value="<2min" label="Full Scan" delay={1.0} />
         </div>
 
@@ -415,32 +415,32 @@ function LandingContent() {
           style={{ animation: mounted ? "fadeUp 0.7s 1.2s both" : "none" }}
         >
           <div className="text-center mb-6">
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#3a5548]">
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8b949e]">
               The Autonomous Defense Loop
             </span>
           </div>
 
-          <div className="bg-[#081510]/60 backdrop-blur-sm border border-[#122a1e] rounded-2xl p-6">
+          <div className="bg-[#1c2128]/60 backdrop-blur-sm border border-[#30363d] rounded-2xl p-6">
             {/* Cloud Scan */}
             <div className="flex items-center gap-2 mb-3">
               <div className="w-1.5 h-1.5 rounded-full bg-[#00e68a]" />
               <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#00e68a]/70">
                 Cloud Scan Super Agent
               </span>
-              <span className="text-[10px] text-[#1a3a2a] ml-1">— deterministic, $0</span>
+              <span className="text-[10px] text-[#3d444d] ml-1">— deterministic, $0</span>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pl-4 mb-5">
               <AgentNode label="Discovery" active />
-              <span className="text-[#122a1e]">→</span>
+              <span className="text-[#30363d]">→</span>
               <AgentNode label="Router" active />
-              <span className="text-[#122a1e]">→</span>
+              <span className="text-[#30363d]">→</span>
               <div className="flex flex-col gap-1">
                 <AgentNode label="Active Scanner" active />
                 <AgentNode label="Log Analyzer" active />
               </div>
-              <span className="text-[#122a1e]">→</span>
+              <span className="text-[#30363d]">→</span>
               <AgentNode label="Correlation" active />
-              <span className="text-[#122a1e]">→</span>
+              <span className="text-[#30363d]">→</span>
               <AgentNode label="Remediation" active />
             </div>
 
@@ -453,7 +453,7 @@ function LandingContent() {
                   animation: "pulse-line 2s ease-in-out infinite",
                 }}
               />
-              <span className="text-[9px] text-[#1a3a2a]">feeds evidence into</span>
+              <span className="text-[9px] text-[#3d444d]">feeds evidence into</span>
             </div>
 
             {/* Threat Pipeline */}
@@ -462,19 +462,19 @@ function LandingContent() {
               <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#f59e0b]/70">
                 Neural Engine — Threat Pipeline
               </span>
-              <span className="text-[10px] text-[#1a3a2a] ml-1">— Claude Sonnet</span>
+              <span className="text-[10px] text-[#3d444d] ml-1">— Claude Sonnet</span>
             </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pl-4">
               <AgentNode label="Ingest" />
-              <span className="text-[#122a1e]">→</span>
+              <span className="text-[#30363d]">→</span>
               <AgentNode label="Detect" />
-              <span className="text-[#122a1e]">→</span>
+              <span className="text-[#30363d]">→</span>
               <AgentNode label="Validate" />
-              <span className="text-[#122a1e]">→</span>
+              <span className="text-[#30363d]">→</span>
               <AgentNode label="Classify" />
-              <span className="text-[#122a1e]">→</span>
+              <span className="text-[#30363d]">→</span>
               <AgentNode label="HITL Gate" />
-              <span className="text-[#122a1e]">→</span>
+              <span className="text-[#30363d]">→</span>
               <AgentNode label="Report" />
             </div>
           </div>
@@ -482,20 +482,20 @@ function LandingContent() {
       </main>
 
       {/* ── Footer ─────────────────────────────────────── */}
-      <footer className="relative z-10 px-8 md:px-12 py-8 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-[#0a1510]">
+      <footer className="relative z-10 px-8 md:px-12 py-8 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-[#161b22]">
         <div className="flex items-center gap-6">
           <span
-            className="text-xs text-[#1a3a2a]"
+            className="text-xs text-[#3d444d]"
             style={{ fontFamily: "'DM Sans', sans-serif" }}
           >
             NeuralWarden &copy; {new Date().getFullYear()}
           </span>
-          <span className="text-[10px] text-[#12251a] font-mono">
+          <span className="text-[10px] text-[#161b22] font-mono">
             neuralwarden.com
           </span>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-[10px] text-[#1a3a2a]">
+          <span className="text-[10px] text-[#3d444d]">
             Built with LangGraph + Claude + Next.js
           </span>
           <div className="flex items-center gap-1.5">

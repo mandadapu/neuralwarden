@@ -16,7 +16,7 @@ const STATUS_STYLES: Record<string, string> = {
 function StatusBadge({ status }: { status: string }) {
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLES[status] ?? "bg-[#0c1e18] text-[#8a9a90]"}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLES[status] ?? "bg-[#262c34] text-[#c9d1d9]"}`}
     >
       {status}
     </span>
@@ -66,7 +66,7 @@ export default function ScanLogsPage() {
 
   if (logs.length === 0) {
     return (
-      <div className="text-center py-20 text-[#5a7068]">
+      <div className="text-center py-20 text-[#8b949e]">
         <p className="text-lg font-medium">No scan logs yet</p>
         <p className="text-sm mt-1">Run a scan to generate execution logs</p>
       </div>
@@ -75,10 +75,10 @@ export default function ScanLogsPage() {
 
   return (
     <>
-      <div className="bg-[#081510] rounded-xl border border-[#122a1e] overflow-hidden">
+      <div className="bg-[#1c2128] rounded-xl border border-[#30363d] overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[#0e1e16] text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider">
+            <tr className="border-b border-[#262c34] text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider">
               <th className="px-5 py-3">Status</th>
               <th className="px-5 py-3">Date</th>
               <th className="px-5 py-3">Duration</th>
@@ -94,16 +94,16 @@ export default function ScanLogsPage() {
               return (
                 <tr
                   key={log.id}
-                  className="border-b border-gray-50 hover:bg-[#0a1a14]/50 transition-colors cursor-pointer"
+                  className="border-b border-gray-50 hover:bg-[#21262d]/50 transition-colors cursor-pointer"
                   onClick={() => setSelectedLogId(log.id)}
                 >
                   <td className="px-5 py-3.5">
                     <StatusBadge status={log.status} />
                   </td>
-                  <td className="px-5 py-3.5 text-[#8a9a90]">
+                  <td className="px-5 py-3.5 text-[#c9d1d9]">
                     {timeAgo(log.started_at)}
                   </td>
-                  <td className="px-5 py-3.5 text-[#8a9a90]">
+                  <td className="px-5 py-3.5 text-[#c9d1d9]">
                     {summary?.duration_seconds ? `${summary.duration_seconds}s` : "—"}
                   </td>
                   <td className="px-5 py-3.5">
@@ -122,10 +122,10 @@ export default function ScanLogsPage() {
                       </div>
                     ) : "—"}
                   </td>
-                  <td className="px-5 py-3.5 text-[#8a9a90]">
+                  <td className="px-5 py-3.5 text-[#c9d1d9]">
                     {summary?.total_asset_count ?? "—"}
                   </td>
-                  <td className="px-5 py-3.5 text-[#8a9a90]">
+                  <td className="px-5 py-3.5 text-[#c9d1d9]">
                     {summary?.total_issue_count ?? "—"}
                   </td>
                   <td className="px-5 py-3.5">

@@ -36,8 +36,8 @@ export default function Sidebar() {
       </Link>
 
       {/* Account selector */}
-      <div className="mx-3 mb-4 px-3 py-2.5 bg-[#00e68a]/5 border border-[#122a1e] rounded-lg flex items-center justify-between cursor-pointer">
-        <span className="text-[#5a7068] text-[13px] font-medium">Security Pipeline v2</span>
+      <div className="mx-3 mb-4 px-3 py-2.5 bg-[#00e68a]/5 border border-[#30363d] rounded-lg flex items-center justify-between cursor-pointer">
+        <span className="text-[#8b949e] text-[13px] font-medium">Security Pipeline v2</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2">
           <path d="M6 9l6 6 6-6" />
         </svg>
@@ -98,7 +98,7 @@ function NavItem({
     <Link
       href={href}
       className={`flex items-center justify-between px-3.5 py-2.5 rounded-lg transition-colors ${
-        active ? "bg-primary/[.18] text-white font-semibold" : "text-[#8b8fa3] hover:bg-white/5"
+        active ? "bg-primary/[.18] text-white font-semibold" : "text-[#8b949e] hover:bg-white/5"
       }`}
     >
       <div className="flex items-center gap-2.5">
@@ -109,7 +109,7 @@ function NavItem({
         <span className="bg-primary text-white text-[11px] font-bold px-2 py-0.5 rounded-full">{badge}</span>
       )}
       {count !== undefined && (
-        <span className="bg-white/10 text-[#8b8fa3] text-[11px] font-semibold px-1.5 py-0.5 rounded-full">{count}</span>
+        <span className="bg-white/10 text-[#8b949e] text-[11px] font-semibold px-1.5 py-0.5 rounded-full">{count}</span>
       )}
     </Link>
   );

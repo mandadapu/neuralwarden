@@ -150,7 +150,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
             {/* Header */}
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-3">
-                <Link href="/clouds" className="text-[#3a5548] hover:text-[#8a9a90] transition-colors">
+                <Link href="/clouds" className="text-[#8b949e] hover:text-[#c9d1d9] transition-colors">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M19 12H5M12 19l-7-7 7-7" />
                   </svg>
@@ -163,7 +163,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
                     </span>
                     <GcpBadge />
                   </div>
-                  <p className="text-sm text-[#5a7068]">
+                  <p className="text-sm text-[#8b949e]">
                     {cloud.project_id} &middot; {cloud.purpose}
                   </p>
                 </div>
@@ -171,7 +171,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setConfigOpen(true)}
-                  className="inline-flex items-center gap-2 px-3 py-2 border border-[#122a1e] rounded-lg hover:bg-[#0a1a14] transition-colors text-[#5a7068] hover:text-[#c0d0c8] text-sm font-medium"
+                  className="inline-flex items-center gap-2 px-3 py-2 border border-[#30363d] rounded-lg hover:bg-[#21262d] transition-colors text-[#8b949e] hover:text-[#e6edf3] text-sm font-medium"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="12" cy="12" r="3" />
@@ -241,7 +241,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
             )}
 
             {/* Tab navigation */}
-            <div className="border-b border-[#122a1e] mb-6">
+            <div className="border-b border-[#30363d] mb-6">
               <nav className="flex gap-0 -mb-px">
                 {TABS.map((tab) => {
                   const tabHref = `${basePath}${tab.href}`;
@@ -256,7 +256,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
                       className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
                         isActive
                           ? "border-primary text-primary"
-                          : "border-transparent text-[#5a7068] hover:text-[#c0d0c8] hover:border-[#1a3020]"
+                          : "border-transparent text-[#8b949e] hover:text-[#e6edf3] hover:border-[#30363d]"
                       }`}
                     >
                       {tab.label}

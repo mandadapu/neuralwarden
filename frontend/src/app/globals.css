@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-sidebar: #06120c;
+  --color-sidebar: #0f1419;
   --color-primary: #00e68a;
   --color-primary-hover: #00cc7a;
-  --color-surface: #040a07;
+  --color-surface: #0d1117;
   --color-severity-critical: #dc2626;
   --color-severity-high: #ea580c;
   --color-severity-medium: #ca8a04;
@@ -20,6 +20,6 @@
 body {
   background: var(--color-surface);
   font-family: var(--font-sans);
-  color: #c0d0c8;
+  color: #e6edf3;
 }
 

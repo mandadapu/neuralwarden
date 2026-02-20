@@ -71,7 +71,7 @@ export default function ChecksTab() {
             className={`px-3.5 py-1.5 text-sm font-medium rounded-full border transition-colors ${
               categoryFilter === cat.key
                 ? "bg-primary text-white border-primary"
-                : "bg-[#081510] text-[#8a9a90] border-[#122a1e] hover:bg-[#0a1a14]"
+                : "bg-[#1c2128] text-[#c9d1d9] border-[#30363d] hover:bg-[#21262d]"
             }`}
           >
             {cat.label}
@@ -82,7 +82,7 @@ export default function ChecksTab() {
       {/* Search */}
       <div className="flex items-center gap-3 mb-5">
         <div className="relative flex-1 max-w-sm">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-[#3a5548]">
+          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-[#8b949e]">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8" />
               <path d="M21 21l-4.35-4.35" />
@@ -93,7 +93,7 @@ export default function ChecksTab() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search checks..."
-            className="w-full pl-10 pr-4 py-2 border border-[#122a1e] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            className="w-full pl-10 pr-4 py-2 border border-[#30363d] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
       </div>
@@ -115,36 +115,36 @@ export default function ChecksTab() {
       {/* Empty state */}
       {!loading && !error && checks.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-[#0c1e18] flex items-center justify-center mb-4">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3a5548" strokeWidth="1.5">
+          <div className="w-14 h-14 rounded-2xl bg-[#262c34] flex items-center justify-center mb-4">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8b949e" strokeWidth="1.5">
               <path d="M9 11l3 3L22 4" />
               <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
             </svg>
           </div>
           <h3 className="text-lg font-semibold text-white mb-1">No checks available</h3>
-          <p className="text-sm text-[#5a7068]">Security checks will appear here when configured.</p>
+          <p className="text-sm text-[#8b949e]">Security checks will appear here when configured.</p>
         </div>
       )}
 
       {/* Checks table */}
       {!loading && !error && filtered.length > 0 && (
-        <div className="bg-[#081510] rounded-xl border border-[#122a1e] overflow-hidden">
+        <div className="bg-[#1c2128] rounded-xl border border-[#30363d] overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="bg-[#0a1a14] border-b border-[#122a1e]">
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Rule Code</th>
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Title</th>
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Description</th>
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Compliance</th>
+              <tr className="bg-[#21262d] border-b border-[#30363d]">
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Rule Code</th>
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Title</th>
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Description</th>
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Compliance</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#0e1e16]">
+            <tbody className="divide-y divide-[#262c34]">
               {filtered.map((check) => {
                 const isViolated = violatedRuleCodes.has(check.rule_code);
                 return (
-                  <tr key={check.id} className="hover:bg-[#0a1a14] transition-colors">
+                  <tr key={check.id} className="hover:bg-[#21262d] transition-colors">
                     <td className="px-5 py-3.5">
-                      <code className="text-xs text-[#c0d0c8] bg-[#0c1e18] px-2 py-1 rounded font-mono">
+                      <code className="text-xs text-[#e6edf3] bg-[#262c34] px-2 py-1 rounded font-mono">
                         {check.rule_code}
                       </code>
                     </td>
@@ -152,7 +152,7 @@ export default function ChecksTab() {
                       <span className="text-sm font-medium text-white">{check.title}</span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="text-sm text-[#5a7068] line-clamp-2">{check.description}</span>
+                      <span className="text-sm text-[#8b949e] line-clamp-2">{check.description}</span>
                     </td>
                     <td className="px-5 py-3.5">
                       {isViolated ? (
@@ -182,7 +182,7 @@ export default function ChecksTab() {
 
       {/* No filter results */}
       {!loading && !error && checks.length > 0 && filtered.length === 0 && (
-        <div className="text-center py-12 text-[#5a7068] text-sm">
+        <div className="text-center py-12 text-[#8b949e] text-sm">
           No checks match your filters.
         </div>
       )}

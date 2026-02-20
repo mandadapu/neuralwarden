@@ -128,7 +128,7 @@ export default function CloudsPage() {
       {/* Search bar */}
       <div className="flex items-center gap-3 mb-5">
         <div className="relative flex-1 max-w-md">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-[#3a5548]">
+          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-[#8b949e]">
             <SearchIcon />
           </div>
           <input
@@ -136,10 +136,10 @@ export default function CloudsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search connections..."
-            className="w-full pl-10 pr-4 py-2 border border-[#122a1e] rounded-lg text-sm bg-[#0a1a14] text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            className="w-full pl-10 pr-4 py-2 border border-[#30363d] rounded-lg text-sm bg-[#21262d] text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
-        <button className="inline-flex items-center gap-2 px-4 py-2 border border-[#122a1e] rounded-lg text-sm font-medium text-[#8a9a90] hover:bg-[#0a1a14] transition-colors">
+        <button className="inline-flex items-center gap-2 px-4 py-2 border border-[#30363d] rounded-lg text-sm font-medium text-[#c9d1d9] hover:bg-[#21262d] transition-colors">
           <SearchIcon />
           Search Cloud Assets
         </button>
@@ -162,13 +162,13 @@ export default function CloudsPage() {
       {/* Empty state */}
       {!loading && !error && clouds.length === 0 && (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-[#0c1e18] flex items-center justify-center mb-4">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3a5548" strokeWidth="1.5">
+          <div className="w-16 h-16 rounded-2xl bg-[#262c34] flex items-center justify-center mb-4">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8b949e" strokeWidth="1.5">
               <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
             </svg>
           </div>
           <h3 className="text-lg font-semibold text-white mb-1">No clouds connected yet</h3>
-          <p className="text-sm text-[#5a7068] mb-5">Connect your first cloud to start scanning.</p>
+          <p className="text-sm text-[#8b949e] mb-5">Connect your first cloud to start scanning.</p>
           <Link
             href="/clouds/connect"
             className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-hover transition-colors"
@@ -181,50 +181,50 @@ export default function CloudsPage() {
 
       {/* Table */}
       {!loading && !error && filtered.length > 0 && (
-        <div className="bg-[#081510] rounded-xl border border-[#122a1e] overflow-hidden">
+        <div className="bg-[#1c2128] rounded-xl border border-[#30363d] overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="bg-[#0a1a14] border-b border-[#122a1e]">
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Type</th>
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Name</th>
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Purpose</th>
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Project ID</th>
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Issues</th>
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Ignored</th>
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Last Scan</th>
-                <th className="text-right text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Actions</th>
+              <tr className="bg-[#21262d] border-b border-[#30363d]">
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Type</th>
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Name</th>
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Purpose</th>
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Project ID</th>
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Issues</th>
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Ignored</th>
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Last Scan</th>
+                <th className="text-right text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#0e1e16]">
+            <tbody className="divide-y divide-[#262c34]">
               {filtered.map((cloud) => (
                 <tr
                   key={cloud.id}
                   onClick={() => router.push(`/clouds/${cloud.id}`)}
-                  className="hover:bg-[#0a1a14] cursor-pointer transition-colors"
+                  className="hover:bg-[#21262d] cursor-pointer transition-colors"
                 >
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
                       <GcpIcon />
-                      <span className="text-xs text-[#5a7068] font-medium uppercase">{cloud.provider}</span>
+                      <span className="text-xs text-[#8b949e] font-medium uppercase">{cloud.provider}</span>
                     </div>
                   </td>
                   <td className="px-5 py-3.5">
                     <span className="text-sm font-medium text-white">{cloud.name}</span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="text-sm text-[#8a9a90] capitalize">{cloud.purpose || "—"}</span>
+                    <span className="text-sm text-[#c9d1d9] capitalize">{cloud.purpose || "—"}</span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <code className="text-xs text-[#5a7068] bg-[#0c1e18] px-2 py-0.5 rounded font-mono">{cloud.project_id}</code>
+                    <code className="text-xs text-[#8b949e] bg-[#262c34] px-2 py-0.5 rounded font-mono">{cloud.project_id}</code>
                   </td>
                   <td className="px-5 py-3.5">
                     <IssueBadges counts={cloud.issue_counts} />
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="text-sm text-[#5a7068]">0</span>
+                    <span className="text-sm text-[#8b949e]">0</span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="text-sm text-[#5a7068]">{relativeTime(cloud.last_scan_at)}</span>
+                    <span className="text-sm text-[#8b949e]">{relativeTime(cloud.last_scan_at)}</span>
                   </td>
                   <td className="px-5 py-3.5 text-right">
                     <button
@@ -257,7 +257,7 @@ export default function CloudsPage() {
 
       {/* No search results */}
       {!loading && !error && clouds.length > 0 && filtered.length === 0 && (
-        <div className="text-center py-12 text-[#5a7068] text-sm">
+        <div className="text-center py-12 text-[#8b949e] text-sm">
           No clouds match your search.
         </div>
       )}
@@ -266,7 +266,7 @@ export default function CloudsPage() {
 }
 
 function IssueBadges({ counts }: { counts?: { critical: number; high: number; medium: number; low: number } }) {
-  if (!counts) return <span className="text-sm text-[#3a5548]">--</span>;
+  if (!counts) return <span className="text-sm text-[#8b949e]">--</span>;
   const badges = [
     { key: "critical", value: counts.critical, bg: "bg-red-100 text-red-700" },
     { key: "high", value: counts.high, bg: "bg-orange-100 text-orange-700" },
@@ -274,7 +274,7 @@ function IssueBadges({ counts }: { counts?: { critical: number; high: number; me
     { key: "low", value: counts.low, bg: "bg-blue-100 text-blue-700" },
   ];
   const hasCounts = badges.some((b) => b.value > 0);
-  if (!hasCounts) return <span className="text-sm text-[#3a5548]">0</span>;
+  if (!hasCounts) return <span className="text-sm text-[#8b949e]">0</span>;
   return (
     <div className="flex items-center gap-1.5">
       {badges

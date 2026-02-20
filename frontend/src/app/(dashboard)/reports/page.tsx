@@ -29,45 +29,45 @@ export default function ReportsPage() {
       }
     >
       {loading ? (
-        <div className="mt-6 bg-[#081510] rounded-xl border border-[#122a1e] p-12 text-center">
-          <p className="text-[#3a5548] text-sm">Loading reports...</p>
+        <div className="mt-6 bg-[#1c2128] rounded-xl border border-[#30363d] p-12 text-center">
+          <p className="text-[#8b949e] text-sm">Loading reports...</p>
         </div>
       ) : reports.length === 0 ? (
-        <div className="mt-6 bg-[#081510] rounded-xl border border-[#122a1e] p-12 text-center">
-          <p className="text-[#3a5548] text-sm">
+        <div className="mt-6 bg-[#1c2128] rounded-xl border border-[#30363d] p-12 text-center">
+          <p className="text-[#8b949e] text-sm">
             No saved reports yet. Run an analysis from the Feed to generate your first report.
           </p>
         </div>
       ) : (
-        <div className="mt-6 bg-[#081510] rounded-xl border border-[#122a1e] overflow-hidden">
+        <div className="mt-6 bg-[#1c2128] rounded-xl border border-[#30363d] overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b-2 border-[#122a1e]">
-                <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Date</th>
-                <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Status</th>
-                <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Logs</th>
-                <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Threats</th>
-                <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Critical</th>
-                <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Time</th>
-                <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Cost</th>
-                <th className="text-center px-5 py-3.5 font-semibold text-[#c0d0c8]">PDF</th>
+              <tr className="border-b-2 border-[#30363d]">
+                <th className="text-left px-5 py-3.5 font-semibold text-[#e6edf3]">Date</th>
+                <th className="text-left px-5 py-3.5 font-semibold text-[#e6edf3]">Status</th>
+                <th className="text-left px-5 py-3.5 font-semibold text-[#e6edf3]">Logs</th>
+                <th className="text-left px-5 py-3.5 font-semibold text-[#e6edf3]">Threats</th>
+                <th className="text-left px-5 py-3.5 font-semibold text-[#e6edf3]">Critical</th>
+                <th className="text-left px-5 py-3.5 font-semibold text-[#e6edf3]">Time</th>
+                <th className="text-left px-5 py-3.5 font-semibold text-[#e6edf3]">Cost</th>
+                <th className="text-center px-5 py-3.5 font-semibold text-[#e6edf3]">PDF</th>
               </tr>
             </thead>
             <tbody>
               {reports.map((r) => (
                 <tr
                   key={r.id}
-                  className="border-b border-[#0e1e16] hover:bg-[#0a1a14] transition-colors cursor-pointer"
+                  className="border-b border-[#262c34] hover:bg-[#21262d] transition-colors cursor-pointer"
                   onClick={() => setExpanded(expanded === r.id ? null : r.id)}
                 >
-                  <td className="px-5 py-3.5 text-[#c0d0c8]">
+                  <td className="px-5 py-3.5 text-[#e6edf3]">
                     {new Date(r.created_at).toLocaleString()}
                   </td>
                   <td className="px-5 py-3.5">
                     <span
                       className={`px-2 py-0.5 rounded-md text-xs font-semibold ${
                         r.status === "completed"
-                          ? "bg-[#0a1a14] text-green-700 border border-green-200"
+                          ? "bg-[#21262d] text-green-700 border border-green-200"
                           : r.status === "error"
                           ? "bg-red-50 text-red-700 border border-red-200"
                           : "bg-yellow-50 text-yellow-700 border border-yellow-200"
@@ -76,23 +76,23 @@ export default function ReportsPage() {
                       {r.status}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5 text-[#8a9a90]">{r.log_count}</td>
-                  <td className="px-5 py-3.5 text-[#8a9a90]">{r.threat_count}</td>
+                  <td className="px-5 py-3.5 text-[#c9d1d9]">{r.log_count}</td>
+                  <td className="px-5 py-3.5 text-[#c9d1d9]">{r.threat_count}</td>
                   <td className="px-5 py-3.5">
                     {r.critical_count > 0 ? (
                       <span className="text-red-600 font-bold">{r.critical_count}</span>
                     ) : (
-                      <span className="text-[#3a5548]">0</span>
+                      <span className="text-[#8b949e]">0</span>
                     )}
                   </td>
-                  <td className="px-5 py-3.5 text-[#8a9a90]">{r.pipeline_time.toFixed(1)}s</td>
-                  <td className="px-5 py-3.5 text-[#8a9a90]">
+                  <td className="px-5 py-3.5 text-[#c9d1d9]">{r.pipeline_time.toFixed(1)}s</td>
+                  <td className="px-5 py-3.5 text-[#c9d1d9]">
                     ${r.pipeline_cost.toFixed(4)}
                   </td>
                   <td className="px-5 py-3.5 text-center">
                     <button
                       title="Download PDF report"
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-[#0c1e18] text-[#5a7068] hover:text-[#c0d0c8] transition-colors"
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-[#262c34] text-[#8b949e] hover:text-[#e6edf3] transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         const base = `${window.location.protocol}//${window.location.hostname}:8000/api`;

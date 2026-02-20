@@ -107,7 +107,7 @@ function NodeRect({ node, hovered, onHover }: { node: FlowNode; hovered: boolean
         width={NODE_W}
         height={NODE_H}
         rx={isSpecial ? NODE_H / 2 : isDiamond ? 4 : NODE_RX}
-        fill={hovered ? node.color : "#081510"}
+        fill={hovered ? node.color : "#1c2128"}
         stroke={node.color}
         strokeWidth={isDiamond ? 2 : 1.5}
         strokeDasharray={isDiamond ? "4 2" : undefined}
@@ -133,7 +133,7 @@ function NodeRect({ node, hovered, onHover }: { node: FlowNode; hovered: boolean
           x={node.x}
           y={node.y + NODE_H / 2 + 12}
           textAnchor="middle"
-          fill="#3a5548"
+          fill="#8b949e"
           fontSize="8"
           fontFamily="'SF Mono', Monaco, 'Cascadia Code', monospace"
         >
@@ -164,7 +164,7 @@ function EdgeArrow({ edge, nodes }: { edge: FlowEdge; nodes: FlowNode[] }) {
       <path
         d={path}
         fill="none"
-        stroke="#1a3020"
+        stroke="#30363d"
         strokeWidth="1.5"
         strokeDasharray={edge.dashed ? "5 3" : undefined}
         markerEnd="url(#arrowhead)"
@@ -174,7 +174,7 @@ function EdgeArrow({ edge, nodes }: { edge: FlowEdge; nodes: FlowNode[] }) {
           x={(x1 + x2) / 2}
           y={((y1 + y2) / 2) - 6}
           textAnchor="middle"
-          fill="#3a5548"
+          fill="#8b949e"
           fontSize="8"
           fontStyle="italic"
           fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
@@ -217,7 +217,7 @@ function PipelineSVG({
           refY="3"
           orient="auto"
         >
-          <polygon points="0 0, 8 3, 0 6" fill="#1a3020" />
+          <polygon points="0 0, 8 3, 0 6" fill="#30363d" />
         </marker>
       </defs>
 
@@ -245,22 +245,22 @@ export default function PipelineFlowDiagram() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-2xl border border-[#122a1e]/60 bg-[#081510]/50 overflow-hidden">
+    <div className="rounded-2xl border border-[#30363d]/60 bg-[#1c2128]/50 overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-6 py-4 hover:bg-[#0a1a14]/80 transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between px-6 py-4 hover:bg-[#21262d]/80 transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3">
           <span className="w-1.5 h-8 rounded-full bg-gradient-to-b from-[#2563eb] to-[#7c3aed]" />
           <div className="text-left">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[#3a5548]">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[#8b949e]">
               Architecture
             </span>
             <h2 className="text-base font-bold text-white -mt-0.5">Data Flow</h2>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-[#3a5548] hidden md:block">How agents connect across both pipelines</span>
+          <span className="text-xs text-[#8b949e] hidden md:block">How agents connect across both pipelines</span>
           <svg
             width="18"
             height="18"
@@ -268,7 +268,7 @@ export default function PipelineFlowDiagram() {
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
-            className={`text-[#3a5548] transition-transform duration-200 ${open ? "rotate-0" : "-rotate-90"}`}
+            className={`text-[#8b949e] transition-transform duration-200 ${open ? "rotate-0" : "-rotate-90"}`}
           >
             <path d="M6 9l6 6 6-6" />
           </svg>
@@ -292,17 +292,17 @@ export default function PipelineFlowDiagram() {
           ].map((item) => (
             <div key={item.label} className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-sm" style={{ background: item.color }} />
-              <span className="text-[11px] text-[#5a7068]">{item.label}</span>
+              <span className="text-[11px] text-[#8b949e]">{item.label}</span>
             </div>
           ))}
         </div>
 
         {/* Cloud Scan Pipeline (runs first) */}
         <div className="px-5">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-[#3a5548] mb-1.5 px-1">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-[#8b949e] mb-1.5 px-1">
             1. Cloud Scan Super Agent
           </div>
-          <div className="bg-[#081510] rounded-xl border border-[#0e1e16] px-4 py-4 overflow-x-auto">
+          <div className="bg-[#1c2128] rounded-xl border border-[#262c34] px-4 py-4 overflow-x-auto">
             <PipelineSVG nodes={CLOUD_NODES} edges={CLOUD_EDGES} width={1020} height={100} />
           </div>
         </div>
@@ -311,23 +311,23 @@ export default function PipelineFlowDiagram() {
         <div className="flex justify-center my-2">
           <div className="flex flex-col items-center">
             <svg width="2" height="16">
-              <line x1="1" y1="0" x2="1" y2="16" stroke="#1a3020" strokeWidth="1.5" strokeDasharray="3 2" />
+              <line x1="1" y1="0" x2="1" y2="16" stroke="#30363d" strokeWidth="1.5" strokeDasharray="3 2" />
             </svg>
-            <span className="text-[9px] text-[#3a5548] bg-[#0a1a14] px-2 py-0.5 rounded-full border border-[#122a1e]">
+            <span className="text-[9px] text-[#8b949e] bg-[#21262d] px-2 py-0.5 rounded-full border border-[#30363d]">
               feeds into
             </span>
             <svg width="2" height="16">
-              <line x1="1" y1="0" x2="1" y2="16" stroke="#1a3020" strokeWidth="1.5" strokeDasharray="3 2" />
+              <line x1="1" y1="0" x2="1" y2="16" stroke="#30363d" strokeWidth="1.5" strokeDasharray="3 2" />
             </svg>
           </div>
         </div>
 
         {/* Threat Pipeline (fed by Cloud Scan) */}
         <div className="px-5">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-[#3a5548] mb-1.5 px-1">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-[#8b949e] mb-1.5 px-1">
             2. Threat Pipeline
           </div>
-          <div className="bg-[#081510] rounded-xl border border-[#0e1e16] px-4 py-4 overflow-x-auto">
+          <div className="bg-[#1c2128] rounded-xl border border-[#262c34] px-4 py-4 overflow-x-auto">
             <PipelineSVG nodes={THREAT_NODES} edges={THREAT_EDGES} width={980} height={75} />
           </div>
         </div>

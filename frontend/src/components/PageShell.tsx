@@ -21,7 +21,7 @@ export default function PageShell({
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">{title}</h1>
-            <p className="text-sm text-[#5a7068]">{description}</p>
+            <p className="text-sm text-[#8b949e]">{description}</p>
           </div>
         </div>
         {children}

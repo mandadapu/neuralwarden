@@ -61,17 +61,17 @@ export default function AutoFixPage() {
       }
     >
       <div className="mt-6 grid grid-cols-3 gap-4">
-        <div className="bg-[#081510] rounded-xl border border-[#122a1e] p-5">
+        <div className="bg-[#1c2128] rounded-xl border border-[#30363d] p-5">
           <div className="text-2xl font-bold text-white">{loading ? "—" : available.length}</div>
-          <div className="text-sm text-[#5a7068]">Available fixes</div>
+          <div className="text-sm text-[#8b949e]">Available fixes</div>
         </div>
-        <div className="bg-[#081510] rounded-xl border border-[#122a1e] p-5">
+        <div className="bg-[#1c2128] rounded-xl border border-[#30363d] p-5">
           <div className="text-2xl font-bold text-green-600">{loading ? "—" : applied.length}</div>
-          <div className="text-sm text-[#5a7068]">Applied</div>
+          <div className="text-sm text-[#8b949e]">Applied</div>
         </div>
-        <div className="bg-[#081510] rounded-xl border border-[#122a1e] p-5">
-          <div className="text-2xl font-bold text-[#3a5548]">{loading ? "—" : skipped.length}</div>
-          <div className="text-sm text-[#5a7068]">Skipped</div>
+        <div className="bg-[#1c2128] rounded-xl border border-[#30363d] p-5">
+          <div className="text-2xl font-bold text-[#8b949e]">{loading ? "—" : skipped.length}</div>
+          <div className="text-sm text-[#8b949e]">Skipped</div>
         </div>
       </div>
 
@@ -82,30 +82,30 @@ export default function AutoFixPage() {
       )}
 
       {!loading && fixable.length === 0 && (
-        <div className="mt-4 bg-[#081510] rounded-xl border border-[#122a1e] p-12 text-center">
-          <p className="text-[#3a5548] text-sm">Run a cloud scan to discover auto-fixable issues.</p>
+        <div className="mt-4 bg-[#1c2128] rounded-xl border border-[#30363d] p-12 text-center">
+          <p className="text-[#8b949e] text-sm">Run a cloud scan to discover auto-fixable issues.</p>
         </div>
       )}
 
       {!loading && available.length > 0 && (
-        <div className="mt-4 bg-[#081510] rounded-xl border border-[#122a1e] overflow-hidden">
+        <div className="mt-4 bg-[#1c2128] rounded-xl border border-[#30363d] overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="bg-[#0a1a14] border-b border-[#122a1e]">
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Issue</th>
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Severity</th>
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Account</th>
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Location</th>
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Fix Time</th>
-                <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3"></th>
+              <tr className="bg-[#21262d] border-b border-[#30363d]">
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Issue</th>
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Severity</th>
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Account</th>
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Location</th>
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Fix Time</th>
+                <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#0e1e16]">
+            <tbody className="divide-y divide-[#262c34]">
               {available.map((issue) => (
-                <tr key={issue.id} className="hover:bg-[#0a1a14] transition-colors">
+                <tr key={issue.id} className="hover:bg-[#21262d] transition-colors">
                   <td className="px-5 py-3.5">
                     <div className="text-sm font-medium text-white">{issue.title}</div>
-                    <div className="text-xs text-[#5a7068] mt-0.5">{issue.rule_code}</div>
+                    <div className="text-xs text-[#8b949e] mt-0.5">{issue.rule_code}</div>
                   </td>
                   <td className="px-5 py-3.5">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold capitalize ${SEVERITY_STYLES[issue.severity] ?? ""}`}>
@@ -113,13 +113,13 @@ export default function AutoFixPage() {
                     </span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="text-sm text-[#8a9a90]">{issue.account_name ?? "—"}</span>
+                    <span className="text-sm text-[#c9d1d9]">{issue.account_name ?? "—"}</span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="text-sm text-[#8a9a90]">{issue.location || "—"}</span>
+                    <span className="text-sm text-[#c9d1d9]">{issue.location || "—"}</span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="text-sm text-[#8a9a90]">{issue.fix_time || "—"}</span>
+                    <span className="text-sm text-[#c9d1d9]">{issue.fix_time || "—"}</span>
                   </td>
                   <td className="px-5 py-3.5">
                     <button

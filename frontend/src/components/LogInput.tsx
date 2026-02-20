@@ -57,12 +57,12 @@ export default function LogInput({
   };
 
   return (
-    <div className="mx-7 mb-5 bg-[#081510] border border-[#122a1e] rounded-xl p-5">
-      <label className="block text-sm font-medium text-[#c0d0c8] mb-2">
+    <div className="mx-7 mb-5 bg-[#1c2128] border border-[#30363d] rounded-xl p-5">
+      <label className="block text-sm font-medium text-[#e6edf3] mb-2">
         Paste Security Logs
       </label>
       <textarea
-        className="w-full border border-[#122a1e] rounded-lg p-3 text-[13px] font-mono text-[#c0d0c8] resize-y focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+        className="w-full border border-[#30363d] rounded-lg p-3 text-[13px] font-mono text-[#e6edf3] resize-y focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
         rows={6}
         placeholder={"Paste security logs here, load a sample, or fetch from GCP Cloud Logging (Log Sources page)...\n\nExample:\n2026-02-19T04:14:58Z WARNING cloud_run_revision/archcelerate: GET /wp-admin/setup-config.php status=404 src=172.71.184.229"}
         value={value}
@@ -70,7 +70,7 @@ export default function LogInput({
       />
       <div className="flex items-center gap-3 mt-3 flex-wrap">
         <select
-          className="border border-[#122a1e] rounded-lg px-3 py-2.5 text-sm text-[#c0d0c8] bg-[#081510] focus:outline-none focus:ring-2 focus:ring-primary/30"
+          className="border border-[#30363d] rounded-lg px-3 py-2.5 text-sm text-[#e6edf3] bg-[#1c2128] focus:outline-none focus:ring-2 focus:ring-primary/30"
           defaultValue=""
           onChange={handleSampleChange}
         >
@@ -83,7 +83,7 @@ export default function LogInput({
         </select>
         {scenarios.length > 0 && (
           <select
-            className="border border-[#122a1e] rounded-lg px-3 py-2.5 text-sm text-[#c0d0c8] bg-[#081510] focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="border border-[#30363d] rounded-lg px-3 py-2.5 text-sm text-[#e6edf3] bg-[#1c2128] focus:outline-none focus:ring-2 focus:ring-primary/30"
             defaultValue=""
             onChange={handleGenerate}
             disabled={generating}

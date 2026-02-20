@@ -19,7 +19,7 @@ export default function Topbar() {
 
   return (
     <>
-      <div className="flex items-center justify-between px-7 py-4 bg-[#081510] border-b border-[#122a1e]">
+      <div className="flex items-center justify-between px-7 py-4 bg-[#1c2128] border-b border-[#30363d]">
         <div className="text-xl font-medium text-white">
           Hello, {userName.split(" ")[0]}!
         </div>
@@ -29,14 +29,14 @@ export default function Topbar() {
             height="20"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#3a5548"
+            stroke="#8b949e"
             strokeWidth="2"
             className="cursor-pointer hover:stroke-[#00e68a] transition-colors"
           >
             <circle cx="11" cy="11" r="8" />
             <path d="M21 21l-4.35-4.35" />
           </svg>
-          <span className="text-[#5a7068] text-sm cursor-pointer hover:text-[#00e68a] transition-colors">Docs</span>
+          <span className="text-[#8b949e] text-sm cursor-pointer hover:text-[#00e68a] transition-colors">Docs</span>
 
           <button
             onClick={() => setShowLogout(true)}
@@ -54,7 +54,7 @@ export default function Topbar() {
             <img
               src={userImage}
               alt={userName}
-              className="w-9 h-9 rounded-full cursor-pointer border border-[#122a1e]"
+              className="w-9 h-9 rounded-full cursor-pointer border border-[#30363d]"
               referrerPolicy="no-referrer"
             />
           ) : (

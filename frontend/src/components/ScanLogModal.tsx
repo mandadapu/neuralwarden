@@ -15,14 +15,14 @@ const STATUS_STYLES: Record<string, string> = {
   success: "bg-emerald-100 text-emerald-800",
   partial: "bg-amber-100 text-amber-800",
   error: "bg-red-100 text-red-800",
-  skipped: "bg-[#0c1e18] text-[#8a9a90]",
+  skipped: "bg-[#262c34] text-[#c9d1d9]",
   running: "bg-blue-100 text-blue-800",
 };
 
 function StatusBadge({ status }: { status: string }) {
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLES[status] ?? "bg-[#0c1e18] text-[#8a9a90]"}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLES[status] ?? "bg-[#262c34] text-[#c9d1d9]"}`}
     >
       {status}
     </span>
@@ -52,16 +52,16 @@ export default function ScanLogModal({ cloudId, logId, open, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-[#081510] rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+      <div className="bg-[#1c2128] rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#0e1e16]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#262c34]">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-bold text-white">Scan Log</h2>
             {log && <StatusBadge status={log.status} />}
           </div>
           <button
             onClick={onClose}
-            className="text-[#3a5548] hover:text-[#8a9a90] transition-colors"
+            className="text-[#8b949e] hover:text-[#c9d1d9] transition-colors"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6L6 18M6 6l12 12" />
@@ -77,8 +77,8 @@ export default function ScanLogModal({ cloudId, logId, open, onClose }: Props) {
           <>
             {/* Summary section */}
             {summary && (
-              <div className="px-6 py-4 border-b border-[#0e1e16] space-y-3">
-                <div className="flex items-center gap-4 text-sm text-[#8a9a90]">
+              <div className="px-6 py-4 border-b border-[#262c34] space-y-3">
+                <div className="flex items-center gap-4 text-sm text-[#c9d1d9]">
                   <span className="font-medium">{summary.duration_seconds}s total</span>
                   <span>{summary.total_asset_count} assets</span>
                   <span>{summary.total_issue_count} issues</span>
@@ -91,19 +91,19 @@ export default function ScanLogModal({ cloudId, logId, open, onClose }: Props) {
 
                 {/* Per-service breakdown */}
                 <div className="space-y-1.5">
-                  <h3 className="text-xs font-semibold text-[#5a7068] uppercase tracking-wider">
+                  <h3 className="text-xs font-semibold text-[#8b949e] uppercase tracking-wider">
                     Services
                   </h3>
                   {Object.entries(summary.service_details).map(([name, detail]) => (
                     <div
                       key={name}
-                      className="flex items-center justify-between text-sm py-1.5 px-3 rounded-lg bg-[#0a1a14]"
+                      className="flex items-center justify-between text-sm py-1.5 px-3 rounded-lg bg-[#21262d]"
                     >
                       <div className="flex items-center gap-2">
                         <StatusBadge status={detail.status} />
                         <span className="font-medium text-white">{name}</span>
                       </div>
-                      <span className="text-[#5a7068]">
+                      <span className="text-[#8b949e]">
                         {detail.status === "success"
                           ? `${detail.asset_count} assets, ${detail.issue_count} issues (${detail.duration_seconds}s)`
                           : detail.status === "skipped"
@@ -118,12 +118,12 @@ export default function ScanLogModal({ cloudId, logId, open, onClose }: Props) {
 
             {/* Log entries */}
             <div className="flex-1 overflow-y-auto px-6 py-4">
-              <h3 className="text-xs font-semibold text-[#5a7068] uppercase tracking-wider mb-2">
+              <h3 className="text-xs font-semibold text-[#8b949e] uppercase tracking-wider mb-2">
                 Log Entries
               </h3>
               <div className="font-mono text-xs space-y-0.5 bg-gray-900 rounded-lg p-4 text-gray-300">
                 {entries.length === 0 ? (
-                  <span className="text-[#5a7068]">No log entries available</span>
+                  <span className="text-[#8b949e]">No log entries available</span>
                 ) : (
                   entries.map((entry, i) => (
                     <div
@@ -136,7 +136,7 @@ export default function ScanLogModal({ cloudId, logId, open, onClose }: Props) {
                             : "text-gray-300"
                       }
                     >
-                      <span className="text-[#5a7068]">
+                      <span className="text-[#8b949e]">
                         {new Date(entry.ts).toLocaleTimeString()}
                       </span>{" "}
                       <span

@@ -20,7 +20,7 @@ export default function SeverityGauge({ score, risk }: SeverityGaugeProps) {
         <path
           d="M 15 60 A 45 45 0 0 1 105 60"
           fill="none"
-          stroke="#122a1e"
+          stroke="#30363d"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
         />
@@ -51,7 +51,7 @@ export default function SeverityGauge({ score, risk }: SeverityGaugeProps) {
           y="66"
           textAnchor="middle"
           fontSize="10"
-          fill="#3a5548"
+          fill="#8b949e"
         >
           {risk.charAt(0).toUpperCase() + risk.slice(1)}
         </text>

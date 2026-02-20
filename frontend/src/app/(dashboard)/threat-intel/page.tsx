@@ -15,27 +15,27 @@ export default function ThreatIntelPage() {
         </svg>
       }
     >
-      <div className="mt-6 bg-[#081510] rounded-xl border border-[#122a1e] overflow-hidden">
+      <div className="mt-6 bg-[#1c2128] rounded-xl border border-[#30363d] overflow-hidden">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b-2 border-[#122a1e]">
-              <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Feed</th>
-              <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Type</th>
-              <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Status</th>
-              <th className="text-left px-5 py-3.5 font-semibold text-[#c0d0c8]">Entries</th>
+            <tr className="border-b-2 border-[#30363d]">
+              <th className="text-left px-5 py-3.5 font-semibold text-[#e6edf3]">Feed</th>
+              <th className="text-left px-5 py-3.5 font-semibold text-[#e6edf3]">Type</th>
+              <th className="text-left px-5 py-3.5 font-semibold text-[#e6edf3]">Status</th>
+              <th className="text-left px-5 py-3.5 font-semibold text-[#e6edf3]">Entries</th>
             </tr>
           </thead>
           <tbody>
             {FEEDS.map((f) => (
-              <tr key={f.name} className="border-b border-[#0e1e16] hover:bg-[#0a1a14] transition-colors">
+              <tr key={f.name} className="border-b border-[#262c34] hover:bg-[#21262d] transition-colors">
                 <td className="px-5 py-3.5 font-medium text-white">{f.name}</td>
-                <td className="px-5 py-3.5 text-[#8a9a90]">{f.type}</td>
+                <td className="px-5 py-3.5 text-[#c9d1d9]">{f.type}</td>
                 <td className="px-5 py-3.5">
-                  <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-[#0a1a14] text-green-700 border border-green-200">
+                  <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-[#21262d] text-green-700 border border-green-200">
                     {f.status}
                   </span>
                 </td>
-                <td className="px-5 py-3.5 text-[#8a9a90]">{f.entries}</td>
+                <td className="px-5 py-3.5 text-[#c9d1d9]">{f.entries}</td>
               </tr>
             ))}
           </tbody>
