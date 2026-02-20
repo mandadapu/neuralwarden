@@ -13,20 +13,20 @@ interface Agent {
 }
 
 const AGENTS: Agent[] = [
-  // Threat Pipeline
-  { name: "Ingest", model: "Haiku 4.5", role: "Parses raw logs into structured entries with timestamp, source, and severity extraction", status: "Ready", group: "Threat Pipeline" },
-  { name: "Detect", model: "Sonnet 4.5", role: "Rule-based pattern matching plus AI-powered novel threat detection across 5 categories", status: "Ready", group: "Threat Pipeline" },
-  { name: "Validate", model: "Haiku 4.5", role: "Shadow validation on 5% sample of clean logs to catch false negatives", status: "Ready", group: "Threat Pipeline" },
-  { name: "Classify", model: "Sonnet 4.5", role: "Risk scoring with MITRE ATT&CK mapping and correlation-aware severity escalation", status: "Ready", group: "Threat Pipeline" },
-  { name: "HITL Gate", model: "\u2014", role: "Human-in-the-loop checkpoint for critical threats before report generation", status: "Ready", group: "Threat Pipeline" },
-  { name: "Report", model: "Haiku 4.5", role: "Generates dual-audience incident reports with executive summary and action plans", status: "Ready", group: "Threat Pipeline" },
-  // Cloud Scan Super Agent
+  // Cloud Scan Super Agent (runs first)
   { name: "Discovery", model: "\u2014", role: "Enumerates GCP assets across Compute, Storage, Firewall, SQL, and IAM", status: "Ready", group: "Cloud Scan Super Agent" },
   { name: "Router", model: "\u2014", role: "Inspects asset metadata to route public assets to active scan, private to log analysis", status: "Ready", group: "Cloud Scan Super Agent" },
   { name: "Active Scanner", model: "\u2014", role: "Runs compliance checks on public-facing assets for open ports, public buckets, default SAs", status: "Ready", group: "Cloud Scan Super Agent" },
   { name: "Log Analyzer", model: "\u2014", role: "Queries Cloud Logging for behavioral signals on private resources", status: "Ready", group: "Cloud Scan Super Agent" },
   { name: "Correlation Engine", model: "\u2014", role: "Cross-references scanner findings with log activity to surface active exploits", status: "Ready", group: "Cloud Scan Super Agent" },
   { name: "Remediation Generator", model: "\u2014", role: "Generates parameterized gcloud remediation scripts from scan findings", status: "Ready", group: "Cloud Scan Super Agent" },
+  // Threat Pipeline (fed by Cloud Scan)
+  { name: "Ingest", model: "Haiku 4.5", role: "Parses raw logs into structured entries with timestamp, source, and severity extraction", status: "Ready", group: "Threat Pipeline" },
+  { name: "Detect", model: "Sonnet 4.5", role: "Rule-based pattern matching plus AI-powered novel threat detection across 5 categories", status: "Ready", group: "Threat Pipeline" },
+  { name: "Validate", model: "Haiku 4.5", role: "Shadow validation on 5% sample of clean logs to catch false negatives", status: "Ready", group: "Threat Pipeline" },
+  { name: "Classify", model: "Sonnet 4.5", role: "Risk scoring with MITRE ATT&CK mapping and correlation-aware severity escalation", status: "Ready", group: "Threat Pipeline" },
+  { name: "HITL Gate", model: "\u2014", role: "Human-in-the-loop checkpoint for critical threats before report generation", status: "Ready", group: "Threat Pipeline" },
+  { name: "Report", model: "Haiku 4.5", role: "Generates dual-audience incident reports with executive summary and action plans", status: "Ready", group: "Threat Pipeline" },
 ];
 
 const GROUP_META: Record<string, { description: string; color: string }> = {

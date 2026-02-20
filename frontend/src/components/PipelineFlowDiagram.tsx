@@ -297,13 +297,13 @@ export default function PipelineFlowDiagram() {
           ))}
         </div>
 
-        {/* Threat Pipeline */}
+        {/* Cloud Scan Pipeline (runs first) */}
         <div className="px-5">
           <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 px-1">
-            Threat Pipeline
+            1. Cloud Scan Super Agent
           </div>
           <div className="bg-white rounded-xl border border-gray-100 px-4 py-4 overflow-x-auto">
-            <PipelineSVG nodes={THREAT_NODES} edges={THREAT_EDGES} width={980} height={75} />
+            <PipelineSVG nodes={CLOUD_NODES} edges={CLOUD_EDGES} width={1020} height={100} />
           </div>
         </div>
 
@@ -322,13 +322,13 @@ export default function PipelineFlowDiagram() {
           </div>
         </div>
 
-        {/* Cloud Scan Pipeline */}
+        {/* Threat Pipeline (fed by Cloud Scan) */}
         <div className="px-5">
           <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 px-1">
-            Cloud Scan Super Agent
+            2. Threat Pipeline
           </div>
           <div className="bg-white rounded-xl border border-gray-100 px-4 py-4 overflow-x-auto">
-            <PipelineSVG nodes={CLOUD_NODES} edges={CLOUD_EDGES} width={1020} height={100} />
+            <PipelineSVG nodes={THREAT_NODES} edges={THREAT_EDGES} width={980} height={75} />
           </div>
         </div>
       </div>
