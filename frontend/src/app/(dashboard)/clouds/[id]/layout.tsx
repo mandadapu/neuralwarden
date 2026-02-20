@@ -122,6 +122,16 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
     if (evt === "discovered") return `Discovered ${scanProgress.total_assets ?? 0} assets`;
     if (evt === "routing") return `Routing ${scanProgress.total_assets ?? 0} assets (${scanProgress.public_count ?? 0} public, ${scanProgress.private_count ?? 0} private)`;
     if (evt === "scanned") return `Scanned ${scanProgress.assets_scanned ?? 0} assets — running threat analysis...`;
+    if (evt === "threat_stage") {
+      const labels: Record<string, string> = {
+        ingest: "Threat pipeline: parsing logs...",
+        detect: "Threat pipeline: detecting threats...",
+        validate: "Threat pipeline: validating findings...",
+        classify: "Threat pipeline: classifying threats...",
+        report: "Threat pipeline: generating report...",
+      };
+      return labels[scanProgress.threat_stage ?? ""] ?? "Threat pipeline: processing...";
+    }
     if (evt === "complete") {
       const exploits = scanProgress.active_exploits_detected ?? 0;
       const base = `Scan complete: ${scanProgress.asset_count ?? 0} assets, ${scanProgress.issue_count ?? 0} issues found`;
