@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import PageShell from "@/components/PageShell";
+import PipelineFlowDiagram from "@/components/PipelineFlowDiagram";
 
 interface Agent {
   name: string;
@@ -155,6 +156,7 @@ export default function AgentsPage() {
       }
     >
       <div className="mt-6 space-y-5">
+        <PipelineFlowDiagram />
         {groups.map((group) => {
           const groupAgents = AGENTS.filter((a) => a.group === group);
           const startIndex = index;
