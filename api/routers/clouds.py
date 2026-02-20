@@ -213,7 +213,6 @@ async def trigger_scan(cloud_id: str):
             final = event
 
             # Save results to database — prefer correlated issues over raw
-            clear_cloud_issues(cloud_id)
             issues = final.get("correlated_issues") or final.get("scan_issues", [])
             assets = final.get("discovered_assets", [])
             active_exploits = final.get("active_exploits_detected", 0)
@@ -223,10 +222,12 @@ async def trigger_scan(cloud_id: str):
                 from pipeline.agents.remediation_generator import generate_remediation
                 generate_remediation(issues, project_id=account["project_id"])
 
+            # Only clear old issues when we have new ones to replace them
+            if issues:
+                clear_cloud_issues(cloud_id)
+                save_cloud_issues(cloud_id, issues)
             if assets:
                 save_cloud_assets(cloud_id, assets)
-            if issues:
-                save_cloud_issues(cloud_id, issues)
             update_cloud_account(
                 cloud_id,
                 last_scan_at=datetime.now(timezone.utc).isoformat(),
