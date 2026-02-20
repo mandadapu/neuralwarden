@@ -1,8 +1,9 @@
 "use client";
 
 import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import LoginModal from "@/components/LoginModal";
 
 /* ── Animated grid background ─────────────────────────────── */
@@ -173,8 +174,18 @@ function AgentNode({
 
 function LandingContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { data: session } = useSession();
   const [showLogin, setShowLogin] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  function handleAccessDashboard() {
+    if (session) {
+      router.push("/feed");
+    } else {
+      setShowLogin(true);
+    }
+  }
 
   useEffect(() => {
     if (searchParams.get("login") === "true") setShowLogin(true);
@@ -263,10 +274,10 @@ function LandingContent() {
             v2.1 — operational
           </span>
           <button
-            onClick={() => setShowLogin(true)}
+            onClick={handleAccessDashboard}
             className="px-5 py-2 rounded-lg bg-[#00e68a]/10 border border-[#00e68a]/20 text-[#00e68a] text-sm font-medium hover:bg-[#00e68a]/20 hover:border-[#00e68a]/30 transition-all duration-300 cursor-pointer"
           >
-            Access Dashboard
+            {session ? "Go to Dashboard" : "Access Dashboard"}
           </button>
         </div>
       </header>
@@ -331,7 +342,7 @@ function LandingContent() {
           style={{ animation: mounted ? "fadeUp 0.7s 0.55s both" : "none" }}
         >
           <button
-            onClick={() => setShowLogin(true)}
+            onClick={handleAccessDashboard}
             className="group px-8 py-3.5 rounded-xl text-sm font-semibold transition-all duration-300 cursor-pointer relative overflow-hidden"
             style={{
               fontFamily: "'DM Sans', sans-serif",
