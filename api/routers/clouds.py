@@ -21,7 +21,6 @@ from api.cloud_database import (
     save_cloud_issues,
     list_cloud_issues,
     update_cloud_issue_status,
-    clear_cloud_issues,
     get_issue_counts,
     list_cloud_assets,
     list_cloud_checks,
@@ -222,9 +221,7 @@ async def trigger_scan(cloud_id: str):
                 from pipeline.agents.remediation_generator import generate_remediation
                 generate_remediation(issues, project_id=account["project_id"])
 
-            # Only clear old issues when we have new ones to replace them
             if issues:
-                clear_cloud_issues(cloud_id)
                 save_cloud_issues(cloud_id, issues)
             if assets:
                 save_cloud_assets(cloud_id, assets)

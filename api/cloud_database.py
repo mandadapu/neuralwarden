@@ -279,12 +279,31 @@ def list_cloud_assets(account_id: str, asset_type: str = "") -> list[dict]:
 # ── Cloud issues CRUD ───────────────────────────────────────────────
 
 
-def save_cloud_issues(account_id: str, issues: list[dict]) -> None:
-    """Insert issues for an account (does NOT clear old ones first)."""
+def save_cloud_issues(account_id: str, issues: list[dict]) -> int:
+    """Insert new issues for an account, skipping duplicates.
+
+    Deduplication key: rule_code + location (within the same account).
+    Existing unresolved issues are never deleted — they persist until
+    the user marks them as solved or ignored.
+
+    Returns the number of newly inserted issues.
+    """
     now = datetime.now(timezone.utc).isoformat()
     conn = _get_conn()
     try:
+        # Build set of existing (rule_code, location) for this account
+        existing = conn.execute(
+            "SELECT rule_code, location FROM cloud_issues WHERE cloud_account_id = ?",
+            (account_id,),
+        ).fetchall()
+        existing_keys = {(r["rule_code"], r["location"]) for r in existing}
+
+        inserted = 0
         for issue in issues:
+            key = (issue.get("rule_code", ""), issue.get("location", ""))
+            if key in existing_keys:
+                continue  # already tracked — keep existing status
+
             conn.execute(
                 """INSERT INTO cloud_issues
                    (id, cloud_account_id, asset_id, rule_code, title, description,
@@ -306,7 +325,10 @@ def save_cloud_issues(account_id: str, issues: list[dict]) -> None:
                     issue.get("discovered_at", now),
                 ),
             )
+            inserted += 1
+
         conn.commit()
+        return inserted
     finally:
         conn.close()
 
