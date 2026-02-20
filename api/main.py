@@ -21,9 +21,19 @@ from api.routers import analyze, clouds, export, gcp_logging, generator, hitl, r
 app = FastAPI(title="NeuralWarden API", version="2.0.0")
 
 # Initialize database on startup (SQLite or PostgreSQL via DATABASE_URL)
-init_db()
-init_cloud_tables()
-seed_cloud_checks()
+# Retry for Cloud SQL proxy socket availability on Cloud Run
+import time as _time
+for _attempt in range(5):
+    try:
+        init_db()
+        init_cloud_tables()
+        seed_cloud_checks()
+        break
+    except Exception as _e:
+        if _attempt < 4:
+            _time.sleep(2)
+        else:
+            raise
 
 _default_origins = "http://localhost:3000,http://localhost:3001"
 _origins = os.getenv("CORS_ORIGINS", _default_origins).split(",")

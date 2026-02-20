@@ -9,21 +9,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy dependency file and install
+# Copy project files and install dependencies
 COPY pyproject.toml ./
-RUN pip install --no-cache-dir -e ".[gcp]" || pip install --no-cache-dir .
-
-# Copy application code
 COPY api/ ./api/
 COPY pipeline/ ./pipeline/
-COPY .env.example ./.env.example
 
-# Create data directory for SQLite
+RUN pip install --no-cache-dir ".[gcp]"
+
+# Create data directory for SQLite fallback
 RUN mkdir -p /app/data
 
-# Cloud Run sets PORT env var
-ENV PORT=8000
+# Cloud Run injects PORT (default 8080)
+ENV PORT=8080
 
 EXPOSE ${PORT}
 
-CMD exec uvicorn api.main:app --host 0.0.0.0 --port ${PORT}
+CMD ["sh", "-c", "exec uvicorn api.main:app --host 0.0.0.0 --port ${PORT}"]
