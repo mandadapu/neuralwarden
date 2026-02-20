@@ -1,4 +1,4 @@
-"""Tests for cloud monitoring SQLite persistence layer."""
+"""Tests for cloud monitoring persistence layer."""
 
 from __future__ import annotations
 
@@ -47,7 +47,6 @@ class _NonClosingConnection:
 @pytest.fixture(autouse=True)
 def fresh_db():
     """Use in-memory DB for every test; re-initialize tables."""
-    cloud_db.DB_PATH = ":memory:"
     import sqlite3
 
     real_conn = sqlite3.connect(":memory:")
@@ -55,16 +54,16 @@ def fresh_db():
     real_conn.execute("PRAGMA foreign_keys = ON")
     wrapper = _NonClosingConnection(real_conn)
 
-    original_get_conn = cloud_db._get_conn
+    original_get_conn = cloud_db.get_conn
 
     def _shared_conn():
         return wrapper
 
-    cloud_db._get_conn = _shared_conn
+    cloud_db.get_conn = _shared_conn
     init_cloud_tables()
     yield
     real_conn.close()
-    cloud_db._get_conn = original_get_conn
+    cloud_db.get_conn = original_get_conn
 
 
 # ── Cloud accounts ──────────────────────────────────────────────────

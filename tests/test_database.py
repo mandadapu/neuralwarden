@@ -1,32 +1,49 @@
-"""Tests for SQLite report history database."""
+"""Tests for report history database."""
 
 from __future__ import annotations
 
 import os
-import tempfile
+import sqlite3
 
 import pytest
 
 # Patch DB_PATH before importing database module
-_tmp = tempfile.mktemp(suffix=".db")
-os.environ["NEURALWARDEN_DB_PATH"] = _tmp
+os.environ["NEURALWARDEN_DB_PATH"] = ":memory:"
 
+import api.database as db
 from api.database import init_db, save_analysis, list_analyses, get_analysis
+
+
+class _NonClosingConnection:
+    """Wraps a sqlite3.Connection so that close() is a no-op."""
+
+    def __init__(self, real_conn):
+        self._conn = real_conn
+
+    def close(self):
+        pass  # no-op
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
 
 
 @pytest.fixture(autouse=True)
 def setup_db():
-    """Initialize a fresh temp database for each test."""
-    os.environ["NEURALWARDEN_DB_PATH"] = tempfile.mktemp(suffix=".db")
-    # Re-import to pick up new path
-    import api.database as db
-    db.DB_PATH = os.environ["NEURALWARDEN_DB_PATH"]
+    """Initialize a fresh in-memory database for each test."""
+    real_conn = sqlite3.connect(":memory:")
+    real_conn.row_factory = sqlite3.Row
+    wrapper = _NonClosingConnection(real_conn)
+
+    original_get_conn = db.get_conn
+
+    def _shared_conn():
+        return wrapper
+
+    db.get_conn = _shared_conn
     init_db()
     yield
-    try:
-        os.unlink(db.DB_PATH)
-    except OSError:
-        pass
+    real_conn.close()
+    db.get_conn = original_get_conn
 
 
 class TestDatabase:

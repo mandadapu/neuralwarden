@@ -20,7 +20,7 @@ from api.routers import analyze, clouds, export, gcp_logging, generator, hitl, r
 
 app = FastAPI(title="NeuralWarden API", version="2.0.0")
 
-# Initialize SQLite database on startup
+# Initialize database on startup (SQLite or PostgreSQL via DATABASE_URL)
 init_db()
 init_cloud_tables()
 seed_cloud_checks()
