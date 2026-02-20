@@ -84,7 +84,7 @@ def run_report(state: PipelineState) -> dict:
         llm = ChatAnthropic(
             model=MODEL,
             temperature=0.3,
-            max_tokens=2048,
+            max_tokens=4096,
         )
 
         with AgentTimer("report", MODEL) as timer:
@@ -123,9 +123,8 @@ def run_report(state: PipelineState) -> dict:
 
         raw_content = response.content or ""
         if not raw_content.strip():
-            logger.warning("Report LLM returned empty content (stop_reason=%s), retrying...",
-                           getattr(response, "response_metadata", {}).get("stop_reason", "unknown"))
-            # Single retry with explicit instruction
+            stop_reason = getattr(response, "response_metadata", {}).get("stop_reason", "unknown")
+            logger.warning("Report LLM returned empty content (stop_reason=%s), retrying...", stop_reason)
             response = llm.invoke([
                 SystemMessage(content=SYSTEM_PROMPT),
                 HumanMessage(content=f"Generate a JSON incident report for {len(classified_threats)} security threats. Return ONLY the JSON object."),
