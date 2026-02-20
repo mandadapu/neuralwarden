@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import queue
+import threading
 from datetime import datetime, timezone
 from typing import List, Optional
 
@@ -235,12 +237,44 @@ async def trigger_scan(cloud_id: str):
             "total_assets": 0,
         }
 
+        # Use a thread-safe queue so graph.stream() pushes events
+        # incrementally from a background thread to this async generator.
+        _SENTINEL = object()
+        event_queue: queue.Queue = queue.Queue()
+
+        def _run_graph():
+            try:
+                last_event = {}
+                for event in graph.stream(initial_state, stream_mode="values"):
+                    last_event = event
+                    event_queue.put(("event", event))
+                event_queue.put(("done", last_event))
+            except Exception as exc:
+                event_queue.put(("error", exc))
+
+        thread = threading.Thread(target=_run_graph, daemon=True)
+        thread.start()
+
         prev_status = ""
-        event = {}
+        final = {}
         try:
-            for event in await asyncio.to_thread(
-                lambda: list(graph.stream(initial_state, stream_mode="values"))
-            ):
+            while True:
+                # Poll the queue from the async loop without blocking the event loop
+                try:
+                    msg = await asyncio.to_thread(event_queue.get, timeout=300)
+                except Exception:
+                    break
+
+                kind, payload = msg
+                if kind == "error":
+                    raise payload
+                if kind == "done":
+                    final = payload
+                    break
+
+                # kind == "event" — emit SSE progress on status changes
+                event = payload
+                final = event
                 status = event.get("scan_status", "")
                 if status != prev_status:
                     prev_status = status
@@ -254,9 +288,6 @@ async def trigger_scan(cloud_id: str):
                             "private_count": len(event.get("private_assets", [])),
                         })
                     }
-
-            # Get final state — last event from stream
-            final = event
 
             # Save results to database — prefer correlated issues over raw
             issues = final.get("correlated_issues") or final.get("scan_issues", [])
@@ -279,6 +310,14 @@ async def trigger_scan(cloud_id: str):
             )
 
             # ── Save scan results to reports DB so Feed can display them ──
+            log_lines_count = len(final.get("log_lines", []))
+            logger.info(
+                "Scan final state: issues=%d, log_lines=%d, classified=%d, has_report=%s, metrics_keys=%s",
+                len(issues), log_lines_count,
+                len(final.get("classified_threats", [])),
+                bool(final.get("report")),
+                list(final.get("agent_metrics", {}).keys()),
+            )
             if issues:
                 classified = final.get("classified_threats", [])
                 report = final.get("report")
@@ -291,6 +330,14 @@ async def trigger_scan(cloud_id: str):
                     sev = iss.get("severity", "medium")
                     severity_counts[sev] = severity_counts.get(sev, 0) + 1
 
+                # Convert Pydantic models to dicts for JSON serialization
+                def _to_dict(obj):
+                    if hasattr(obj, "model_dump"):
+                        return obj.model_dump()
+                    if hasattr(obj, "dict"):
+                        return obj.dict()
+                    return obj
+
                 response_data = {
                     "status": "completed",
                     "summary": {
@@ -300,9 +347,9 @@ async def trigger_scan(cloud_id: str):
                         "total_logs": len(final.get("log_lines", [])),
                         "logs_cleared": 0,
                     },
-                    "classified_threats": classified,
-                    "report": report,
-                    "agent_metrics": agent_metrics,
+                    "classified_threats": [_to_dict(ct) for ct in classified],
+                    "report": _to_dict(report) if report else None,
+                    "agent_metrics": {k: _to_dict(v) for k, v in agent_metrics.items()} if agent_metrics else {},
                     "pipeline_time": pipeline_time,
                 }
 

@@ -25,9 +25,12 @@ init_db()
 init_cloud_tables()
 seed_cloud_checks()
 
+_default_origins = "http://localhost:3000,http://localhost:3001"
+_origins = os.getenv("CORS_ORIGINS", _default_origins).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=[o.strip() for o in _origins],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

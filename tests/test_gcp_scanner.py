@@ -160,7 +160,7 @@ class TestCheckDefaultSA:
 
 
 class TestRunScan:
-    @patch("api.gcp_scanner._scan_cloud_logging", return_value=([], []))
+    @patch("api.gcp_scanner._scan_cloud_logging", return_value=([], [], []))
     @patch("api.gcp_scanner.probe_available_services", return_value=["cloud_logging"])
     def test_run_scan_cloud_logging_fallback(self, mock_probe, mock_scan_logging):
         """When no service APIs are available, scan_type should be cloud_logging_only."""
@@ -183,6 +183,7 @@ class TestRunScan:
     @patch("api.gcp_scanner._scan_cloud_logging", return_value=(
         [{"asset_type": "log_summary", "name": "cloud_logging_summary"}],
         [{"rule_code": "log_001", "title": "High error count", "severity": "high"}],
+        ["2025-01-01 INFO test log line"],
     ))
     @patch("api.gcp_scanner._scan_compute", return_value=(
         [{"asset_type": "firewall_rule", "name": "allow-ssh"}],

@@ -7,9 +7,9 @@ import sqlite3
 
 # ── Bootstrap: patch DB connections BEFORE importing api.main ──────
 # api.main runs init_db(), init_cloud_tables(), and seed_cloud_checks()
-# at import time.  With NEURALWARDEN_DB_PATH=":memory:" each _get_conn()
+# at import time.  With NEURALWARDEN_DB_PATH=":memory:" each get_conn()
 # call opens a *separate* in-memory DB, so tables vanish between calls.
-# We must monkey-patch _get_conn in both modules to share one connection
+# We must monkey-patch get_conn in all three modules to share one connection
 # BEFORE api.main is imported.
 
 os.environ["NEURALWARDEN_DB_PATH"] = ":memory:"
@@ -36,6 +36,7 @@ _shared_real_conn.row_factory = sqlite3.Row
 _shared_real_conn.execute("PRAGMA foreign_keys = ON")
 _shared_wrapper = _NonClosingConnection(_shared_real_conn)
 
+import api.db as db_layer
 import api.cloud_database as cloud_db
 import api.database as db
 
@@ -44,8 +45,10 @@ def _shared_conn():
     return _shared_wrapper
 
 
-cloud_db._get_conn = _shared_conn
-db._get_conn = _shared_conn
+# Patch get_conn in all modules that imported it
+db_layer.get_conn = _shared_conn
+cloud_db.get_conn = _shared_conn
+db.get_conn = _shared_conn
 
 # NOW it is safe to import api.main — its init_db / init_cloud_tables /
 # seed_cloud_checks will use our shared in-memory connection.

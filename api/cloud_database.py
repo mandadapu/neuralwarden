@@ -1,29 +1,19 @@
-"""SQLite persistence for cloud monitoring: accounts, assets, issues, checks."""
+"""Persistence for cloud monitoring: accounts, assets, issues, checks.
+
+Supports SQLite (local dev) and PostgreSQL (Cloud Run) via api.db layer.
+"""
 
 from __future__ import annotations
 
 import json
-import os
-import sqlite3
 import uuid
 from datetime import datetime, timezone
 
-DB_PATH = os.getenv("NEURALWARDEN_DB_PATH", os.getenv("NEURALWARDEN_DB_PATH", "data/neuralwarden.db"))
+from api.db import get_conn, adapt_sql, placeholder, insert_or_ignore
 
 # ── Severity ordering (lower = more severe) ─────────────────────────
 
 _SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-
-# ── Connection helper ────────────────────────────────────────────────
-
-
-def _get_conn() -> sqlite3.Connection:
-    """Get a SQLite connection, creating the DB directory if needed."""
-    os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
 
 # ── Schema initialisation ───────────────────────────────────────────
 
@@ -103,7 +93,7 @@ CREATE TABLE IF NOT EXISTS scan_logs (
 
 def init_cloud_tables() -> None:
     """Create all cloud monitoring tables if they don't exist."""
-    conn = _get_conn()
+    conn = get_conn()
     try:
         conn.execute(_CREATE_CLOUD_ACCOUNTS)
         conn.execute(_CREATE_CLOUD_ASSETS)
@@ -137,13 +127,14 @@ def create_cloud_account(
     """Create a cloud account and return its ID."""
     account_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
-    conn = _get_conn()
+    p = placeholder
+    conn = get_conn()
     try:
         conn.execute(
-            """INSERT INTO cloud_accounts
+            f"""INSERT INTO cloud_accounts
                (id, user_email, provider, name, project_id, purpose,
                 credentials_json, services, created_at, status)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')""",
+               VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, 'active')""",
             (
                 account_id,
                 user_email,
@@ -164,10 +155,10 @@ def create_cloud_account(
 
 def list_cloud_accounts(user_email: str) -> list[dict]:
     """List all cloud accounts for a given user."""
-    conn = _get_conn()
+    conn = get_conn()
     try:
         rows = conn.execute(
-            "SELECT * FROM cloud_accounts WHERE user_email = ? ORDER BY created_at DESC",
+            adapt_sql("SELECT * FROM cloud_accounts WHERE user_email = ? ORDER BY created_at DESC"),
             (user_email,),
         ).fetchall()
         return [dict(row) for row in rows]
@@ -177,10 +168,10 @@ def list_cloud_accounts(user_email: str) -> list[dict]:
 
 def get_cloud_account(account_id: str) -> dict | None:
     """Get a cloud account by ID, or None."""
-    conn = _get_conn()
+    conn = get_conn()
     try:
         row = conn.execute(
-            "SELECT * FROM cloud_accounts WHERE id = ?", (account_id,)
+            adapt_sql("SELECT * FROM cloud_accounts WHERE id = ?"), (account_id,)
         ).fetchone()
         return dict(row) if row else None
     finally:
@@ -202,12 +193,13 @@ def update_cloud_account(account_id: str, **fields) -> None:
     updates = {k: v for k, v in fields.items() if k in _ALLOWED_ACCOUNT_FIELDS}
     if not updates:
         return
-    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    p = placeholder
+    set_clause = ", ".join(f"{k} = {p}" for k in updates)
     values = list(updates.values()) + [account_id]
-    conn = _get_conn()
+    conn = get_conn()
     try:
         conn.execute(
-            f"UPDATE cloud_accounts SET {set_clause} WHERE id = ?",
+            f"UPDATE cloud_accounts SET {set_clause} WHERE id = {p}",
             values,
         )
         conn.commit()
@@ -217,12 +209,12 @@ def update_cloud_account(account_id: str, **fields) -> None:
 
 def delete_cloud_account(account_id: str) -> None:
     """Delete an account and cascade-delete its assets, issues, and scan logs."""
-    conn = _get_conn()
+    conn = get_conn()
     try:
-        conn.execute("DELETE FROM scan_logs WHERE cloud_account_id = ?", (account_id,))
-        conn.execute("DELETE FROM cloud_issues WHERE cloud_account_id = ?", (account_id,))
-        conn.execute("DELETE FROM cloud_assets WHERE cloud_account_id = ?", (account_id,))
-        conn.execute("DELETE FROM cloud_accounts WHERE id = ?", (account_id,))
+        conn.execute(adapt_sql("DELETE FROM scan_logs WHERE cloud_account_id = ?"), (account_id,))
+        conn.execute(adapt_sql("DELETE FROM cloud_issues WHERE cloud_account_id = ?"), (account_id,))
+        conn.execute(adapt_sql("DELETE FROM cloud_assets WHERE cloud_account_id = ?"), (account_id,))
+        conn.execute(adapt_sql("DELETE FROM cloud_accounts WHERE id = ?"), (account_id,))
         conn.commit()
     finally:
         conn.close()
@@ -234,14 +226,15 @@ def delete_cloud_account(account_id: str) -> None:
 def save_cloud_assets(account_id: str, assets: list[dict]) -> None:
     """Clear old assets for this account and insert new ones."""
     now = datetime.now(timezone.utc).isoformat()
-    conn = _get_conn()
+    p = placeholder
+    conn = get_conn()
     try:
-        conn.execute("DELETE FROM cloud_assets WHERE cloud_account_id = ?", (account_id,))
+        conn.execute(adapt_sql("DELETE FROM cloud_assets WHERE cloud_account_id = ?"), (account_id,))
         for asset in assets:
             conn.execute(
-                """INSERT INTO cloud_assets
+                f"""INSERT INTO cloud_assets
                    (id, cloud_account_id, asset_type, name, region, metadata_json, discovered_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                   VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p})""",
                 (
                     str(uuid.uuid4()),
                     account_id,
@@ -259,16 +252,16 @@ def save_cloud_assets(account_id: str, assets: list[dict]) -> None:
 
 def list_cloud_assets(account_id: str, asset_type: str = "") -> list[dict]:
     """List assets for an account, optionally filtered by type."""
-    conn = _get_conn()
+    conn = get_conn()
     try:
         if asset_type:
             rows = conn.execute(
-                "SELECT * FROM cloud_assets WHERE cloud_account_id = ? AND asset_type = ?",
+                adapt_sql("SELECT * FROM cloud_assets WHERE cloud_account_id = ? AND asset_type = ?"),
                 (account_id, asset_type),
             ).fetchall()
         else:
             rows = conn.execute(
-                "SELECT * FROM cloud_assets WHERE cloud_account_id = ?",
+                adapt_sql("SELECT * FROM cloud_assets WHERE cloud_account_id = ?"),
                 (account_id,),
             ).fetchall()
         return [dict(row) for row in rows]
@@ -278,13 +271,15 @@ def list_cloud_assets(account_id: str, asset_type: str = "") -> list[dict]:
 
 def get_asset_counts(account_id: str) -> dict:
     """Count assets by type for an account."""
-    conn = _get_conn()
+    conn = get_conn()
     try:
         rows = conn.execute(
-            """SELECT asset_type, COUNT(*) as cnt
-               FROM cloud_assets
-               WHERE cloud_account_id = ?
-               GROUP BY asset_type""",
+            adapt_sql(
+                """SELECT asset_type, COUNT(*) as cnt
+                   FROM cloud_assets
+                   WHERE cloud_account_id = ?
+                   GROUP BY asset_type"""
+            ),
             (account_id,),
         ).fetchall()
         by_type = {r["asset_type"]: r["cnt"] for r in rows}
@@ -309,11 +304,12 @@ def save_cloud_issues(account_id: str, issues: list[dict]) -> int:
     Returns the number of newly inserted issues.
     """
     now = datetime.now(timezone.utc).isoformat()
-    conn = _get_conn()
+    p = placeholder
+    conn = get_conn()
     try:
         # Build set of existing (rule_code, location) for this account
         existing = conn.execute(
-            "SELECT rule_code, location FROM cloud_issues WHERE cloud_account_id = ?",
+            adapt_sql("SELECT rule_code, location FROM cloud_issues WHERE cloud_account_id = ?"),
             (account_id,),
         ).fetchall()
         existing_keys = {(r["rule_code"], r["location"]) for r in existing}
@@ -325,11 +321,11 @@ def save_cloud_issues(account_id: str, issues: list[dict]) -> int:
                 continue  # already tracked — keep existing status
 
             conn.execute(
-                """INSERT INTO cloud_issues
+                f"""INSERT INTO cloud_issues
                    (id, cloud_account_id, asset_id, rule_code, title, description,
                     severity, location, fix_time, status, remediation_script,
                     discovered_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p})""",
                 (
                     str(uuid.uuid4()),
                     account_id,
@@ -357,15 +353,16 @@ def list_cloud_issues(
     account_id: str, status: str = "", severity: str = ""
 ) -> list[dict]:
     """List issues sorted by severity (critical first) then discovered_at desc."""
-    conn = _get_conn()
+    p = placeholder
+    conn = get_conn()
     try:
-        query = "SELECT * FROM cloud_issues WHERE cloud_account_id = ?"
+        query = f"SELECT * FROM cloud_issues WHERE cloud_account_id = {p}"
         params: list = [account_id]
         if status:
-            query += " AND status = ?"
+            query += f" AND status = {p}"
             params.append(status)
         if severity:
-            query += " AND severity = ?"
+            query += f" AND severity = {p}"
             params.append(severity)
         rows = conn.execute(query, params).fetchall()
         # Sort in Python so we can use custom severity order
@@ -383,10 +380,10 @@ def list_cloud_issues(
 
 def update_cloud_issue_status(issue_id: str, status: str) -> None:
     """Update the status of a single issue."""
-    conn = _get_conn()
+    conn = get_conn()
     try:
         conn.execute(
-            "UPDATE cloud_issues SET status = ? WHERE id = ?",
+            adapt_sql("UPDATE cloud_issues SET status = ? WHERE id = ?"),
             (status, issue_id),
         )
         conn.commit()
@@ -396,10 +393,10 @@ def update_cloud_issue_status(issue_id: str, status: str) -> None:
 
 def clear_cloud_issues(account_id: str) -> None:
     """Delete all issues for an account."""
-    conn = _get_conn()
+    conn = get_conn()
     try:
         conn.execute(
-            "DELETE FROM cloud_issues WHERE cloud_account_id = ?", (account_id,)
+            adapt_sql("DELETE FROM cloud_issues WHERE cloud_account_id = ?"), (account_id,)
         )
         conn.commit()
     finally:
@@ -408,20 +405,21 @@ def clear_cloud_issues(account_id: str) -> None:
 
 def list_all_user_issues(user_email: str, status: str = "", severity: str = "") -> list[dict]:
     """List all cloud issues across all accounts for a user, sorted by severity."""
-    conn = _get_conn()
+    p = placeholder
+    conn = get_conn()
     try:
-        query = """
+        query = f"""
             SELECT ci.*, ca.name as cloud_name, ca.project_id
             FROM cloud_issues ci
             JOIN cloud_accounts ca ON ci.cloud_account_id = ca.id
-            WHERE ca.user_email = ?
+            WHERE ca.user_email = {p}
         """
         params: list = [user_email]
         if status:
-            query += " AND ci.status = ?"
+            query += f" AND ci.status = {p}"
             params.append(status)
         if severity:
-            query += " AND ci.severity = ?"
+            query += f" AND ci.severity = {p}"
             params.append(severity)
         rows = conn.execute(query, params).fetchall()
         results = [dict(row) for row in rows]
@@ -438,13 +436,15 @@ def list_all_user_issues(user_email: str, status: str = "", severity: str = "") 
 
 def get_issue_counts(account_id: str) -> dict:
     """Count open (todo + in_progress) issues by severity."""
-    conn = _get_conn()
+    conn = get_conn()
     try:
         rows = conn.execute(
-            """SELECT severity, COUNT(*) as cnt
-               FROM cloud_issues
-               WHERE cloud_account_id = ? AND status IN ('todo', 'in_progress')
-               GROUP BY severity""",
+            adapt_sql(
+                """SELECT severity, COUNT(*) as cnt
+                   FROM cloud_issues
+                   WHERE cloud_account_id = ? AND status IN ('todo', 'in_progress')
+                   GROUP BY severity"""
+            ),
             (account_id,),
         ).fetchall()
         counts = {r["severity"]: r["cnt"] for r in rows}
@@ -477,15 +477,16 @@ _GCP_CHECKS = [
 
 def seed_cloud_checks() -> None:
     """Insert the 10 default GCP compliance checks (idempotent)."""
-    conn = _get_conn()
+    p = placeholder
+    conn = get_conn()
     try:
         for rule_code, title, description, check_fn in _GCP_CHECKS:
-            conn.execute(
-                """INSERT OR IGNORE INTO cloud_checks
-                   (id, provider, rule_code, title, description, category, check_function)
-                   VALUES (?, 'gcp', ?, ?, ?, 'standard', ?)""",
-                (str(uuid.uuid4()), rule_code, title, description, check_fn),
+            sql = insert_or_ignore(
+                "cloud_checks",
+                ["id", "provider", "rule_code", "title", "description", "category", "check_function"],
+                f"{p}, 'gcp', {p}, {p}, {p}, 'standard', {p}",
             )
+            conn.execute(sql, (str(uuid.uuid4()), rule_code, title, description, check_fn))
         conn.commit()
     finally:
         conn.close()
@@ -493,12 +494,13 @@ def seed_cloud_checks() -> None:
 
 def list_cloud_checks(provider: str = "gcp", category: str = "") -> list[dict]:
     """List compliance checks, optionally filtered by category."""
-    conn = _get_conn()
+    p = placeholder
+    conn = get_conn()
     try:
-        query = "SELECT * FROM cloud_checks WHERE provider = ?"
+        query = f"SELECT * FROM cloud_checks WHERE provider = {p}"
         params: list = [provider]
         if category:
-            query += " AND category = ?"
+            query += f" AND category = {p}"
             params.append(category)
         query += " ORDER BY rule_code"
         rows = conn.execute(query, params).fetchall()
@@ -513,12 +515,13 @@ def list_cloud_checks(provider: str = "gcp", category: str = "") -> list[dict]:
 def create_scan_log(cloud_account_id: str, started_at: str) -> str:
     """Create a scan log entry in 'running' state. Returns the log ID."""
     log_id = str(uuid.uuid4())
-    conn = _get_conn()
+    p = placeholder
+    conn = get_conn()
     try:
         conn.execute(
-            """INSERT INTO scan_logs
+            f"""INSERT INTO scan_logs
                (id, cloud_account_id, started_at, status)
-               VALUES (?, ?, ?, 'running')""",
+               VALUES ({p}, {p}, {p}, 'running')""",
             (log_id, cloud_account_id, started_at),
         )
         conn.commit()
@@ -535,13 +538,15 @@ def complete_scan_log(
     log_entries_json: str,
 ) -> None:
     """Finalize a scan log with results."""
-    conn = _get_conn()
+    conn = get_conn()
     try:
         conn.execute(
-            """UPDATE scan_logs
-               SET status = ?, completed_at = ?,
-                   summary_json = ?, log_entries_json = ?
-               WHERE id = ?""",
+            adapt_sql(
+                """UPDATE scan_logs
+                   SET status = ?, completed_at = ?,
+                       summary_json = ?, log_entries_json = ?
+                   WHERE id = ?"""
+            ),
             (status, completed_at, summary_json, log_entries_json, log_id),
         )
         conn.commit()
@@ -551,15 +556,17 @@ def complete_scan_log(
 
 def list_scan_logs(cloud_account_id: str, limit: int = 20) -> list[dict]:
     """List recent scan logs for an account, newest first (no log entries)."""
-    conn = _get_conn()
+    conn = get_conn()
     try:
         rows = conn.execute(
-            """SELECT id, cloud_account_id, started_at, completed_at,
-                      status, summary_json
-               FROM scan_logs
-               WHERE cloud_account_id = ?
-               ORDER BY started_at DESC
-               LIMIT ?""",
+            adapt_sql(
+                """SELECT id, cloud_account_id, started_at, completed_at,
+                          status, summary_json
+                   FROM scan_logs
+                   WHERE cloud_account_id = ?
+                   ORDER BY started_at DESC
+                   LIMIT ?"""
+            ),
             (cloud_account_id, limit),
         ).fetchall()
         return [dict(row) for row in rows]
@@ -569,10 +576,10 @@ def list_scan_logs(cloud_account_id: str, limit: int = 20) -> list[dict]:
 
 def get_scan_log(log_id: str) -> dict | None:
     """Get full scan log detail including log entries."""
-    conn = _get_conn()
+    conn = get_conn()
     try:
         row = conn.execute(
-            "SELECT * FROM scan_logs WHERE id = ?", (log_id,)
+            adapt_sql("SELECT * FROM scan_logs WHERE id = ?"), (log_id,)
         ).fetchone()
         return dict(row) if row else None
     finally:

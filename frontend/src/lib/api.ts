@@ -14,9 +14,10 @@ import type {
 } from "./types";
 
 const BASE =
-  typeof window !== "undefined"
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== "undefined"
     ? `${window.location.protocol}//${window.location.hostname}:8000/api`
-    : "/api";
+    : "/api");
 
 // User email is set by AnalysisContext after session loads
 let _userEmail = "";
