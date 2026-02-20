@@ -23,7 +23,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install -e ".[gcp]"
+        run: pip install -e ".[gcp,dev]"
 
       - name: Run tests
         env:
