@@ -105,7 +105,7 @@ def aggregate_node(state: ScanAgentState) -> dict:
     # Cross-reference scanner findings with log activity
     scan_issues = state.get("scan_issues", [])
     log_lines = state.get("log_lines", [])
-    correlated_issues, active_count = correlate_findings(scan_issues, log_lines)
+    correlated_issues, active_count, correlated_evidence = correlate_findings(scan_issues, log_lines)
 
     return {
         "scan_status": "scanned",
@@ -113,6 +113,7 @@ def aggregate_node(state: ScanAgentState) -> dict:
         "scan_type": scan_type,
         "correlated_issues": correlated_issues,
         "active_exploits_detected": active_count,
+        "correlated_evidence": correlated_evidence,
     }
 
 
@@ -162,6 +163,7 @@ def threat_pipeline_node(state: ScanAgentState) -> dict:
         "agent_metrics": {},
         "burst_mode": False,
         "chunk_count": 0,
+        "correlated_evidence": state.get("correlated_evidence", []),
     })
 
     return {
