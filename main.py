@@ -1,4 +1,4 @@
-"""CLI entry point for the AI NeuralWarden Pipeline."""
+"""CLI entry point for the NeuralWarden AI Security Pipeline."""
 
 import sys
 

@@ -1,4 +1,4 @@
-"""POST /api/analyze — run the neuralwarden pipeline."""
+"""POST /api/analyze — run the NeuralWarden pipeline."""
 
 import asyncio
 

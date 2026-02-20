@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "NeuralWarden — Security Dashboard",
-  description: "AI NeuralWarden Pipeline v2.0",
+  description: "NeuralWarden — AI-Powered Cloud Security Platform",
 };
 
 export default function RootLayout({

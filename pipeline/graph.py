@@ -136,7 +136,7 @@ def skip_ingest_node(state: PipelineState) -> dict:
 
 
 def build_pipeline(enable_hitl: bool = False):
-    """Build and compile the LangGraph neuralwarden pipeline.
+    """Build and compile the LangGraph NeuralWarden pipeline.
 
     Args:
         enable_hitl: If True, compiles with checkpointer to enable
@@ -223,7 +223,7 @@ def run_pipeline(
     enable_hitl: bool = False,
     thread_id: str | None = None,
 ) -> PipelineState:
-    """Run the full neuralwarden pipeline on a list of raw log lines.
+    """Run the full NeuralWarden pipeline on a list of raw log lines.
 
     Args:
         raw_logs: List of raw log lines to analyze.

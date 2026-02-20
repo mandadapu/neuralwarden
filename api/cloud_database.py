@@ -8,7 +8,7 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 
-DB_PATH = os.getenv("NEURALWARDEN_DB_PATH", "data/neuralwarden.db")
+DB_PATH = os.getenv("NEURALWARDEN_DB_PATH", os.getenv("NEURALWARDEN_DB_PATH", "data/neuralwarden.db"))
 
 # ── Severity ordering (lower = more severe) ─────────────────────────
 

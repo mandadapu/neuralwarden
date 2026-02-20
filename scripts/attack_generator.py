@@ -13,7 +13,7 @@ from typing import ClassVar
 
 
 class AttackGenerator:
-    """Generate synthetic security logs for neuralwarden testing."""
+    """Generate synthetic security logs for NeuralWarden testing."""
 
     USERNAMES: ClassVar[list[str]] = [
         "admin", "jsmith", "root", "svc_backup", "deploy", "analyst",

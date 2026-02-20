@@ -1,4 +1,4 @@
-"""FastAPI backend for the AI NeuralWarden Pipeline."""
+"""FastAPI backend for the NeuralWarden AI Security Pipeline."""
 
 from dotenv import load_dotenv
 

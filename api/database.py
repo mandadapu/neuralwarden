@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime, timezone
 
 
-DB_PATH = os.getenv("NEURALWARDEN_DB_PATH", "data/neuralwarden.db")
+DB_PATH = os.getenv("NEURALWARDEN_DB_PATH", os.getenv("NEURALWARDEN_DB_PATH", "data/neuralwarden.db"))
 
 _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS analyses (
