@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import PageShell from "@/components/PageShell";
-import { listClouds, scanCloud, setApiUserEmail } from "@/lib/api";
+import { listClouds, scanCloudStream, setApiUserEmail } from "@/lib/api";
 import type { CloudAccount } from "@/lib/types";
 
 function CloudIcon() {
@@ -70,7 +70,7 @@ export default function CloudsPage() {
     e.stopPropagation();
     setScanningId(cloudId);
     try {
-      await scanCloud(cloudId);
+      await scanCloudStream(cloudId, () => {});
       await loadClouds();
     } catch (err) {
       console.error("Scan failed:", err);
