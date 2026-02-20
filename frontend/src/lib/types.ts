@@ -144,6 +144,7 @@ export interface CloudIssue {
   location: string;
   fix_time: string;
   status: "todo" | "in_progress" | "ignored" | "solved";
+  remediation_script: string;
   discovered_at: string;
 }
 

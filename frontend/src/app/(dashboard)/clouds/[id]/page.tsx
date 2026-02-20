@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import { listCloudIssues, updateIssueStatus } from "@/lib/api";
 import type { CloudIssue } from "@/lib/types";
+import RemediationModal from "@/components/RemediationModal";
 
 const SEVERITY_STYLES: Record<string, string> = {
   critical: "bg-red-100 text-red-700",
@@ -64,6 +65,7 @@ export default function IssuesTab() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusDropdownId, setStatusDropdownId] = useState<string | null>(null);
+  const [fixIssue, setFixIssue] = useState<CloudIssue | null>(null);
   const dropdownRef = useRef<HTMLTableCellElement>(null);
 
   useEffect(() => {
@@ -194,6 +196,7 @@ export default function IssuesTab() {
                 <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3">Severity</th>
                 <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3">Location</th>
                 <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3">Fix Time</th>
+                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3">Fix</th>
                 <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-5 py-3">Status</th>
               </tr>
             </thead>
@@ -219,6 +222,21 @@ export default function IssuesTab() {
                   </td>
                   <td className="px-5 py-3.5">
                     <span className="text-sm text-gray-600">{issue.fix_time || "—"}</span>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    {issue.remediation_script ? (
+                      <button
+                        onClick={() => setFixIssue(issue)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary rounded-lg text-xs font-semibold hover:bg-primary/20 transition-colors"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                        </svg>
+                        Fix
+                      </button>
+                    ) : (
+                      <span className="text-xs text-gray-300">—</span>
+                    )}
                   </td>
                   <td className="px-5 py-3.5 relative" ref={statusDropdownId === issue.id ? dropdownRef : undefined}>
                     <button
@@ -259,6 +277,14 @@ export default function IssuesTab() {
         <div className="text-center py-12 text-gray-500 text-sm">
           No issues match your filters.
         </div>
+      )}
+
+      {fixIssue && (
+        <RemediationModal
+          issue={fixIssue}
+          open={!!fixIssue}
+          onClose={() => setFixIssue(null)}
+        />
       )}
     </div>
   );

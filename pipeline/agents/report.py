@@ -86,6 +86,19 @@ def run_report(state: PipelineState) -> dict:
 
         with AgentTimer("report", MODEL) as timer:
             log_timeline = "\n".join(log_samples)
+
+            # Build Active Incidents section if correlated evidence exists
+            correlated_evidence = state.get("correlated_evidence", [])
+            active_incidents_section = ""
+            if correlated_evidence:
+                active_incidents_section = (
+                    "\n\n## Active Incidents (Correlated — HIGHEST PRIORITY)\n"
+                    "These findings have matching live log evidence of active exploitation.\n"
+                    "Lead your executive summary with these active incidents.\n"
+                    "For each, include the specific remediation gcloud command.\n\n"
+                    + json.dumps(correlated_evidence, indent=2)
+                )
+
             response = llm.invoke([
                 SystemMessage(content=SYSTEM_PROMPT),
                 HumanMessage(
@@ -99,6 +112,7 @@ def run_report(state: PipelineState) -> dict:
                         f"- Total threats: {detection_stats.get('total_threats', 0)}\n\n"
                         f"## Classified Threats\n{json.dumps(threat_summary, indent=2)}\n\n"
                         f"## Log Timeline (samples)\n{wrap_user_data(log_timeline, 'log_samples')}"
+                        + active_incidents_section
                     )
                 ),
             ])

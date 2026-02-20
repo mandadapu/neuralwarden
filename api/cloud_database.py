@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS cloud_issues (
     location TEXT DEFAULT '',
     fix_time TEXT DEFAULT '',
     status TEXT DEFAULT 'todo',
+    remediation_script TEXT DEFAULT '',
     discovered_at TEXT NOT NULL,
     FOREIGN KEY (cloud_account_id) REFERENCES cloud_accounts(id),
     FOREIGN KEY (asset_id) REFERENCES cloud_assets(id)
@@ -109,6 +110,13 @@ def init_cloud_tables() -> None:
         conn.execute(_CREATE_CLOUD_ISSUES)
         conn.execute(_CREATE_CLOUD_CHECKS)
         conn.execute(_CREATE_SCAN_LOGS)
+        # Migrations — add columns that may not exist on older DBs
+        try:
+            conn.execute(
+                "ALTER TABLE cloud_issues ADD COLUMN remediation_script TEXT DEFAULT ''"
+            )
+        except Exception:
+            pass  # column already exists
         conn.commit()
     finally:
         conn.close()
@@ -280,8 +288,9 @@ def save_cloud_issues(account_id: str, issues: list[dict]) -> None:
             conn.execute(
                 """INSERT INTO cloud_issues
                    (id, cloud_account_id, asset_id, rule_code, title, description,
-                    severity, location, fix_time, status, discovered_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    severity, location, fix_time, status, remediation_script,
+                    discovered_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     str(uuid.uuid4()),
                     account_id,
@@ -293,6 +302,7 @@ def save_cloud_issues(account_id: str, issues: list[dict]) -> None:
                     issue.get("location", ""),
                     issue.get("fix_time", ""),
                     issue.get("status", "todo"),
+                    issue.get("remediation_script", ""),
                     issue.get("discovered_at", now),
                 ),
             )

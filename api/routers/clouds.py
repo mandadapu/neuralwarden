@@ -217,6 +217,12 @@ async def trigger_scan(cloud_id: str):
             issues = final.get("correlated_issues") or final.get("scan_issues", [])
             assets = final.get("discovered_assets", [])
             active_exploits = final.get("active_exploits_detected", 0)
+
+            # Generate remediation scripts for all issues
+            if issues:
+                from pipeline.agents.remediation_generator import generate_remediation
+                generate_remediation(issues, project_id=account["project_id"])
+
             if assets:
                 save_cloud_assets(cloud_id, assets)
             if issues:
