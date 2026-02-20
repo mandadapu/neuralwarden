@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useAnalysisContext } from "@/context/AnalysisContext";
-import { listAllCloudIssues, setApiUserEmail, updateIssueStatus } from "@/lib/api";
+import { listAllCloudIssues, setApiUserEmail, updateIssueStatus, updateIssueSeverity } from "@/lib/api";
 import type { ClassifiedThreat, CloudIssue, Summary } from "@/lib/types";
 import SummaryCards from "@/components/SummaryCards";
 import PipelineProgress from "@/components/PipelineProgress";
@@ -109,6 +109,26 @@ export default function DashboardPage() {
     const cloudThreat = cloudThreats.find((t) => t.threat_id === threatId);
 
     if (cloudThreat) {
+      // Handle severity adjustments for cloud issues
+      if (action.startsWith("adjust_")) {
+        const newSeverity = action.replace("adjust_", "") as "critical" | "high" | "medium" | "low";
+        try {
+          await updateIssueSeverity(threatId, newSeverity);
+        } catch (err) {
+          console.error("Failed to update cloud issue severity:", err);
+          return;
+        }
+        // Update local state so the UI reflects the change
+        setCloudThreats((prev) =>
+          prev.map((t) =>
+            t.threat_id === threatId
+              ? { ...t, risk: newSeverity, risk_score: RISK_SCORES[newSeverity] ?? 50 }
+              : t
+          )
+        );
+        return;
+      }
+
       // Map action to backend status and context destination
       const actionConfig: Record<string, { backendStatus: string; destination: "snoozed" | "ignored" | "resolved" }> = {
         snooze: { backendStatus: "in_progress", destination: "snoozed" },

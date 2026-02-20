@@ -142,7 +142,7 @@ export default function ThreatDetailPanel({
             </button>
 
             {actionsOpen && (
-              <div className="absolute right-0 top-full mt-1 w-56 bg-[#1c2128] border border-[#30363d] rounded-xl shadow-lg z-60 py-1 overflow-hidden">
+              <div className="absolute right-0 top-full mt-1 w-56 bg-[#1c2128] border border-[#30363d] rounded-xl shadow-lg z-60 py-1">
                 <div className="px-4 py-2.5 text-xs font-semibold text-[#8b949e] uppercase tracking-wider border-b border-[#262c34]">
                   Actions
                 </div>
@@ -187,7 +187,7 @@ export default function ThreatDetailPanel({
                     onClick={() => setSeverityOpen(!severityOpen)}
                   />
                   {severityOpen && (
-                    <div className="absolute left-full top-0 ml-1 w-40 bg-[#1c2128] border border-[#30363d] rounded-xl shadow-lg py-1">
+                    <div className="absolute right-full top-0 mr-1 w-40 bg-[#1c2128] border border-[#30363d] rounded-xl shadow-lg py-1">
                       {(["critical", "high", "medium", "low"] as const).map((level) => (
                         <button
                           key={level}
