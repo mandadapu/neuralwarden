@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import CloudConfigModal from "@/components/CloudConfigModal";
 import ScanLogModal from "@/components/ScanLogModal";
+import ScanProgressOverlay from "@/components/ScanProgressOverlay";
 import { getCloud, scanCloudStream } from "@/lib/api";
 import type { CloudAccount, ScanStreamEvent } from "@/lib/types";
 
@@ -57,6 +58,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
   const [configOpen, setConfigOpen] = useState(false);
   const [lastScanLogId, setLastScanLogId] = useState<string | null>(null);
   const [showScanLog, setShowScanLog] = useState(false);
+  const [showOverlay, setShowOverlay] = useState(false);
 
   const loadCloud = useCallback(async () => {
     try {
@@ -79,6 +81,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
     setScanProgress(null);
     setLastScanLogId(null);
     setError(null);
+    setShowOverlay(true);
     try {
       await scanCloudStream(id, (event) => {
         setScanProgress(event);
@@ -290,6 +293,14 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
           onClose={() => setShowScanLog(false)}
         />
       )}
+
+      {/* Scan progress overlay */}
+      <ScanProgressOverlay
+        open={showOverlay}
+        onClose={() => setShowOverlay(false)}
+        progress={scanProgress}
+        scanning={scanning}
+      />
     </CloudContext.Provider>
   );
 }

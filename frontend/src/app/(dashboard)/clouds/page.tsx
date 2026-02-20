@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import PageShell from "@/components/PageShell";
 import { listClouds, scanCloudStream, setApiUserEmail } from "@/lib/api";
-import type { CloudAccount } from "@/lib/types";
+import type { CloudAccount, ScanStreamEvent } from "@/lib/types";
+import ScanProgressOverlay from "@/components/ScanProgressOverlay";
 
 function CloudIcon() {
   return (
@@ -65,12 +66,18 @@ export default function CloudsPage() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [scanningId, setScanningId] = useState<string | null>(null);
+  const [scanProgress, setScanProgress] = useState<ScanStreamEvent | null>(null);
+  const [showOverlay, setShowOverlay] = useState(false);
 
   async function handleSync(e: React.MouseEvent, cloudId: string) {
     e.stopPropagation();
     setScanningId(cloudId);
+    setScanProgress(null);
+    setShowOverlay(true);
     try {
-      await scanCloudStream(cloudId, () => {});
+      await scanCloudStream(cloudId, (event) => {
+        setScanProgress(event);
+      });
       await loadClouds();
     } catch (err) {
       console.error("Scan failed:", err);
@@ -261,6 +268,12 @@ export default function CloudsPage() {
           No clouds match your search.
         </div>
       )}
+      <ScanProgressOverlay
+        open={showOverlay}
+        onClose={() => setShowOverlay(false)}
+        progress={scanProgress}
+        scanning={scanningId !== null}
+      />
     </PageShell>
   );
 }
