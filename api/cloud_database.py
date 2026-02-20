@@ -9,7 +9,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-from api.db import get_conn, adapt_sql, placeholder, insert_or_ignore
+from api.db import get_conn, adapt_sql, placeholder, insert_or_ignore, is_postgres
 
 # ── Severity ordering (lower = more severe) ─────────────────────────
 
@@ -101,12 +101,19 @@ def init_cloud_tables() -> None:
         conn.execute(_CREATE_CLOUD_CHECKS)
         conn.execute(_CREATE_SCAN_LOGS)
         # Migrations — add columns that may not exist on older DBs
+        # Use SAVEPOINT for PostgreSQL so a failure doesn't abort the transaction
         try:
+            if is_postgres():
+                conn.execute("SAVEPOINT alter_migration")
             conn.execute(
                 "ALTER TABLE cloud_issues ADD COLUMN remediation_script TEXT DEFAULT ''"
             )
+            if is_postgres():
+                conn.execute("RELEASE SAVEPOINT alter_migration")
         except Exception:
-            pass  # column already exists
+            if is_postgres():
+                conn.execute("ROLLBACK TO SAVEPOINT alter_migration")
+            # column already exists — safe to ignore
         conn.commit()
     finally:
         conn.close()
