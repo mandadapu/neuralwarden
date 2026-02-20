@@ -404,15 +404,16 @@ def _scan_storage(
 def _scan_cloud_logging(
     project_id: str,
     credentials_json: str,
-) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[str]]:
     """Fetch recent WARNING+ logs and produce issues via deterministic parsing.
 
-    Returns (assets, issues).
+    Returns (assets, issues, raw_log_lines).
     """
     from api.gcp_logging import fetch_logs, deterministic_parse
 
     assets: List[Dict[str, Any]] = []
     issues: List[Dict[str, Any]] = []
+    raw_lines: List[str] = []
 
     # Set up credentials for the Cloud Logging client
     creds_path = _temp_credentials_file(credentials_json)
@@ -426,6 +427,7 @@ def _scan_cloud_logging(
             max_entries=500,
             hours_back=24,
         )
+        raw_lines = lines
 
         entries = deterministic_parse(lines)
 
@@ -505,7 +507,7 @@ def _scan_cloud_logging(
         else:
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = old_env
 
-    return assets, issues
+    return assets, issues, raw_lines
 
 
 # ── Main orchestrator ───────────────────────────────────────────────
@@ -548,6 +550,7 @@ def run_scan(
 
     all_assets: List[Dict[str, Any]] = []
     all_issues: List[Dict[str, Any]] = []
+    log_lines: List[str] = []
     scanned: List[str] = []
 
     # ── Scan log capture ──
@@ -663,7 +666,7 @@ def run_scan(
         _log("info", "[cloud_logging] Started scanning")
         svc_start = time.monotonic()
         try:
-            assets, issues = _scan_cloud_logging(project_id, credentials_json)
+            assets, issues, log_lines = _scan_cloud_logging(project_id, credentials_json)
             all_assets.extend(assets)
             all_issues.extend(issues)
             scanned.append("cloud_logging")
@@ -714,5 +717,6 @@ def run_scan(
         "issues": all_issues,
         "asset_count": len(all_assets),
         "issue_count": len(all_issues),
+        "log_lines": log_lines,
         "scan_log": scan_log,
     }
