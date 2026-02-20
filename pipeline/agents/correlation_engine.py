@@ -72,7 +72,7 @@ def _extract_resource_name(location: str) -> str:
 def correlate_findings(
     scan_issues: list[dict],
     log_lines: list[str],
-) -> tuple[list[dict], int]:
+) -> tuple[list[dict], int, list[dict]]:
     """Cross-reference scan issues with log activity.
 
     Returns
@@ -83,12 +83,15 @@ def correlate_findings(
         added).
     active_exploit_count : int
         Number of issues that were correlated with live log activity.
+    correlated_evidence : list[dict]
+        Evidence samples for each correlated finding (for LLM consumption).
     """
     if not log_lines:
-        return list(scan_issues), 0
+        return list(scan_issues), 0, []
 
     active_count = 0
     correlated: list[dict] = []
+    evidence_list: list[dict] = []
 
     for issue in scan_issues:
         rule = CORRELATION_RULES.get(issue.get("rule_code", ""))
@@ -125,7 +128,17 @@ def correlate_findings(
             upgraded["mitre_technique"] = rule["mitre_technique"]
             correlated.append(upgraded)
             active_count += 1
+
+            evidence_list.append({
+                "rule_code": issue.get("rule_code", ""),
+                "asset": resource,
+                "verdict": rule["verdict"],
+                "mitre_tactic": rule["mitre_tactic"],
+                "mitre_technique": rule["mitre_technique"],
+                "evidence_logs": related_logs[:5],
+                "matched_patterns": matched_patterns,
+            })
         else:
             correlated.append(issue)
 
-    return correlated, active_count
+    return correlated, active_count, evidence_list
