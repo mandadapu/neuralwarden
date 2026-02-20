@@ -51,6 +51,7 @@ class ScanAgentState(TypedDict, total=False):
     # ── Correlation ──
     correlated_issues: list[dict]
     active_exploits_detected: int
+    correlated_evidence: list[dict]
 
     # ── Scan log ──
     scan_log_data: dict

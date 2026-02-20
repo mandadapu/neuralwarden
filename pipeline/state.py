@@ -51,3 +51,6 @@ class PipelineState(TypedDict, total=False):
     agent_metrics: dict[str, dict[str, Any]]
     burst_mode: bool
     chunk_count: int
+
+    # --- v2.1: Correlation Evidence (injected from cloud scan context) ---
+    correlated_evidence: list[dict]
