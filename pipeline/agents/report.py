@@ -1,6 +1,7 @@
-"""Report Agent — Opus 4.6: Generates incident reports and action plans."""
+"""Report Agent — generates incident reports and action plans."""
 
 import json
+import logging
 from datetime import datetime
 
 from langchain_anthropic import ChatAnthropic
@@ -11,6 +12,8 @@ from models.threat import ClassifiedThreat
 from pipeline.metrics import AgentTimer
 from pipeline.security import extract_json, sanitize_log_line, validate_report_output, wrap_user_data
 from pipeline.state import PipelineState
+
+logger = logging.getLogger(__name__)
 
 MODEL = "claude-haiku-4-5-20251001"
 
@@ -118,7 +121,19 @@ def run_report(state: PipelineState) -> dict:
             ])
             timer.record_usage(response)
 
-        content = extract_json(response.content)
+        raw_content = response.content or ""
+        if not raw_content.strip():
+            logger.warning("Report LLM returned empty content (stop_reason=%s), retrying...",
+                           getattr(response, "response_metadata", {}).get("stop_reason", "unknown"))
+            # Single retry with explicit instruction
+            response = llm.invoke([
+                SystemMessage(content=SYSTEM_PROMPT),
+                HumanMessage(content=f"Generate a JSON incident report for {len(classified_threats)} security threats. Return ONLY the JSON object."),
+            ])
+            timer.record_usage(response)
+            raw_content = response.content or ""
+
+        content = extract_json(raw_content)
         report_data = json.loads(content)
         report_data = validate_report_output(report_data)
 
@@ -156,16 +171,23 @@ def run_report(state: PipelineState) -> dict:
         }
 
     except Exception as e:
-        print(f"[Report] Report generation failed, using template: {e}")
+        logger.warning("Report generation failed, using template: %s", e)
         risk_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
         for ct in classified_threats:
             if ct.risk in risk_counts:
                 risk_counts[ct.risk] += 1
 
         # Fallback: structured template with raw data
+        critical_count = risk_counts["critical"]
+        high_count = risk_counts["high"]
+        severity_note = ""
+        if critical_count:
+            severity_note = f" including {critical_count} critical"
+        elif high_count:
+            severity_note = f" including {high_count} high-severity"
         return {
             "report": IncidentReport(
-                summary=f"Automated analysis found {len(classified_threats)} threats. Manual review required — report generation failed: {e}",
+                summary=f"Automated analysis found {len(classified_threats)} threats{severity_note}. Review the action plan below for recommended remediation steps.",
                 threat_count=len(classified_threats),
                 critical_count=risk_counts["critical"],
                 high_count=risk_counts["high"],
