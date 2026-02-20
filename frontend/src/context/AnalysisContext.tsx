@@ -51,14 +51,12 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     setApiUserEmail(session?.user?.email ?? "");
   }, [session?.user?.email]);
 
-  // Restore last session: load from server per-user, local state from localStorage
+  // Restore local-only state (snoozed/ignored/solved lists) from localStorage
   useEffect(() => {
-    // Load local-only state (snoozed/ignored/solved lists, log text)
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.logText) setLogText(parsed.logText);
         setSnoozedThreats(parsed.snoozedThreats ?? []);
         setIgnoredThreats(parsed.ignoredThreats ?? []);
         setSolvedThreats(parsed.solvedThreats ?? []);
@@ -75,15 +73,15 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     }).catch(() => {});
   }, [session?.user?.email]);
 
-  // Persist on change
+  // Persist local-only state (result loads from server, logText no longer needed)
   useEffect(() => {
     try {
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ result, logText, snoozedThreats, ignoredThreats, solvedThreats })
+        JSON.stringify({ snoozedThreats, ignoredThreats, solvedThreats })
       );
     } catch {}
-  }, [result, logText, snoozedThreats, ignoredThreats, solvedThreats]);
+  }, [snoozedThreats, ignoredThreats, solvedThreats]);
 
   const STAGES = ["ingest", "detect", "validate", "classify", "report"];
 
