@@ -164,7 +164,7 @@ function EdgeArrow({ edge, nodes }: { edge: FlowEdge; nodes: FlowNode[] }) {
       <path
         d={path}
         fill="none"
-        stroke="#cbd5e1"
+        stroke="#1a3020"
         strokeWidth="1.5"
         strokeDasharray={edge.dashed ? "5 3" : undefined}
         markerEnd="url(#arrowhead)"
@@ -217,7 +217,7 @@ function PipelineSVG({
           refY="3"
           orient="auto"
         >
-          <polygon points="0 0, 8 3, 0 6" fill="#cbd5e1" />
+          <polygon points="0 0, 8 3, 0 6" fill="#1a3020" />
         </marker>
       </defs>
 
@@ -242,7 +242,7 @@ function PipelineSVG({
 /* ── Main export ──────────────────────────────────────────── */
 
 export default function PipelineFlowDiagram() {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="rounded-2xl border border-[#122a1e]/60 bg-[#081510]/50 overflow-hidden">
@@ -311,13 +311,13 @@ export default function PipelineFlowDiagram() {
         <div className="flex justify-center my-2">
           <div className="flex flex-col items-center">
             <svg width="2" height="16">
-              <line x1="1" y1="0" x2="1" y2="16" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 2" />
+              <line x1="1" y1="0" x2="1" y2="16" stroke="#1a3020" strokeWidth="1.5" strokeDasharray="3 2" />
             </svg>
             <span className="text-[9px] text-[#3a5548] bg-[#0a1a14] px-2 py-0.5 rounded-full border border-[#122a1e]">
               feeds into
             </span>
             <svg width="2" height="16">
-              <line x1="1" y1="0" x2="1" y2="16" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="3 2" />
+              <line x1="1" y1="0" x2="1" y2="16" stroke="#1a3020" strokeWidth="1.5" strokeDasharray="3 2" />
             </svg>
           </div>
         </div>

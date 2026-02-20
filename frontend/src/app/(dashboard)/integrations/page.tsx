@@ -23,7 +23,7 @@ export default function IntegrationsPage() {
     >
       <div className="mt-6 grid grid-cols-2 gap-3">
         {INTEGRATIONS.map((int) => (
-          <div key={int.name} className="bg-[#081510] rounded-xl border border-[#122a1e] p-5 flex items-center justify-between hover:shadow-sm transition-shadow">
+          <div key={int.name} className="bg-[#081510] rounded-xl border border-[#122a1e] p-5 flex items-center justify-between transition-shadow">
             <div>
               <div className="font-semibold text-white text-sm">{int.name}</div>
               <div className="text-xs text-[#5a7068]">{int.category}</div>

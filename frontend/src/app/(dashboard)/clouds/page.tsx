@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import PageShell from "@/components/PageShell";
-import { listClouds, setApiUserEmail } from "@/lib/api";
+import { listClouds, scanCloud, setApiUserEmail } from "@/lib/api";
 import type { CloudAccount } from "@/lib/types";
 
 function CloudIcon() {
@@ -64,6 +64,20 @@ export default function CloudsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [scanningId, setScanningId] = useState<string | null>(null);
+
+  async function handleSync(e: React.MouseEvent, cloudId: string) {
+    e.stopPropagation();
+    setScanningId(cloudId);
+    try {
+      await scanCloud(cloudId);
+      await loadClouds();
+    } catch (err) {
+      console.error("Scan failed:", err);
+    } finally {
+      setScanningId(null);
+    }
+  }
 
   useEffect(() => {
     if (!session?.user?.email) return;
@@ -91,15 +105,15 @@ export default function CloudsPage() {
 
   return (
     <PageShell
-      title="Clouds"
+      title="Cloud Connections"
       description="Connected cloud accounts"
       icon={<CloudIcon />}
     >
       {/* Header row */}
       <div className="flex items-center justify-between mt-4 mb-5">
         <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full">
-            {clouds.length} connected cloud{clouds.length !== 1 ? "s" : ""}
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#00e68a]/10 text-[#00e68a] text-xs font-semibold rounded-full border border-[#00e68a]/20">
+            {clouds.length} connection{clouds.length !== 1 ? "s" : ""}
           </span>
         </div>
         <Link
@@ -121,7 +135,7 @@ export default function CloudsPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search clouds..."
+            placeholder="Search connections..."
             className="w-full pl-10 pr-4 py-2 border border-[#122a1e] rounded-lg text-sm bg-[#0a1a14] text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
@@ -140,7 +154,7 @@ export default function CloudsPage() {
 
       {/* Error */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm mb-4">
+        <div className="p-4 bg-red-950/20 border border-red-500/30 rounded-xl text-red-400 text-sm mb-4">
           {error}
         </div>
       )}
@@ -178,6 +192,7 @@ export default function CloudsPage() {
                 <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Issues</th>
                 <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Ignored</th>
                 <th className="text-left text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Last Scan</th>
+                <th className="text-right text-xs font-semibold text-[#5a7068] uppercase tracking-wider px-5 py-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#0e1e16]">
@@ -210,6 +225,28 @@ export default function CloudsPage() {
                   </td>
                   <td className="px-5 py-3.5">
                     <span className="text-sm text-[#5a7068]">{relativeTime(cloud.last_scan_at)}</span>
+                  </td>
+                  <td className="px-5 py-3.5 text-right">
+                    <button
+                      onClick={(e) => handleSync(e, String(cloud.id))}
+                      disabled={scanningId === String(cloud.id)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-[#00e68a]/30 text-[#00e68a] hover:bg-[#00e68a]/10 transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        className={scanningId === String(cloud.id) ? "animate-spin" : ""}
+                      >
+                        <path d="M23 4v6h-6" />
+                        <path d="M1 20v-6h6" />
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                      </svg>
+                      {scanningId === String(cloud.id) ? "Scanning..." : "Sync"}
+                    </button>
                   </td>
                 </tr>
               ))}

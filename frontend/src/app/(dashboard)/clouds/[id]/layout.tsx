@@ -204,11 +204,11 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
                   ? "bg-red-50 border-red-200 text-red-700"
                   : isComplete
                   ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                  : "bg-blue-50 border-blue-200 text-blue-700"
+                  : "bg-[#00e68a]/10 border-[#00e68a]/30 text-[#00e68a]"
               }`}>
                 <div className="flex items-center gap-3">
                   {scanning && !isComplete && !isError && (
-                    <div className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-[#00e68a]/30 border-t-[#00e68a] rounded-full animate-spin" />
                   )}
                   {isComplete && (
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-emerald-600">

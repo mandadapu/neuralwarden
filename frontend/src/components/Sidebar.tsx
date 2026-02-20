@@ -1,16 +1,27 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useAnalysisContext } from "@/context/AnalysisContext";
+import { listClouds, setApiUserEmail } from "@/lib/api";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const { result, snoozedThreats, ignoredThreats, solvedThreats } = useAnalysisContext();
   const feedCount = result?.classified_threats?.length ?? 0;
   const snoozedCount = snoozedThreats.length;
   const ignoredCount = ignoredThreats.length;
   const solvedCount = solvedThreats.length;
+  const [cloudCount, setCloudCount] = useState(0);
+
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    setApiUserEmail(session.user.email);
+    listClouds().then((data) => setCloudCount(data.length)).catch(() => {});
+  }, [session?.user?.email]);
 
   return (
     <aside className="w-[250px] min-w-[250px] min-h-screen bg-sidebar text-gray-400 text-sm flex flex-col">
@@ -50,7 +61,7 @@ export default function Sidebar() {
 
       {/* Resources */}
       <nav className="px-2 space-y-0.5">
-        <NavItem href="/clouds" icon={<CloudIcon />} label="Clouds" active={pathname.startsWith("/clouds")} />
+        <NavItem href="/clouds" icon={<CloudIcon />} label="Cloud Connections" active={pathname.startsWith("/clouds")} count={cloudCount > 0 ? String(cloudCount) : undefined} />
         <NavItem href="/agents" icon={<ServerIcon />} label="Agents" count="12" active={pathname === "/agents"} />
         <NavItem href="/mitre" icon={<SunIcon />} label="MITRE ATT&CK" count="1" active={pathname === "/mitre"} />
         <NavItem href="/threat-intel" icon={<ShieldIcon />} label="Threat Intel" count="1" active={pathname === "/threat-intel"} />
