@@ -187,7 +187,7 @@ export default function IssuesTab() {
 
       {/* Issues table */}
       {!loading && !error && filtered.length > 0 && (
-        <div className="bg-[#1c2128] rounded-xl border border-[#30363d] overflow-hidden">
+        <div className="bg-[#1c2128] rounded-xl border border-[#30363d] overflow-visible">
           <table className="w-full">
             <thead>
               <tr className="bg-[#21262d] border-b border-[#30363d]">
@@ -250,7 +250,7 @@ export default function IssuesTab() {
                     </button>
 
                     {statusDropdownId === issue.id && (
-                      <div className="absolute right-0 top-full mt-1 w-36 bg-[#1c2128] border border-[#30363d] rounded-lg shadow-lg z-20 py-1">
+                      <div className="absolute right-0 bottom-full mb-1 w-36 bg-[#1c2128] border border-[#30363d] rounded-lg shadow-lg z-20 py-1">
                         {ALL_STATUSES.map((s) => (
                           <button
                             key={s}
