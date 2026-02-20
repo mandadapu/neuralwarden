@@ -437,13 +437,13 @@ def list_all_user_issues(user_email: str, status: str = "", severity: str = "") 
 
 
 def get_issue_counts(account_id: str) -> dict:
-    """Count open (status='todo') issues by severity."""
+    """Count open (todo + in_progress) issues by severity."""
     conn = _get_conn()
     try:
         rows = conn.execute(
             """SELECT severity, COUNT(*) as cnt
                FROM cloud_issues
-               WHERE cloud_account_id = ? AND status = 'todo'
+               WHERE cloud_account_id = ? AND status IN ('todo', 'in_progress')
                GROUP BY severity""",
             (account_id,),
         ).fetchall()
