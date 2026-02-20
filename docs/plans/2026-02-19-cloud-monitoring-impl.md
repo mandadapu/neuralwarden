@@ -1595,7 +1595,7 @@ Expected: Empty state page with "Connect Cloud" button
 
 ```bash
 git add frontend/src/app/\(dashboard\)/clouds/page.tsx
-git commit -m "feat(clouds): add cloud list page with table"
+git commit -m "feat(clouds): add cloud list page with severity table"
 ```
 
 ---
@@ -1609,7 +1609,7 @@ git commit -m "feat(clouds): add cloud list page with table"
 
 Multi-step wizard:
 
-1. **Step 1 — Choose Provider**: Cards for "Google Cloud Platform" (active), "AWS" (disabled/coming soon), "Azure" (disabled/coming soon). Similar to NeuralWarden's onboarding screenshot.
+1. **Step 1 — Choose Provider**: Cards for "Google Cloud Platform" (active), "AWS" (disabled/coming soon), "Azure" (disabled/coming soon). Card-based provider selection.
 
 2. **Step 2 — Authentication**: Project ID input + Service Account JSON file upload with drag-and-drop zone. Shows validation status.
 
@@ -1617,7 +1617,7 @@ Multi-step wizard:
 
 4. **Step 4 — Save**: Calls `createCloud()` API, shows success, redirects to `/clouds/[id]`.
 
-The wizard should use the dark left panel + white right panel split layout from the NeuralWarden screenshots.
+The wizard should use the dark left panel + white right panel split layout.
 
 **Step 2: Verify**
 
@@ -1648,7 +1648,7 @@ The layout provides:
 
 **Step 2: Create the Issues tab page**
 
-Table matching NeuralWarden's style:
+Issues table:
 - Type icon (cloud icon for config issues, log icon for log-based) | Name + description subtitle | Severity badge | Location | Fix time | Status pill (To Do / In Progress / Ignored / Solved)
 - Search bar
 - "All types" dropdown filter
@@ -1743,7 +1743,7 @@ git commit -m "feat(clouds): add compliance checks tab with standard/advanced/cu
 
 **Step 1: Create the modal**
 
-Modal matching NeuralWarden's "Edit connected cloud" dialog:
+Cloud config modal:
 - "Let's configure your cloud" heading
 - Name input
 - Purpose dropdown (Production / Staging / Development)
@@ -1809,7 +1809,7 @@ Expected: Build succeeds with no TypeScript errors
 
 ```bash
 git add -A
-git commit -m "feat(clouds): complete cloud monitoring feature — GCP scanning, compliance checks, UI"
+git commit -m "feat(clouds): complete cloud monitoring feature — GCP scanning, compliance checks, NeuralWarden UI"
 ```
 
 ---

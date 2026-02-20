@@ -6,7 +6,7 @@
 
 ## Overview
 
-Redesign the static "Log Sources" page into a production-grade "Cloud Monitoring" section inspired by NeuralWarden's Clouds feature. The system integrates with GCP via service account credentials, discovers cloud resources, runs CIS-style compliance checks, and feeds Cloud Logging into the existing LangGraph threat detection pipeline.
+Redesign the static "Log Sources" page into a production-grade "Cloud Monitoring" section. The system integrates with GCP via service account credentials, discovers cloud resources, runs CIS-style compliance checks, and feeds Cloud Logging into the existing LangGraph threat detection pipeline.
 
 ## Navigation & Routes
 
