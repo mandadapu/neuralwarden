@@ -79,7 +79,7 @@ An agentic cloud security platform that runs a fully **autonomous defense loop**
 | 2 | **Router** | Routes public assets to active scanning, private assets to log-based analysis |
 | 3 | **Active Scanner** | 10 compliance checks (GCP_001–010) on public-facing assets |
 | 4 | **Log Analyzer** | Queries Cloud Logging for brute force, data exfiltration, privilege escalation signals |
-| 5 | **Correlation Engine** | Cross-references scanner + log findings to detect active exploits with MITRE mapping |
+| 5 | **Correlation Engine** | Cross-references scanner + log findings to detect active exploits with MITRE mapping. Returns evidence samples (up to 5 log lines) threaded into the Threat Pipeline for LLM reasoning |
 | 6 | **Remediation Generator** | Maps rule_codes to parameterized `gcloud` fix scripts (6 templates) |
 
 ### Threat Pipeline (6 agents — LLM-powered)
@@ -88,18 +88,22 @@ An agentic cloud security platform that runs a fully **autonomous defense loop**
 |---|-------|-------|---------|
 | 7 | **Ingest** | Haiku 4.5 | Parse raw logs into structured entries |
 | 8 | **Detect** | Sonnet 4.5 | Rule-based + AI threat detection |
-| 9 | **Validate** | Sonnet 4.5 | Shadow-check 5% of "clean" logs |
-| 10 | **Classify** | Sonnet 4.5 | Risk scoring + MITRE ATT&CK + RAG, prioritizes correlated evidence |
+| 9 | **Validate** | Haiku 4.5 | Shadow-check 5% of "clean" logs |
+| 10 | **Classify** | Sonnet 4.5 | Risk scoring + MITRE ATT&CK + RAG. When `correlated_evidence` is present, injects `CORRELATION_ADDENDUM` to force-escalate severity and generate remediation commands |
 | 11 | **HITL Gate** | — | Human-in-the-loop review for critical threats |
-| 12 | **Report** | Opus 4.6 | Incident reports with Active Incidents section and action plans |
+| 12 | **Report** | Haiku 4.5 | Incident reports with action plans. Leads with "Active Incidents" section when correlated evidence is threaded from Cloud Scan |
 
 ### Correlation Intelligence Matrix
 
-| Scanner Finds | Log Agent Finds | Verdict | MITRE |
-|---|---|---|---|
-| GCP_002 (Open SSH) | Failed password, Invalid user | Brute Force in Progress | T1110 |
-| GCP_004 (Public Bucket) | AnonymousAccess, GetObject | Data Exfiltration | T1530 |
-| GCP_006 (Default SA) | CreateServiceAccountKey | Privilege Escalation | T1078.004 |
+The Correlation Engine uses a two-layer strategy: **deterministic first ($0), LLM second**. The engine matches scanner rule codes to log patterns, then threads evidence samples into the Classify Agent for reasoning.
+
+| Scanner Finds | Log Agent Finds | Verdict | MITRE | LLM Action |
+|---|---|---|---|---|
+| GCP_002 (Open SSH) | Failed password, Invalid user | Brute Force in Progress | T1110 | Escalate to CRITICAL, generate `gcloud compute firewall-rules update` |
+| GCP_004 (Public Bucket) | AnonymousAccess, GetObject | Data Exfiltration | T1530 | Escalate to CRITICAL, generate `gcloud storage buckets update` |
+| GCP_006 (Default SA) | CreateServiceAccountKey | Privilege Escalation | T1078.004 | Escalate to CRITICAL, explain lateral movement risk |
+
+**Evidence flow:** `correlate_findings()` → `correlated_evidence[]` (up to 5 log samples per finding) → `ScanAgentState` → `threat_pipeline_node` → `PipelineState` → Classify (`CORRELATION_ADDENDUM`) → Report ("Active Incidents" section)
 
 ### Remediation Templates
 
