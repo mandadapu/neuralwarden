@@ -144,7 +144,7 @@ export interface CloudIssue {
   severity: "critical" | "high" | "medium" | "low";
   location: string;
   fix_time: string;
-  status: "todo" | "in_progress" | "ignored" | "solved";
+  status: "todo" | "in_progress" | "ignored" | "resolved";
   remediation_script: string;
   discovered_at: string;
 }
@@ -181,6 +181,7 @@ export interface ScanStreamEvent {
   has_report?: boolean;
   message?: string;
   scan_log_id?: string;
+  threat_stage?: string;
 }
 
 // ── Scan Logs ──

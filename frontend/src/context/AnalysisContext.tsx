@@ -16,7 +16,7 @@ interface AnalysisContextType {
   pipelineProgress: StageProgress[];
   snoozedThreats: ClassifiedThreat[];
   ignoredThreats: ClassifiedThreat[];
-  solvedThreats: ClassifiedThreat[];
+  resolvedThreats: ClassifiedThreat[];
   setLogText: (text: string) => void;
   setSkipIngest: (skip: boolean) => void;
   setAutoAnalyze: (auto: boolean) => void;
@@ -25,10 +25,10 @@ interface AnalysisContextType {
   updateThreat: (threatId: string, updates: { status?: string; risk?: string }) => void;
   snoozeThreat: (threatId: string) => void;
   ignoreThreat: (threatId: string) => void;
-  solveThreat: (threatId: string) => void;
+  resolveThreat: (threatId: string) => void;
   /** Add an external threat (e.g. cloud issue) directly to a destination list. */
-  addThreatTo: (threat: ClassifiedThreat, destination: "snoozed" | "ignored" | "solved") => void;
-  restoreThreat: (threatId: string, from: "snoozed" | "ignored" | "solved") => void;
+  addThreatTo: (threat: ClassifiedThreat, destination: "snoozed" | "ignored" | "resolved") => void;
+  restoreThreat: (threatId: string, from: "snoozed" | "ignored" | "resolved") => void;
   loadLatestReport: () => Promise<void>;
 }
 
@@ -47,14 +47,14 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const [pipelineProgress, setPipelineProgress] = useState<StageProgress[]>([]);
   const [snoozedThreats, setSnoozedThreats] = useState<ClassifiedThreat[]>([]);
   const [ignoredThreats, setIgnoredThreats] = useState<ClassifiedThreat[]>([]);
-  const [solvedThreats, setSolvedThreats] = useState<ClassifiedThreat[]>([]);
+  const [resolvedThreats, setResolvedThreats] = useState<ClassifiedThreat[]>([]);
 
   // Set API user email whenever session changes
   useEffect(() => {
     setApiUserEmail(session?.user?.email ?? "");
   }, [session?.user?.email]);
 
-  // Restore local-only state (snoozed/ignored/solved lists) from localStorage
+  // Restore local-only state (snoozed/ignored/resolved lists) from localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -62,7 +62,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
         const parsed = JSON.parse(saved);
         setSnoozedThreats(parsed.snoozedThreats ?? []);
         setIgnoredThreats(parsed.ignoredThreats ?? []);
-        setSolvedThreats(parsed.solvedThreats ?? []);
+        setResolvedThreats(parsed.resolvedThreats ?? parsed.solvedThreats ?? []);
       }
     } catch {}
   }, []);
@@ -87,10 +87,10 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     try {
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ snoozedThreats, ignoredThreats, solvedThreats })
+        JSON.stringify({ snoozedThreats, ignoredThreats, resolvedThreats })
       );
     } catch {}
-  }, [snoozedThreats, ignoredThreats, solvedThreats]);
+  }, [snoozedThreats, ignoredThreats, resolvedThreats]);
 
   const STAGES = ["ingest", "detect", "validate", "classify", "report"];
 
@@ -99,7 +99,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     setSnoozedThreats([]);
     setIgnoredThreats([]);
-    setSolvedThreats([]);
+    setResolvedThreats([]);
     setPipelineProgress(STAGES.map((s) => ({ stage: s, status: "pending" as const })));
     try {
       await analyzeStream(logs, (event: StreamEvent) => {
@@ -172,10 +172,10 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const moveThreat = useCallback(
-    (threatId: string, destination: "snoozed" | "ignored" | "solved") => {
+    (threatId: string, destination: "snoozed" | "ignored" | "resolved") => {
       const setter =
         destination === "snoozed" ? setSnoozedThreats :
-        destination === "ignored" ? setIgnoredThreats : setSolvedThreats;
+        destination === "ignored" ? setIgnoredThreats : setResolvedThreats;
 
       setResult((prev) => {
         if (!prev) return prev;
@@ -196,21 +196,21 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
 
   const snoozeThreat = useCallback((threatId: string) => moveThreat(threatId, "snoozed"), [moveThreat]);
   const ignoreThreat = useCallback((threatId: string) => moveThreat(threatId, "ignored"), [moveThreat]);
-  const solveThreat = useCallback((threatId: string) => moveThreat(threatId, "solved"), [moveThreat]);
+  const resolveThreat = useCallback((threatId: string) => moveThreat(threatId, "resolved"), [moveThreat]);
 
-  const addThreatTo = useCallback((threat: ClassifiedThreat, destination: "snoozed" | "ignored" | "solved") => {
+  const addThreatTo = useCallback((threat: ClassifiedThreat, destination: "snoozed" | "ignored" | "resolved") => {
     const setter =
       destination === "snoozed" ? setSnoozedThreats :
-      destination === "ignored" ? setIgnoredThreats : setSolvedThreats;
+      destination === "ignored" ? setIgnoredThreats : setResolvedThreats;
     setter((list) =>
       list.some((ct) => ct.threat_id === threat.threat_id) ? list : [...list, threat]
     );
   }, []);
 
-  const restoreThreat = useCallback((threatId: string, from: "snoozed" | "ignored" | "solved") => {
+  const restoreThreat = useCallback((threatId: string, from: "snoozed" | "ignored" | "resolved") => {
     const setter =
       from === "snoozed" ? setSnoozedThreats :
-      from === "ignored" ? setIgnoredThreats : setSolvedThreats;
+      from === "ignored" ? setIgnoredThreats : setResolvedThreats;
 
     setter((list) => {
       const threat = list.find((ct) => ct.threat_id === threatId);
@@ -228,8 +228,8 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   return (
     <AnalysisContext.Provider
       value={{
-        isLoading, result, error, logText, skipIngest, autoAnalyze, pipelineProgress, snoozedThreats, ignoredThreats, solvedThreats,
-        setLogText, setSkipIngest, setAutoAnalyze, runAnalysis, resume, updateThreat, snoozeThreat, ignoreThreat, solveThreat, addThreatTo, restoreThreat, loadLatestReport,
+        isLoading, result, error, logText, skipIngest, autoAnalyze, pipelineProgress, snoozedThreats, ignoredThreats, resolvedThreats,
+        setLogText, setSkipIngest, setAutoAnalyze, runAnalysis, resume, updateThreat, snoozeThreat, ignoreThreat, resolveThreat, addThreatTo, restoreThreat, loadLatestReport,
       }}
     >
       {children}

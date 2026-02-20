@@ -18,17 +18,17 @@ const STATUS_STYLES: Record<string, string> = {
   todo: "border-[#00e68a]/30 text-[#00e68a] bg-[#00e68a]/10",
   in_progress: "border-yellow-300 text-yellow-700 bg-yellow-50",
   ignored: "border-[#30363d] text-[#8b949e] bg-[#21262d]",
-  solved: "border-emerald-300 text-emerald-600 bg-emerald-50",
+  resolved: "border-emerald-300 text-emerald-600 bg-emerald-50",
 };
 
 const STATUS_LABELS: Record<string, string> = {
   todo: "To Do",
   in_progress: "In Progress",
   ignored: "Ignored",
-  solved: "Solved",
+  resolved: "Resolved",
 };
 
-const ALL_STATUSES = ["todo", "in_progress", "ignored", "solved"];
+const ALL_STATUSES = ["todo", "in_progress", "ignored", "resolved"];
 
 function SearchIcon() {
   return (
@@ -156,7 +156,7 @@ export default function IssuesTab() {
         <select className="px-3 py-2 border border-[#30363d] rounded-lg text-sm bg-[#21262d] text-[#c9d1d9]">
           <option>Actions</option>
           <option>Mark selected as Ignored</option>
-          <option>Mark selected as Solved</option>
+          <option>Mark selected as Resolved</option>
         </select>
       </div>
 

@@ -5,12 +5,12 @@ import PageShell from "@/components/PageShell";
 import SeverityBadge from "@/components/SeverityBadge";
 import ThreatTypeIcon from "@/components/ThreatTypeIcon";
 
-export default function SolvedPage() {
-  const { solvedThreats, restoreThreat } = useAnalysisContext();
+export default function ResolvedPage() {
+  const { resolvedThreats, restoreThreat } = useAnalysisContext();
 
   return (
     <PageShell
-      title="Solved"
+      title="Resolved"
       description="Threats that have been resolved"
       icon={
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -19,9 +19,9 @@ export default function SolvedPage() {
       }
     >
       <div className="mt-6">
-        {solvedThreats.length === 0 ? (
+        {resolvedThreats.length === 0 ? (
           <div className="bg-[#1c2128] rounded-xl border border-[#30363d] p-12 text-center">
-            <p className="text-[#8b949e] text-sm">No solved findings yet. Resolve threats from the Feed to track them here.</p>
+            <p className="text-[#8b949e] text-sm">No resolved findings yet. Resolve threats from the Feed to track them here.</p>
           </div>
         ) : (
           <div className="bg-[#1c2128] rounded-xl border border-[#30363d] overflow-hidden">
@@ -36,7 +36,7 @@ export default function SolvedPage() {
                 </tr>
               </thead>
               <tbody>
-                {solvedThreats.map((ct) => (
+                {resolvedThreats.map((ct) => (
                   <tr key={ct.threat_id} className="border-b border-[#262c34] hover:bg-[#21262d] transition-colors">
                     <td className="px-4 py-3.5"><ThreatTypeIcon type={ct.type} /></td>
                     <td className="px-4 py-3.5">
@@ -51,7 +51,7 @@ export default function SolvedPage() {
                     <td className="px-4 py-3.5 text-[#c9d1d9] text-[13px]">{ct.source_ip || "N/A"}</td>
                     <td className="px-4 py-3.5">
                       <button
-                        onClick={() => restoreThreat(ct.threat_id, "solved")}
+                        onClick={() => restoreThreat(ct.threat_id, "resolved")}
                         className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-white hover:bg-primary-hover transition-colors"
                       >
                         Reopen
