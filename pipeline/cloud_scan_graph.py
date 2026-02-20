@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from typing import Any
 
 from langgraph.graph import END, START, StateGraph
@@ -20,6 +21,21 @@ from pipeline.agents.log_analyzer import log_analyzer_node
 from pipeline.agents.correlation_engine import correlate_findings
 
 logger = logging.getLogger(__name__)
+
+# -- Thread-local progress queue --
+# The SSE endpoint sets a queue before running the graph so that
+# threat_pipeline_node can push sub-stage events back to the client.
+
+_thread_local = threading.local()
+
+
+def set_progress_queue(q):
+    """Set the progress queue on the current thread (called from SSE runner)."""
+    _thread_local.progress_queue = q
+
+
+def _get_progress_queue():
+    return getattr(_thread_local, "progress_queue", None)
 
 
 # -- Discovery Node --
@@ -132,8 +148,29 @@ def should_run_threat_pipeline(state: ScanAgentState) -> str:
     return "finalize"
 
 
+def _map_threat_node_to_stage(node_name: str) -> str | None:
+    """Map a threat pipeline node name to a display stage name."""
+    mapping = {
+        "skip_ingest": "ingest",
+        "ingest": "ingest",
+        "ingest_chunk": "ingest",
+        "aggregate_ingest": "ingest",
+        "detect": "detect",
+        "validate": "validate",
+        "classify": "classify",
+        "report": "report",
+        "empty_report": "report",
+        "clean_report": "report",
+    }
+    return mapping.get(node_name)
+
+
 def threat_pipeline_node(state: ScanAgentState) -> dict:
-    """Feed collected log lines into the existing threat detection pipeline."""
+    """Feed collected log lines into the existing threat detection pipeline.
+
+    Uses stream(stream_mode='updates') to push sub-stage progress events
+    back through the thread-local queue so the SSE endpoint can relay them.
+    """
     from api.gcp_logging import deterministic_parse
     from pipeline.graph import build_pipeline
 
@@ -143,9 +180,8 @@ def threat_pipeline_node(state: ScanAgentState) -> dict:
 
     parsed = deterministic_parse(log_lines)
 
-    # Run the existing threat pipeline -- pass parsed_logs so it skips LLM ingest
     threat_graph = build_pipeline(enable_hitl=False)
-    result = threat_graph.invoke({
+    initial_state = {
         "raw_logs": log_lines,
         "parsed_logs": parsed,
         "invalid_count": 0,
@@ -168,7 +204,26 @@ def threat_pipeline_node(state: ScanAgentState) -> dict:
         "burst_mode": False,
         "chunk_count": 0,
         "correlated_evidence": state.get("correlated_evidence", []),
-    })
+    }
+
+    progress_queue = _get_progress_queue()
+    result = {}
+    last_stage = None
+
+    for chunk in threat_graph.stream(initial_state, stream_mode="updates"):
+        # chunk is {node_name: state_update}
+        for node_name, update in chunk.items():
+            stage = _map_threat_node_to_stage(node_name)
+            if stage and stage != last_stage and progress_queue is not None:
+                progress_queue.put(("threat_stage", stage))
+                last_stage = stage
+            # Accumulate fields we care about from the final state
+            if "classified_threats" in update:
+                result["classified_threats"] = update["classified_threats"]
+            if "report" in update:
+                result["report"] = update["report"]
+            if "agent_metrics" in update:
+                result["agent_metrics"] = update["agent_metrics"]
 
     return {
         "classified_threats": result.get("classified_threats", []),

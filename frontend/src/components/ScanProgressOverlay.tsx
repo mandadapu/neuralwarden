@@ -50,6 +50,35 @@ const EDGES: FlowEdge[] = [
   { from: "c-remediate", to: "c-threat",    dashed: true },
 ];
 
+/* ── Threat pipeline sub-stages ────────────────────────── */
+
+const THREAT_SUB_NODES = [
+  { id: "ts-ingest",   label: "Ingest" },
+  { id: "ts-detect",   label: "Detect" },
+  { id: "ts-validate", label: "Validate" },
+  { id: "ts-classify", label: "Classify" },
+  { id: "ts-report",   label: "Report" },
+];
+
+const THREAT_STAGE_ORDER = ["ingest", "detect", "validate", "classify", "report"];
+
+function deriveThreatSubStates(threatStage: string | null): Record<string, NodeStatus> {
+  const states: Record<string, NodeStatus> = {};
+  for (const n of THREAT_SUB_NODES) states[n.id] = "pending";
+  if (!threatStage) return states;
+
+  const idx = THREAT_STAGE_ORDER.indexOf(threatStage);
+  if (idx === -1) return states;
+
+  // Everything before current is completed, current is active
+  for (let i = 0; i < idx; i++) {
+    states[THREAT_SUB_NODES[i].id] = "completed";
+  }
+  states[THREAT_SUB_NODES[idx].id] = "active";
+
+  return states;
+}
+
 /* ── Event → node state mapping ────────────────────────── */
 
 type NodeStatus = "pending" | "active" | "completed" | "error";
@@ -74,18 +103,20 @@ function deriveNodeStates(
   }
 
   // Progressive completion based on event
-  // "starting"    → GCP done, Discovery active
-  // "discovered"  → Discovery done, Router active
-  // "routing"     → Router done, Scanners active
-  // "scanned"     → Scanners done, Correlation+Remediation done, Threat Pipeline active
-  // "complete"    → All done
+  // "starting"      → GCP done, Discovery active
+  // "discovered"    → Discovery done, Router active
+  // "routing"       → Router done, Scanners active
+  // "scanned"       → Scanners done, Correlation+Remediation done, Threat Pipeline active
+  // "threat_stage"  → Same as scanned (Threat Pipeline active with sub-stages)
+  // "complete"      → All done
 
   const ORDER: { event: string; completed: string[]; active: string[] }[] = [
-    { event: "starting",   completed: ["c-gcp"],                                                                    active: ["c-discover"] },
-    { event: "discovered", completed: ["c-gcp", "c-discover"],                                                      active: ["c-router"] },
-    { event: "routing",    completed: ["c-gcp", "c-discover", "c-router"],                                          active: ["c-active", "c-logs"] },
-    { event: "scanned",    completed: ["c-gcp", "c-discover", "c-router", "c-active", "c-logs", "c-correlate"],     active: ["c-remediate", "c-threat"] },
-    { event: "complete",   completed: ["c-gcp", "c-discover", "c-router", "c-active", "c-logs", "c-correlate", "c-remediate", "c-threat"], active: [] },
+    { event: "starting",      completed: ["c-gcp"],                                                                    active: ["c-discover"] },
+    { event: "discovered",    completed: ["c-gcp", "c-discover"],                                                      active: ["c-router"] },
+    { event: "routing",       completed: ["c-gcp", "c-discover", "c-router"],                                          active: ["c-active", "c-logs"] },
+    { event: "scanned",       completed: ["c-gcp", "c-discover", "c-router", "c-active", "c-logs", "c-correlate"],     active: ["c-remediate", "c-threat"] },
+    { event: "threat_stage",  completed: ["c-gcp", "c-discover", "c-router", "c-active", "c-logs", "c-correlate", "c-remediate"], active: ["c-threat"] },
+    { event: "complete",      completed: ["c-gcp", "c-discover", "c-router", "c-active", "c-logs", "c-correlate", "c-remediate", "c-threat"], active: [] },
   ];
 
   const match = ORDER.find((o) => o.event === event);
@@ -113,6 +144,16 @@ function getStatusDetail(progress: ScanStreamEvent | null): string | null {
       return `${progress.public_count ?? 0} public, ${progress.private_count ?? 0} private`;
     case "scanned":
       return `${progress.assets_scanned ?? 0} assets scanned — analyzing threats...`;
+    case "threat_stage": {
+      const stageLabels: Record<string, string> = {
+        ingest: "Parsing logs...",
+        detect: "Detecting threats...",
+        validate: "Validating findings...",
+        classify: "Classifying threats...",
+        report: "Generating report...",
+      };
+      return `Threat Pipeline: ${stageLabels[progress.threat_stage ?? ""] ?? "Processing..."}`;
+    }
     case "complete":
       return `${progress.asset_count ?? 0} assets, ${progress.issue_count ?? 0} issues found${
         (progress.active_exploits_detected ?? 0) > 0
@@ -303,6 +344,17 @@ export default function ScanProgressOverlay({ open, onClose, progress, scanning 
   const canClose = isComplete || isError;
   const exploits = progress?.active_exploits_detected ?? 0;
 
+  // Threat pipeline sub-stages
+  const threatActive = nodeStates["c-threat"] === "active";
+  const threatDone = nodeStates["c-threat"] === "completed";
+  const threatStage = progress?.threat_stage ?? null;
+  const subStates = deriveThreatSubStates(threatActive ? threatStage : null);
+  // When threat pipeline completes, mark all sub-stages as completed
+  if (threatDone && threatStage) {
+    for (const n of THREAT_SUB_NODES) subStates[n.id] = "completed";
+  }
+  const showSubStages = threatActive || (threatDone && threatStage);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       {/* Backdrop */}
@@ -351,7 +403,13 @@ export default function ScanProgressOverlay({ open, onClose, progress, scanning 
 
         {/* Pipeline SVG */}
         <div className="px-6 py-5 overflow-x-auto">
-          <svg viewBox="0 0 1020 100" width="100%" height={100} className="overflow-visible min-w-[700px]">
+          <svg
+            viewBox={showSubStages ? "0 0 1100 155" : "0 0 1020 100"}
+            width="100%"
+            height={showSubStages ? 155 : 100}
+            className="overflow-visible min-w-[700px]"
+            style={{ transition: "height 0.3s ease" }}
+          >
             <defs>
               <marker id="arrow-gray" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
                 <polygon points="0 0, 8 3, 0 6" fill="#30363d" />
@@ -370,6 +428,115 @@ export default function ScanProgressOverlay({ open, onClose, progress, scanning 
             {NODES.map((node) => (
               <NodeRect key={node.id} node={node} status={nodeStates[node.id]} />
             ))}
+
+            {/* Threat pipeline sub-stages */}
+            {showSubStages && (() => {
+              const SUB_SPACING = 88;
+              const SUB_W = 76;
+              const SUB_H = 30;
+              const SUB_RX = 7;
+              const SUB_Y = 118;
+              // Center the 5 sub-nodes: middle node (index 2) at x=850
+              const SUB_START_X = 850 - 2 * SUB_SPACING; // 674
+
+              return (
+                <g>
+                  {/* Connector from Threat Pipeline node down to sub-stage row */}
+                  <path
+                    d={`M 940 ${40 + NODE_H / 2} C 940 ${SUB_Y - 20}, 850 ${SUB_Y - 30}, 850 ${SUB_Y - SUB_H / 2 - 4}`}
+                    fill="none"
+                    stroke={threatDone ? GREEN : BLUE}
+                    strokeWidth="1.5"
+                    strokeDasharray="4 3"
+                  />
+
+                  {/* Sub-stage nodes */}
+                  {THREAT_SUB_NODES.map((sub, i) => {
+                    const subX = SUB_START_X + i * SUB_SPACING;
+                    const st = subStates[sub.id];
+                    const isSubCompleted = st === "completed";
+                    const isSubActive = st === "active";
+
+                    const fill = isSubCompleted ? BLUE : isSubActive ? BLUE : "#1c2128";
+                    const fillOp = isSubCompleted ? 1 : isSubActive ? 0.2 : 1;
+                    const stroke = isSubCompleted || isSubActive ? BLUE : "#30363d";
+                    const labelCol = isSubCompleted ? "white" : isSubActive ? BLUE : "#8b949e";
+
+                    return (
+                      <g key={sub.id}>
+                        {/* Active pulse */}
+                        {isSubActive && (
+                          <rect
+                            x={subX - SUB_W / 2 - 3}
+                            y={SUB_Y - SUB_H / 2 - 3}
+                            width={SUB_W + 6}
+                            height={SUB_H + 6}
+                            rx={SUB_RX + 2}
+                            fill="none"
+                            stroke={BLUE}
+                            strokeWidth="1.5"
+                            opacity="0.4"
+                          >
+                            <animate attributeName="opacity" values="0.4;0.15;0.4" dur="1.5s" repeatCount="indefinite" />
+                          </rect>
+                        )}
+                        <rect
+                          x={subX - SUB_W / 2}
+                          y={SUB_Y - SUB_H / 2}
+                          width={SUB_W}
+                          height={SUB_H}
+                          rx={SUB_RX}
+                          fill={fill}
+                          fillOpacity={fillOp}
+                          stroke={stroke}
+                          strokeWidth={isSubActive || isSubCompleted ? 1.5 : 1}
+                        />
+                        {/* Completed checkmark */}
+                        {isSubCompleted && (
+                          <g transform={`translate(${subX + SUB_W / 2 - 11}, ${SUB_Y - SUB_H / 2 - 4})`}>
+                            <circle cx="5" cy="5" r="5" fill={GREEN} />
+                            <polyline points="2.5 5 4.5 7 7.5 3.5" fill="none" stroke="white" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                          </g>
+                        )}
+                        {/* Active spinner */}
+                        {isSubActive && (
+                          <g transform={`translate(${subX - SUB_W / 2 + 3}, ${SUB_Y - SUB_H / 2 - 4})`}>
+                            <circle cx="5" cy="5" r="4" fill="#1c2128" stroke={BLUE} strokeWidth="1" />
+                            <circle cx="5" cy="5" r="2.5" fill="none" stroke={BLUE} strokeWidth="1" strokeDasharray="4 4" strokeLinecap="round">
+                              <animateTransform attributeName="transform" type="rotate" from="0 5 5" to="360 5 5" dur="1s" repeatCount="indefinite" />
+                            </circle>
+                          </g>
+                        )}
+                        <text
+                          x={subX}
+                          y={SUB_Y + 1}
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          fill={labelCol}
+                          fontSize="10.5"
+                          fontWeight={isSubActive || isSubCompleted ? "700" : "600"}
+                          fontFamily="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+                        >
+                          {sub.label}
+                        </text>
+                        {/* Arrow to next sub-node */}
+                        {i < THREAT_SUB_NODES.length - 1 && (
+                          <line
+                            x1={subX + SUB_W / 2}
+                            y1={SUB_Y}
+                            x2={subX + SUB_SPACING - SUB_W / 2}
+                            y2={SUB_Y}
+                            stroke={isSubCompleted ? GREEN : "#30363d"}
+                            strokeWidth="1.2"
+                            markerEnd={`url(#arrow-${isSubCompleted ? "green" : "gray"})`}
+                          />
+                        )}
+                      </g>
+                    );
+                  })}
+                </g>
+              );
+            })()}
           </svg>
         </div>
 
@@ -379,6 +546,9 @@ export default function ScanProgressOverlay({ open, onClose, progress, scanning 
             <div className="w-2 h-2 rounded-full bg-[#00e68a] animate-pulse" />
             <span className="text-xs font-semibold text-[#00e68a]">
               Processing: {activeNodes.map((n) => n.label).join(" + ")}
+              {threatActive && threatStage && (
+                <> &gt; {threatStage.charAt(0).toUpperCase() + threatStage.slice(1)}</>
+              )}
             </span>
           </div>
         )}
