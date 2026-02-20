@@ -1,4 +1,4 @@
-"""Gradio dashboard for the NeuralWarden AI Security Platform — UI."""
+"""Gradio dashboard for the NeuralWarden AI Security Platform."""
 
 import time
 import uuid
