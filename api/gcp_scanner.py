@@ -31,7 +31,7 @@ def _try_import(module: str) -> bool:
 
 
 def probe_available_services() -> List[str]:
-    """Return which GCP services can actually be scanned.
+    """Return which GCP services have libraries installed locally.
 
     Always includes ``cloud_logging``.  Conditionally includes
     ``compute``, ``firewall``, ``storage``, ``resource_manager`` if
@@ -50,6 +50,101 @@ def probe_available_services() -> List[str]:
         services.append("resource_manager")
 
     return services
+
+
+def probe_credential_access(
+    project_id: str, credentials_json: str
+) -> Dict[str, Any]:
+    """Test which GCP services the credential can actually access.
+
+    Makes lightweight API calls (list with limit 1) against each
+    service to determine real permissions.  Returns a dict mapping
+    service names to ``{"accessible": bool, "detail": str}``.
+    """
+    installed = probe_available_services()
+    results: Dict[str, Any] = {}
+    accessible_services: List[str] = []
+
+    credentials = None
+    if credentials_json:
+        try:
+            credentials = _make_credentials(credentials_json)
+        except Exception as exc:
+            return {"error": str(exc), "services": {}, "accessible": []}
+
+    # ── Compute Engine ──
+    if "compute" in installed and credentials:
+        try:
+            from google.cloud.compute_v1 import InstancesClient
+            client = InstancesClient(credentials=credentials)
+            # aggregated_list is the cheapest call — stops after first zone
+            for _zone, scope in client.aggregated_list(
+                project=project_id, max_results=1
+            ):
+                break
+            results["compute"] = {"accessible": True, "detail": "Compute Engine API accessible"}
+            accessible_services.append("compute")
+        except Exception as exc:
+            results["compute"] = {"accessible": False, "detail": str(exc)}
+    elif "compute" not in installed:
+        results["compute"] = {"accessible": False, "detail": "Library not installed"}
+
+    # ── Firewall (same library as compute) ──
+    if "firewall" in installed and credentials:
+        try:
+            from google.cloud.compute_v1 import FirewallsClient
+            client = FirewallsClient(credentials=credentials)
+            for _fw in client.list(project=project_id, max_results=1):
+                break
+            results["firewall"] = {"accessible": True, "detail": "Firewall rules accessible"}
+            accessible_services.append("firewall")
+        except Exception as exc:
+            results["firewall"] = {"accessible": False, "detail": str(exc)}
+
+    # ── Cloud Storage ──
+    if "storage" in installed and credentials:
+        try:
+            from google.cloud.storage import Client as StorageClient
+            client = StorageClient(project=project_id, credentials=credentials)
+            # list_buckets with max_results=1 is the lightest call
+            next(iter(client.list_buckets(max_results=1)), None)
+            results["storage"] = {"accessible": True, "detail": "Cloud Storage API accessible"}
+            accessible_services.append("storage")
+        except Exception as exc:
+            results["storage"] = {"accessible": False, "detail": str(exc)}
+    elif "storage" not in installed:
+        results["storage"] = {"accessible": False, "detail": "Library not installed"}
+
+    # ── Cloud Logging ──
+    if credentials_json:
+        creds_path = _temp_credentials_file(credentials_json)
+        old_env = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+        try:
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
+            from google.cloud.logging import Client as LoggingClient
+            client = LoggingClient(project=project_id)
+            # list_entries with max_results=1
+            next(iter(client.list_entries(max_results=1)), None)
+            results["cloud_logging"] = {"accessible": True, "detail": "Cloud Logging API accessible"}
+            accessible_services.append("cloud_logging")
+        except Exception as exc:
+            results["cloud_logging"] = {"accessible": False, "detail": str(exc)}
+        finally:
+            try:
+                os.unlink(creds_path)
+            except OSError:
+                pass
+            if old_env is None:
+                os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+            else:
+                os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = old_env
+    else:
+        results["cloud_logging"] = {"accessible": False, "detail": "No credentials provided"}
+
+    return {
+        "services": results,
+        "accessible": accessible_services,
+    }
 
 
 # ── Credential helpers ──────────────────────────────────────────────
@@ -419,6 +514,25 @@ def _scan_cloud_logging(
 # ── Main orchestrator ───────────────────────────────────────────────
 
 
+_SERVICE_ALIASES: Dict[str, str] = {
+    "compute_engine": "compute",
+    "cloud_storage": "storage",
+    "firewall_rules": "firewall",
+    "cloud_logging": "cloud_logging",
+    "resource_manager": "resource_manager",
+}
+
+
+def _normalize_services(services: List[str]) -> List[str]:
+    """Map frontend service IDs to backend scanner IDs."""
+    normalized: List[str] = []
+    for s in services:
+        mapped = _SERVICE_ALIASES.get(s, s)
+        if mapped not in normalized:
+            normalized.append(mapped)
+    return normalized
+
+
 def run_scan(
     project_id: str,
     credentials_json: str,
@@ -426,16 +540,13 @@ def run_scan(
 ) -> Dict[str, Any]:
     """Run a GCP compliance scan across the requested services.
 
-    For each requested service, checks if it is in
-    ``probe_available_services()``.  If available *and* credentials
-    exist, run that scanner.  Always runs ``cloud_logging``.
+    When *services* is ``None``, auto-discovers and scans all
+    available GCP services.  Frontend service IDs (e.g.
+    ``compute_engine``) are mapped to backend IDs automatically.
 
     Returns a result dict with scan_type, scanned_services, assets,
     issues, counts, and a ``scan_log`` key with per-service details.
     """
-    if services is None:
-        services = ["cloud_logging"]
-
     available = probe_available_services()
 
     all_assets: List[Dict[str, Any]] = []
@@ -455,8 +566,28 @@ def run_scan(
             "message": message,
         })
 
+    # Live-probe which services the credentials can access
+    if credentials_json:
+        probe = probe_credential_access(project_id, credentials_json)
+        accessible = probe.get("accessible", [])
+        _log("info", f"Credential probe: accessible services = {accessible}")
+        for svc, detail in probe.get("services", {}).items():
+            if not detail["accessible"]:
+                _log("info", f"  {svc}: {detail['detail']}")
+    else:
+        accessible = []
+
+    # Determine final service list: scan everything the creds can reach
+    if services is None:
+        services = list(accessible) if accessible else list(available)
+    else:
+        services = _normalize_services(services)
+        # Only keep services the credentials can actually access
+        if accessible:
+            services = [s for s in services if s in accessible or s == "cloud_logging"]
+
     _log("info", f"Scan started for project {project_id}")
-    _log("info", f"Requested services: {', '.join(services)}")
+    _log("info", f"Services to scan: {', '.join(services)}")
     _log("info", f"Available libraries: {', '.join(available)}")
 
     credentials = None

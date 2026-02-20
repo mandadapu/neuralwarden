@@ -55,7 +55,7 @@ def discovery_node(state: ScanAgentState) -> dict:
     assets, scan_log_data = _discover_assets(
         state["project_id"],
         state.get("credentials_json", ""),
-        state.get("enabled_services", ["cloud_logging"]),
+        state.get("enabled_services") or None,
     )
     return {
         "discovered_assets": assets,
@@ -227,7 +227,7 @@ def run_cloud_scan(
         "cloud_account_id": cloud_account_id,
         "project_id": project_id,
         "credentials_json": credentials_json,
-        "enabled_services": enabled_services or ["cloud_logging"],
+        "enabled_services": enabled_services or [],
         "discovered_assets": [],
         "public_assets": [],
         "private_assets": [],

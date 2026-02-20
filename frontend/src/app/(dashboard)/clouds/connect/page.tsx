@@ -252,7 +252,36 @@ export default function ConnectCloudPage() {
           {step === 2 && (
             <div>
               <h3 className="text-xl font-bold text-white mb-1">Authentication</h3>
-              <p className="text-sm text-[#8b949e] mb-8">Provide your GCP credentials for NeuralWarden to scan your infrastructure.</p>
+              <p className="text-sm text-[#8b949e] mb-6">Provide your GCP credentials for NeuralWarden to scan your infrastructure.</p>
+
+              {/* Recommended roles info box */}
+              <div className="mb-6 p-4 bg-[#00e68a]/5 border border-[#00e68a]/20 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 w-5 h-5 rounded-full bg-[#00e68a]/15 flex items-center justify-center flex-shrink-0">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00e68a" strokeWidth="3">
+                      <path d="M12 16v-4M12 8h.01" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-[#e6edf3] mb-2">Recommended IAM roles for the service account</p>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <code className="text-xs font-mono px-1.5 py-0.5 bg-[#262c34] text-[#00e68a] rounded">roles/viewer</code>
+                        <span className="text-xs text-[#8b949e]">Compute, Storage, Firewall, Project metadata</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <code className="text-xs font-mono px-1.5 py-0.5 bg-[#262c34] text-[#00e68a] rounded">roles/logging.viewer</code>
+                        <span className="text-xs text-[#8b949e]">Cloud Logging entries</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <code className="text-xs font-mono px-1.5 py-0.5 bg-[#262c34] text-[#00e68a] rounded">roles/iam.securityReviewer</code>
+                        <span className="text-xs text-[#8b949e]">IAM policies, service account keys</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#8b949e] mt-2">NeuralWarden auto-detects available permissions at scan time. You can add roles later without re-uploading credentials.</p>
+                  </div>
+                </div>
+              </div>
 
               <div className="space-y-5">
                 <div>

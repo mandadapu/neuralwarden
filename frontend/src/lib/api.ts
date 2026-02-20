@@ -267,6 +267,18 @@ export async function deleteCloud(id: string): Promise<void> {
   if (!res.ok) throw new Error(`Failed to delete cloud: ${res.statusText}`);
 }
 
+export interface ProbeResult {
+  services: Record<string, { accessible: boolean; detail: string }>;
+  accessible: string[];
+  error?: string;
+}
+
+export async function probeCloudAccess(id: string): Promise<ProbeResult> {
+  const res = await fetch(`${BASE}/clouds/${id}/probe`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Probe failed: ${res.statusText}`);
+  return res.json();
+}
+
 export async function scanCloud(id: string): Promise<ScanResult> {
   const res = await fetch(`${BASE}/clouds/${id}/scan`, {
     method: "POST",

@@ -101,8 +101,41 @@ async def create_cloud(request: Request, body: CreateCloudRequest):
     return _account_with_counts(account)
 
 
-# IMPORTANT: /checks must be defined BEFORE /{cloud_id} to avoid
-# FastAPI matching "checks" as a cloud_id parameter.
+# IMPORTANT: Static path segments must be defined BEFORE /{cloud_id}
+# to avoid FastAPI matching them as a cloud_id parameter.
+
+
+@router.get("/{cloud_id}/probe")
+async def probe_cloud_access(cloud_id: str):
+    """Live-test which GCP services the stored credentials can access.
+
+    Returns per-service accessibility so the UI can show what the
+    service account is allowed to reach — no need to re-upload creds
+    after adding roles in the GCP console.
+    """
+    import asyncio
+    from api.gcp_scanner import probe_credential_access
+
+    account = get_cloud_account(cloud_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Cloud account not found")
+
+    creds = account.get("credentials_json", "")
+    if not creds:
+        raise HTTPException(status_code=400, detail="No credentials stored for this cloud")
+
+    result = await asyncio.to_thread(
+        probe_credential_access, account["project_id"], creds
+    )
+
+    # Update stored services list to match what's actually accessible
+    accessible = result.get("accessible", [])
+    if accessible:
+        update_cloud_account(cloud_id, services=json.dumps(accessible))
+
+    return result
+
+
 @router.get("/checks")
 async def list_checks(category: Optional[str] = Query(None)):
     """List compliance check definitions."""
@@ -163,9 +196,9 @@ async def trigger_scan(cloud_id: str):
     if not account:
         raise HTTPException(status_code=404, detail="Cloud account not found")
 
-    services = account.get("services", "[]")
-    if isinstance(services, str):
-        services = json.loads(services)
+    # Always pass None so run_scan live-probes credentials and scans
+    # everything the service account can access — no static config needed.
+    services = None
 
     async def scan_generator():
         from pipeline.cloud_scan_graph import build_scan_pipeline
