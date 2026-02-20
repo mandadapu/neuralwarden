@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { useAnalysisContext } from "@/context/AnalysisContext";
+import { listAllCloudIssues, setApiUserEmail } from "@/lib/api";
+import type { ClassifiedThreat, CloudIssue, Summary } from "@/lib/types";
 import SummaryCards from "@/components/SummaryCards";
 import PipelineProgress from "@/components/PipelineProgress";
 import ThreatsTable from "@/components/ThreatsTable";
@@ -10,12 +13,51 @@ import CostBreakdown from "@/components/CostBreakdown";
 import IncidentReport from "@/components/IncidentReport";
 import ThreatDetailPanel from "@/components/ThreatDetailPanel";
 
+const RISK_SCORES: Record<string, number> = {
+  critical: 95,
+  high: 75,
+  medium: 50,
+  low: 25,
+};
+
+function cloudIssueToThreat(issue: CloudIssue): ClassifiedThreat {
+  return {
+    threat_id: issue.id,
+    type: issue.title,
+    confidence: 1.0,
+    source_log_indices: [],
+    method: "rule_based",
+    description: issue.description,
+    source_ip: "",
+    risk: issue.severity,
+    risk_score: RISK_SCORES[issue.severity] ?? 50,
+    mitre_technique: issue.rule_code,
+    mitre_tactic: "",
+    business_impact: issue.title,
+    affected_systems: issue.location ? [issue.location] : [],
+    remediation_priority: RISK_SCORES[issue.severity] ?? 50,
+  };
+}
+
 export default function DashboardPage() {
+  const { data: session } = useSession();
   const [selectedThreatIndex, setSelectedThreatIndex] = useState<number | null>(null);
+  const [cloudThreats, setCloudThreats] = useState<ClassifiedThreat[]>([]);
   const {
     isLoading, result, error, logText, skipIngest, autoAnalyze, pipelineProgress, setLogText, setAutoAnalyze, runAnalysis, resume,
     updateThreat, snoozeThreat, ignoreThreat,
   } = useAnalysisContext();
+
+  // Fetch cloud scan issues
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    setApiUserEmail(session.user.email);
+    listAllCloudIssues().then((issues) => {
+      // Filter out resolved issues (solved/ignored) — show todo + in_progress
+      issues = issues.filter((i) => i.status === "todo" || i.status === "in_progress");
+      setCloudThreats(issues.map(cloudIssueToThreat));
+    }).catch(() => {});
+  }, [session?.user?.email]);
 
   // Auto-start analysis when redirected from GCP fetch
   useEffect(() => {
@@ -25,8 +67,36 @@ export default function DashboardPage() {
     }
   }, [autoAnalyze, logText, isLoading, setAutoAnalyze, runAnalysis]);
 
-  const threats = result?.classified_threats ?? [];
-  const selectedThreat = selectedThreatIndex !== null ? threats[selectedThreatIndex] : null;
+  // Combine threat pipeline results with cloud scan issues
+  const pipelineThreats = result?.classified_threats ?? [];
+  const allThreats = [...cloudThreats, ...pipelineThreats];
+
+  // Build combined summary
+  const combinedSummary: Summary = result?.summary
+    ? {
+        ...result.summary,
+        total_threats: result.summary.total_threats + cloudThreats.length,
+        severity_counts: {
+          critical: (result.summary.severity_counts.critical ?? 0) + cloudThreats.filter((t) => t.risk === "critical").length,
+          high: (result.summary.severity_counts.high ?? 0) + cloudThreats.filter((t) => t.risk === "high").length,
+          medium: (result.summary.severity_counts.medium ?? 0) + cloudThreats.filter((t) => t.risk === "medium").length,
+          low: (result.summary.severity_counts.low ?? 0) + cloudThreats.filter((t) => t.risk === "low").length,
+        },
+      }
+    : {
+        total_threats: cloudThreats.length,
+        severity_counts: {
+          critical: cloudThreats.filter((t) => t.risk === "critical").length,
+          high: cloudThreats.filter((t) => t.risk === "high").length,
+          medium: cloudThreats.filter((t) => t.risk === "medium").length,
+          low: cloudThreats.filter((t) => t.risk === "low").length,
+        },
+        auto_ignored: 0,
+        total_logs: 0,
+        logs_cleared: 0,
+      };
+
+  const selectedThreat = selectedThreatIndex !== null ? allThreats[selectedThreatIndex] : null;
 
   const handleAction = (threatId: string, action: string) => {
     switch (action) {
@@ -55,7 +125,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <SummaryCards summary={result?.summary ?? null} />
+      <SummaryCards summary={combinedSummary} />
 
       {isLoading && pipelineProgress.length > 0 && (
         <PipelineProgress stages={pipelineProgress} />
@@ -68,7 +138,7 @@ export default function DashboardPage() {
       )}
 
       <ThreatsTable
-        threats={threats}
+        threats={allThreats}
         onThreatClick={(_threat, index) => setSelectedThreatIndex(index)}
       />
 
@@ -98,7 +168,7 @@ export default function DashboardPage() {
       {selectedThreat && (
         <ThreatDetailPanel
           threat={selectedThreat}
-          threats={threats}
+          threats={allThreats}
           currentIndex={selectedThreatIndex!}
           onClose={() => setSelectedThreatIndex(null)}
           onNavigate={(index) => setSelectedThreatIndex(index)}

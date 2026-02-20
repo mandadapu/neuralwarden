@@ -406,6 +406,36 @@ def clear_cloud_issues(account_id: str) -> None:
         conn.close()
 
 
+def list_all_user_issues(user_email: str, status: str = "", severity: str = "") -> list[dict]:
+    """List all cloud issues across all accounts for a user, sorted by severity."""
+    conn = _get_conn()
+    try:
+        query = """
+            SELECT ci.*, ca.name as cloud_name, ca.project_id
+            FROM cloud_issues ci
+            JOIN cloud_accounts ca ON ci.cloud_account_id = ca.id
+            WHERE ca.user_email = ?
+        """
+        params: list = [user_email]
+        if status:
+            query += " AND ci.status = ?"
+            params.append(status)
+        if severity:
+            query += " AND ci.severity = ?"
+            params.append(severity)
+        rows = conn.execute(query, params).fetchall()
+        results = [dict(row) for row in rows]
+        results.sort(
+            key=lambda r: (
+                _SEVERITY_ORDER.get(r["severity"], 99),
+                r["discovered_at"],
+            )
+        )
+        return results
+    finally:
+        conn.close()
+
+
 def get_issue_counts(account_id: str) -> dict:
     """Count open (status='todo') issues by severity."""
     conn = _get_conn()

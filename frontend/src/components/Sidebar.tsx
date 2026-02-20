@@ -11,7 +11,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { result, snoozedThreats, ignoredThreats, solvedThreats } = useAnalysisContext();
-  const feedCount = result?.classified_threats?.length ?? 0;
+  const pipelineThreatCount = result?.classified_threats?.length ?? 0;
   const snoozedCount = snoozedThreats.length;
   const ignoredCount = ignoredThreats.length;
   const solvedCount = solvedThreats.length;
@@ -30,6 +30,8 @@ export default function Sidebar() {
       setCloudIssueCount(totalIssues);
     }).catch(() => {});
   }, [session?.user?.email]);
+
+  const feedCount = pipelineThreatCount + cloudIssueCount;
 
   return (
     <aside className="w-[250px] min-w-[250px] h-full overflow-y-auto bg-sidebar text-gray-400 text-sm flex flex-col">

@@ -20,6 +20,7 @@ from api.cloud_database import (
     save_cloud_assets,
     save_cloud_issues,
     list_cloud_issues,
+    list_all_user_issues,
     update_cloud_issue_status,
     get_issue_counts,
     get_asset_counts,
@@ -105,6 +106,17 @@ async def create_cloud(request: Request, body: CreateCloudRequest):
 
 # IMPORTANT: Static path segments must be defined BEFORE /{cloud_id}
 # to avoid FastAPI matching them as a cloud_id parameter.
+
+
+@router.get("/all-issues")
+async def all_issues(
+    request: Request,
+    status: Optional[str] = Query(None),
+    severity: Optional[str] = Query(None),
+):
+    """List all cloud issues across all clouds for the authenticated user."""
+    user_email = _get_user_email(request)
+    return list_all_user_issues(user_email, status=status or "", severity=severity or "")
 
 
 @router.get("/{cloud_id}/probe")

@@ -66,7 +66,7 @@ export default function ThreatsTable({
             {threats.length === 0 ? (
               <tr>
                 <td colSpan={6} className="text-center py-12 text-[#8b949e] text-sm">
-                  No findings yet. Paste logs and click <strong className="text-[#00e68a]">Analyze Threats</strong> to start.
+                  No findings yet. Connect a cloud and run a scan, or paste logs to analyze.
                 </td>
               </tr>
             ) : (

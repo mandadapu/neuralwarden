@@ -325,6 +325,20 @@ export async function scanCloudStream(
   }
 }
 
+export async function listAllCloudIssues(
+  status?: string,
+  severity?: string
+): Promise<CloudIssue[]> {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  if (severity) params.set("severity", severity);
+  const res = await fetch(`${BASE}/clouds/all-issues?${params}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to list all issues: ${res.statusText}`);
+  return res.json();
+}
+
 export async function listCloudIssues(
   cloudId: string,
   status?: string,
