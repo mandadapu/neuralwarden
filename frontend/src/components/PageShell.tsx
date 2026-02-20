@@ -1,5 +1,3 @@
-import Topbar from "./Topbar";
-
 export default function PageShell({
   title,
   description,
@@ -13,7 +11,6 @@ export default function PageShell({
 }) {
   return (
     <>
-      <Topbar />
       <div className="px-7 py-6">
         <div className="flex items-center gap-3 mb-1">
           <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">

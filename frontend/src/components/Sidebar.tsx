@@ -24,7 +24,7 @@ export default function Sidebar() {
   }, [session?.user?.email]);
 
   return (
-    <aside className="w-[250px] min-w-[250px] min-h-screen bg-sidebar text-gray-400 text-sm flex flex-col">
+    <aside className="w-[250px] min-w-[250px] h-full overflow-y-auto bg-sidebar text-gray-400 text-sm flex flex-col">
       {/* Account selector */}
       <div className="mx-3 mt-4 mb-4 px-3 py-2.5 bg-[#00e68a]/5 border border-[#30363d] rounded-lg flex items-center justify-between cursor-pointer">
         <span className="text-[#8b949e] text-[13px] font-medium">Security Pipeline v2</span>

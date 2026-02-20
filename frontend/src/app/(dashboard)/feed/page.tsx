@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useAnalysisContext } from "@/context/AnalysisContext";
-import Topbar from "@/components/Topbar";
 import SummaryCards from "@/components/SummaryCards";
 import PipelineProgress from "@/components/PipelineProgress";
 import ThreatsTable from "@/components/ThreatsTable";
@@ -56,8 +55,6 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Topbar />
-
       <SummaryCards summary={result?.summary ?? null} />
 
       {isLoading && pipelineProgress.length > 0 && (

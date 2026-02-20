@@ -3,7 +3,6 @@
 import { useState, useEffect, createContext, useContext, useCallback } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
-import Topbar from "@/components/Topbar";
 import CloudConfigModal from "@/components/CloudConfigModal";
 import ScanLogModal from "@/components/ScanLogModal";
 import { getCloud, scanCloudStream } from "@/lib/api";
@@ -129,7 +128,6 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
 
   return (
     <CloudContext.Provider value={{ cloud, loading, refresh: loadCloud }}>
-      <Topbar />
       <div className="px-7 py-6">
         {/* Loading */}
         {loading && !cloud && (
