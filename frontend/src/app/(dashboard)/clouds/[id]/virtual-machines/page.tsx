@@ -85,11 +85,11 @@ export default function VirtualMachinesTab() {
       // Build VM rows with issue cross-references
       const rows: VmRow[] = assets.map((asset) => {
         const assetIssues = issues.filter((i) => i.asset_id === asset.id);
-        const openIssues = assetIssues.filter((i) => i.status !== "ignored" && i.status !== "solved").length;
+        const openIssues = assetIssues.filter((i) => i.status !== "ignored" && i.status !== "resolved").length;
         const ignoredIssues = assetIssues.filter((i) => i.status === "ignored").length;
 
         const activeSeverities = assetIssues
-          .filter((i) => i.status !== "ignored" && i.status !== "solved")
+          .filter((i) => i.status !== "ignored" && i.status !== "resolved")
           .map((i) => i.severity);
         const highestSeverity = activeSeverities.length > 0
           ? activeSeverities.sort((a, b) => (SEVERITY_ORDER[a] ?? 4) - (SEVERITY_ORDER[b] ?? 4))[0]

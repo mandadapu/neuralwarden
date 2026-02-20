@@ -79,7 +79,7 @@ export default function DashboardPage() {
   }, [autoAnalyze, logText, isLoading, setAutoAnalyze, runAnalysis]);
 
   // Combine threat pipeline results with cloud scan issues
-  // Filter out cloud issues already moved to snoozed/ignored/solved
+  // Filter out cloud issues already moved to snoozed/ignored/resolved
   const snoozedIds = new Set(snoozedThreats.map((t) => t.threat_id));
   const ignoredIds = new Set(ignoredThreats.map((t) => t.threat_id));
   const pipelineThreats = result?.classified_threats ?? [];
@@ -110,10 +110,10 @@ export default function DashboardPage() {
 
     if (cloudThreat) {
       // Map action to backend status and context destination
-      const actionConfig: Record<string, { backendStatus: string; destination: "snoozed" | "ignored" | "solved" }> = {
+      const actionConfig: Record<string, { backendStatus: string; destination: "snoozed" | "ignored" | "resolved" }> = {
         snooze: { backendStatus: "in_progress", destination: "snoozed" },
         ignore: { backendStatus: "ignored", destination: "ignored" },
-        solve: { backendStatus: "solved", destination: "solved" },
+        solve: { backendStatus: "resolved", destination: "resolved" },
       };
       const config = actionConfig[action];
       if (config) {
@@ -123,7 +123,7 @@ export default function DashboardPage() {
           console.error("Failed to update cloud issue status:", err);
           return;
         }
-        // Add to context list (shows in Snoozed/Ignored/Solved pages)
+        // Add to context list (shows in Snoozed/Ignored/Resolved pages)
         addThreatTo(cloudThreat, config.destination);
         // Remove from feed
         setCloudThreats((prev) => prev.filter((t) => t.threat_id !== threatId));

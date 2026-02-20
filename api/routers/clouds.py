@@ -59,7 +59,7 @@ class UpdateCloudRequest(BaseModel):
 
 
 class UpdateIssueStatusRequest(BaseModel):
-    status: str  # todo, in_progress, ignored, solved
+    status: str  # todo, in_progress, ignored, resolved
 
 
 # --------------- helpers ---------------
@@ -243,6 +243,8 @@ async def trigger_scan(cloud_id: str):
         event_queue: queue.Queue = queue.Queue()
 
         def _run_graph():
+            from pipeline.cloud_scan_graph import set_progress_queue
+            set_progress_queue(event_queue)
             try:
                 last_event = {}
                 for event in graph.stream(initial_state, stream_mode="values"):
@@ -271,6 +273,16 @@ async def trigger_scan(cloud_id: str):
                 if kind == "done":
                     final = payload
                     break
+
+                # Threat pipeline sub-stage event
+                if kind == "threat_stage":
+                    yield {
+                        "data": json.dumps({
+                            "event": "threat_stage",
+                            "threat_stage": payload,
+                        })
+                    }
+                    continue
 
                 # kind == "event" — emit SSE progress on status changes
                 event = payload

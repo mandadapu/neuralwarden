@@ -46,7 +46,7 @@ export default function AutoFixPage() {
   }
 
   const fixable = issues.filter((i) => i.remediation_script);
-  const applied = fixable.filter((i) => i.status === "solved");
+  const applied = fixable.filter((i) => i.status === "resolved");
   const skipped = fixable.filter((i) => i.status === "ignored");
   const available = fixable.filter((i) => i.status === "todo" || i.status === "in_progress");
 

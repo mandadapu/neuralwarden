@@ -46,7 +46,7 @@ export default function ChecksTab() {
   // Build a set of rule_codes that have active issues
   const violatedRuleCodes = new Set(
     issues
-      .filter((i) => i.status !== "solved")
+      .filter((i) => i.status !== "resolved")
       .map((i) => i.rule_code)
   );
 

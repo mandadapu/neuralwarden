@@ -63,10 +63,10 @@ export default function SummaryCards({ summary }: { summary: Summary | null }) {
         sub="detected this session"
       />
 
-      {/* Solved */}
+      {/* Resolved */}
       <StatCard
         dotColor="#22c55e"
-        label="Solved"
+        label="Resolved"
         value={0}
         sub="in last 7 days"
       />

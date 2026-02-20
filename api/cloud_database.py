@@ -306,7 +306,7 @@ def save_cloud_issues(account_id: str, issues: list[dict]) -> int:
 
     Deduplication key: rule_code + location (within the same account).
     Existing unresolved issues are never deleted — they persist until
-    the user marks them as solved or ignored.
+    the user marks them as resolved or ignored.
 
     Returns the number of newly inserted issues.
     """

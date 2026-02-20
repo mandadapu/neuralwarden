@@ -10,11 +10,11 @@ import { listClouds, setApiUserEmail } from "@/lib/api";
 export default function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const { result, snoozedThreats, ignoredThreats, solvedThreats } = useAnalysisContext();
+  const { result, snoozedThreats, ignoredThreats, resolvedThreats } = useAnalysisContext();
   const pipelineThreatCount = result?.classified_threats?.length ?? 0;
   const snoozedCount = snoozedThreats.length;
   const ignoredCount = ignoredThreats.length;
-  const solvedCount = solvedThreats.length;
+  const resolvedCount = resolvedThreats.length;
   const [cloudCount, setCloudCount] = useState(0);
   const [cloudIssueCount, setCloudIssueCount] = useState(0);
 
@@ -48,7 +48,7 @@ export default function Sidebar() {
         <NavItem href="/feed" icon={<GridIcon />} label="Feed" active={pathname === "/feed"} count={feedCount > 0 ? String(feedCount) : undefined} />
         <NavItem href="/snoozed" icon={<ClockIcon />} label="Snoozed" active={pathname === "/snoozed"} count={snoozedCount > 0 ? String(snoozedCount) : undefined} />
         <NavItem href="/ignored" icon={<XIcon />} label="Ignored" active={pathname === "/ignored"} badge={String(ignoredCount)} />
-        <NavItem href="/solved" icon={<CheckIcon />} label="Solved" active={pathname === "/solved"} count={solvedCount > 0 ? String(solvedCount) : undefined} />
+        <NavItem href="/resolved" icon={<CheckIcon />} label="Resolved" active={pathname === "/resolved"} count={resolvedCount > 0 ? String(resolvedCount) : undefined} />
       </nav>
 
       <Divider />
