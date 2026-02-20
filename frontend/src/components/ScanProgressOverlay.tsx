@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import type { ScanStreamEvent } from "@/lib/types";
 
 /* ── Pipeline node definitions ─────────────────────────── */
@@ -283,10 +284,20 @@ interface ScanProgressOverlayProps {
 }
 
 export default function ScanProgressOverlay({ open, onClose, progress, scanning }: ScanProgressOverlayProps) {
+  // Auto-close after scan completes (2s delay so user sees the result)
+  useEffect(() => {
+    if (!open) return;
+    if (progress?.event === "complete") {
+      const timer = setTimeout(onClose, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [open, progress?.event, onClose]);
+
   if (!open) return null;
 
   const nodeStates = deriveNodeStates(progress, scanning);
   const detail = getStatusDetail(progress);
+  const activeNodes = NODES.filter((n) => nodeStates[n.id] === "active");
   const isComplete = progress?.event === "complete";
   const isError = progress?.event === "error";
   const canClose = isComplete || isError;
@@ -361,6 +372,16 @@ export default function ScanProgressOverlay({ open, onClose, progress, scanning 
             ))}
           </svg>
         </div>
+
+        {/* Active step indicator */}
+        {activeNodes.length > 0 && !isComplete && !isError && (
+          <div className="px-6 pb-3 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-[#00e68a] animate-pulse" />
+            <span className="text-xs font-semibold text-[#00e68a]">
+              Processing: {activeNodes.map((n) => n.label).join(" + ")}
+            </span>
+          </div>
+        )}
 
         {/* Status detail bar */}
         <div className="px-6 pb-5">
