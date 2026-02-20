@@ -258,6 +258,7 @@ def run_pipeline(
         "agent_metrics": {},
         "burst_mode": False,
         "chunk_count": 0,
+        "correlated_evidence": [],
     }
 
     start_time = time.time()
