@@ -278,8 +278,8 @@ async def trigger_scan(cloud_id: str):
                 last_scan_at=datetime.now(timezone.utc).isoformat(),
             )
 
-            # ── Save threat pipeline results if new issues were found ──
-            if inserted > 0:
+            # ── Save scan results to reports DB so Feed can display them ──
+            if issues:
                 classified = final.get("classified_threats", [])
                 report = final.get("report")
                 agent_metrics = final.get("agent_metrics", {})

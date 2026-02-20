@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useAnalysisContext } from "@/context/AnalysisContext";
 import { listAllCloudIssues, setApiUserEmail } from "@/lib/api";
@@ -43,22 +43,31 @@ export default function DashboardPage() {
   const { data: session } = useSession();
   const [selectedThreatIndex, setSelectedThreatIndex] = useState<number | null>(null);
   const [cloudThreats, setCloudThreats] = useState<ClassifiedThreat[]>([]);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const {
     isLoading, result, error, logText, skipIngest, autoAnalyze, pipelineProgress, setLogText, setAutoAnalyze, runAnalysis, resume,
     updateThreat, snoozeThreat, ignoreThreat, loadLatestReport,
   } = useAnalysisContext();
 
-  // Fetch cloud scan issues and refresh latest report on mount
-  useEffect(() => {
+  const refreshFeed = useCallback(async () => {
     if (!session?.user?.email) return;
+    setRefreshing(true);
     setApiUserEmail(session.user.email);
-    loadLatestReport();
-    listAllCloudIssues().then((issues) => {
-      // Filter out resolved issues (solved/ignored) — show todo + in_progress
+    await loadLatestReport();
+    try {
+      let issues = await listAllCloudIssues();
       issues = issues.filter((i) => i.status === "todo" || i.status === "in_progress");
       setCloudThreats(issues.map(cloudIssueToThreat));
-    }).catch(() => {});
+    } catch {}
+    setLastRefreshed(new Date());
+    setRefreshing(false);
   }, [session?.user?.email, loadLatestReport]);
+
+  // Fetch on mount
+  useEffect(() => {
+    refreshFeed();
+  }, [refreshFeed]);
 
   // Auto-start analysis when redirected from GCP fetch
   useEffect(() => {
@@ -127,6 +136,35 @@ export default function DashboardPage() {
   return (
     <>
       <SummaryCards summary={combinedSummary} />
+
+      {/* Last refreshed + refresh button */}
+      <div className="flex items-center justify-between mx-7 mb-3">
+        <div className="text-xs text-[#8b949e]">
+          {lastRefreshed
+            ? `Last refreshed: ${lastRefreshed.toLocaleTimeString()}`
+            : "Loading..."}
+        </div>
+        <button
+          onClick={refreshFeed}
+          disabled={refreshing}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-[#30363d] text-[#8b949e] hover:text-white hover:bg-[#21262d] transition-colors disabled:opacity-50 cursor-pointer"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className={refreshing ? "animate-spin" : ""}
+          >
+            <path d="M23 4v6h-6" />
+            <path d="M1 20v-6h6" />
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+          </svg>
+          {refreshing ? "Refreshing..." : "Refresh"}
+        </button>
+      </div>
 
       {isLoading && pipelineProgress.length > 0 && (
         <PipelineProgress stages={pipelineProgress} />
