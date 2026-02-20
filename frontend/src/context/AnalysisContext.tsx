@@ -26,6 +26,8 @@ interface AnalysisContextType {
   snoozeThreat: (threatId: string) => void;
   ignoreThreat: (threatId: string) => void;
   solveThreat: (threatId: string) => void;
+  /** Add an external threat (e.g. cloud issue) directly to a destination list. */
+  addThreatTo: (threat: ClassifiedThreat, destination: "snoozed" | "ignored" | "solved") => void;
   restoreThreat: (threatId: string, from: "snoozed" | "ignored" | "solved") => void;
   loadLatestReport: () => Promise<void>;
 }
@@ -196,6 +198,15 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const ignoreThreat = useCallback((threatId: string) => moveThreat(threatId, "ignored"), [moveThreat]);
   const solveThreat = useCallback((threatId: string) => moveThreat(threatId, "solved"), [moveThreat]);
 
+  const addThreatTo = useCallback((threat: ClassifiedThreat, destination: "snoozed" | "ignored" | "solved") => {
+    const setter =
+      destination === "snoozed" ? setSnoozedThreats :
+      destination === "ignored" ? setIgnoredThreats : setSolvedThreats;
+    setter((list) =>
+      list.some((ct) => ct.threat_id === threat.threat_id) ? list : [...list, threat]
+    );
+  }, []);
+
   const restoreThreat = useCallback((threatId: string, from: "snoozed" | "ignored" | "solved") => {
     const setter =
       from === "snoozed" ? setSnoozedThreats :
@@ -218,7 +229,7 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     <AnalysisContext.Provider
       value={{
         isLoading, result, error, logText, skipIngest, autoAnalyze, pipelineProgress, snoozedThreats, ignoredThreats, solvedThreats,
-        setLogText, setSkipIngest, setAutoAnalyze, runAnalysis, resume, updateThreat, snoozeThreat, ignoreThreat, solveThreat, restoreThreat, loadLatestReport,
+        setLogText, setSkipIngest, setAutoAnalyze, runAnalysis, resume, updateThreat, snoozeThreat, ignoreThreat, solveThreat, addThreatTo, restoreThreat, loadLatestReport,
       }}
     >
       {children}

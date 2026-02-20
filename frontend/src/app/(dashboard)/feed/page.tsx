@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useAnalysisContext } from "@/context/AnalysisContext";
-import { listAllCloudIssues, setApiUserEmail } from "@/lib/api";
+import { listAllCloudIssues, setApiUserEmail, updateIssueStatus } from "@/lib/api";
 import type { ClassifiedThreat, CloudIssue, Summary } from "@/lib/types";
 import SummaryCards from "@/components/SummaryCards";
 import PipelineProgress from "@/components/PipelineProgress";
@@ -43,11 +43,12 @@ export default function DashboardPage() {
   const { data: session } = useSession();
   const [selectedThreatIndex, setSelectedThreatIndex] = useState<number | null>(null);
   const [cloudThreats, setCloudThreats] = useState<ClassifiedThreat[]>([]);
+  const [hiddenCloudIds, setHiddenCloudIds] = useState<Set<string>>(new Set());
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const {
     isLoading, result, error, logText, skipIngest, autoAnalyze, pipelineProgress, setLogText, setAutoAnalyze, runAnalysis, resume,
-    updateThreat, snoozeThreat, ignoreThreat, loadLatestReport,
+    updateThreat, snoozeThreat, ignoreThreat, addThreatTo, snoozedThreats, ignoredThreats, loadLatestReport,
   } = useAnalysisContext();
 
   const refreshFeed = useCallback(async () => {
@@ -78,8 +79,14 @@ export default function DashboardPage() {
   }, [autoAnalyze, logText, isLoading, setAutoAnalyze, runAnalysis]);
 
   // Combine threat pipeline results with cloud scan issues
+  // Filter out cloud issues already moved to snoozed/ignored/solved
+  const snoozedIds = new Set(snoozedThreats.map((t) => t.threat_id));
+  const ignoredIds = new Set(ignoredThreats.map((t) => t.threat_id));
   const pipelineThreats = result?.classified_threats ?? [];
-  const allThreats = [...cloudThreats, ...pipelineThreats];
+  const visibleCloudThreats = cloudThreats.filter(
+    (t) => !hiddenCloudIds.has(t.threat_id) && !snoozedIds.has(t.threat_id) && !ignoredIds.has(t.threat_id)
+  );
+  const allThreats = [...visibleCloudThreats, ...pipelineThreats];
 
   // Build summary from what's actually displayed in the table
   const combinedSummary: Summary = {
@@ -97,7 +104,36 @@ export default function DashboardPage() {
 
   const selectedThreat = selectedThreatIndex !== null ? allThreats[selectedThreatIndex] : null;
 
-  const handleAction = (threatId: string, action: string) => {
+  const handleAction = async (threatId: string, action: string) => {
+    // Check if this is a cloud issue (vs pipeline threat)
+    const cloudThreat = cloudThreats.find((t) => t.threat_id === threatId);
+
+    if (cloudThreat) {
+      // Map action to backend status and context destination
+      const actionConfig: Record<string, { backendStatus: string; destination: "snoozed" | "ignored" | "solved" }> = {
+        snooze: { backendStatus: "in_progress", destination: "snoozed" },
+        ignore: { backendStatus: "ignored", destination: "ignored" },
+        solve: { backendStatus: "solved", destination: "solved" },
+      };
+      const config = actionConfig[action];
+      if (config) {
+        try {
+          await updateIssueStatus(threatId, config.backendStatus);
+        } catch (err) {
+          console.error("Failed to update cloud issue status:", err);
+          return;
+        }
+        // Add to context list (shows in Snoozed/Ignored/Solved pages)
+        addThreatTo(cloudThreat, config.destination);
+        // Remove from feed
+        setCloudThreats((prev) => prev.filter((t) => t.threat_id !== threatId));
+        setHiddenCloudIds((prev) => new Set(prev).add(threatId));
+      }
+      setSelectedThreatIndex(null);
+      return;
+    }
+
+    // Pipeline threat — use AnalysisContext
     switch (action) {
       case "ignore":
         ignoreThreat(threatId);
