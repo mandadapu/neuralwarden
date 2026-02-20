@@ -51,7 +51,7 @@ export default function Sidebar() {
       {/* Resources */}
       <nav className="px-2 space-y-0.5">
         <NavItem href="/clouds" icon={<CloudIcon />} label="Clouds" active={pathname.startsWith("/clouds")} />
-        <NavItem href="/agents" icon={<ServerIcon />} label="Agents" count="11" active={pathname === "/agents"} />
+        <NavItem href="/agents" icon={<ServerIcon />} label="Agents" count="12" active={pathname === "/agents"} />
         <NavItem href="/mitre" icon={<SunIcon />} label="MITRE ATT&CK" count="1" active={pathname === "/mitre"} />
         <NavItem href="/threat-intel" icon={<ShieldIcon />} label="Threat Intel" count="1" active={pathname === "/threat-intel"} />
       </nav>

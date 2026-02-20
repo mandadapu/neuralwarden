@@ -22,6 +22,7 @@ const AGENTS: Agent[] = [
   { name: "Active Scanner", model: "\u2014", role: "Runs compliance checks on public-facing assets", status: "Ready", group: "Cloud Scan" },
   { name: "Log Analyzer", model: "\u2014", role: "Queries Cloud Logging for private resource audit events", status: "Ready", group: "Cloud Scan" },
   { name: "Correlation Engine", model: "\u2014", role: "Cross-references scanner findings with log activity to detect active exploits", status: "Ready", group: "Cloud Scan" },
+  { name: "Remediation Generator", model: "\u2014", role: "Generates parameterized gcloud remediation scripts for scan findings", status: "Ready", group: "Cloud Scan" },
 ];
 
 function AgentGroup({ group, agents, startIndex }: { group: string; agents: Agent[]; startIndex: number }) {
