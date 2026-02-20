@@ -10,7 +10,7 @@ NeuralWarden — AI-powered cloud security platform with GCP scanning, threat co
 - **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS v4, Auth.js v5
 - **Database:** SQLite (via `api/cloud_database.py`)
 - **Auth:** Google OAuth via Auth.js v5
-- **Testing:** pytest (38+ tests)
+- **Testing:** pytest (45+ tests)
 
 ## Commands
 
@@ -32,11 +32,14 @@ cd frontend && npm run dev
 
 Two LangGraph pipelines:
 
-1. **Threat Pipeline** (`pipeline/graph.py`) — LLM-powered log analysis
-   - Ingest(Haiku) → Detect(Sonnet) → Validate(Sonnet) → Classify(Sonnet+RAG) → HITL → Report(Opus)
+1. **Cloud Scan Super Agent** (`pipeline/cloud_scan_graph.py`) — runs first, deterministic GCP scanning
+   - Discovery → Router → Active Scanner/Log Analyzer (parallel via Send) → Aggregate+Correlate → Remediation → Threat Pipeline → Finalize
+   - Correlation Engine produces `correlated_evidence` (log samples + MITRE mappings) threaded into Threat Pipeline
 
-2. **Cloud Scan Super Agent** (`pipeline/cloud_scan_graph.py`) — deterministic GCP scanning
-   - Discovery → Router → Active Scanner/Log Analyzer (parallel via Send) → Aggregate+Correlate → Threat Pipeline → Finalize
+2. **Threat Pipeline** (`pipeline/graph.py`) — LLM-powered log analysis, fed by Cloud Scan
+   - Ingest(Haiku) → Detect(Sonnet) → Validate(Haiku) → Classify(Sonnet+RAG+Correlation) → HITL → Report(Haiku)
+   - Classify Agent injects `CORRELATION_ADDENDUM` when `correlated_evidence` is present (severity escalation, remediation commands)
+   - Report Agent leads with "Active Incidents" section when correlated evidence exists
 
 ## Key Files
 
@@ -49,6 +52,9 @@ Two LangGraph pipelines:
 | Threat pipeline | `pipeline/graph.py`, `pipeline/state.py` |
 | Cloud scan pipeline | `pipeline/cloud_scan_graph.py`, `pipeline/cloud_scan_state.py` |
 | Correlation engine | `pipeline/agents/correlation_engine.py` |
+| Remediation generator | `pipeline/agents/remediation_generator.py` |
+| Classify agent | `pipeline/agents/classify.py` |
+| Report agent | `pipeline/agents/report.py` |
 | Router agent | `pipeline/agents/cloud_router.py` |
 | Active scanner | `pipeline/agents/active_scanner.py` |
 | Log analyzer | `pipeline/agents/log_analyzer.py` |
@@ -57,12 +63,15 @@ Two LangGraph pipelines:
 | Cloud detail page | `frontend/src/app/(dashboard)/clouds/[id]/layout.tsx` |
 | Cloud config modal | `frontend/src/components/CloudConfigModal.tsx` |
 | Agents page | `frontend/src/app/(dashboard)/agents/page.tsx` |
+| Pipeline flow diagram | `frontend/src/components/PipelineFlowDiagram.tsx` |
 | Sidebar | `frontend/src/components/Sidebar.tsx` |
 
 ## Conventions
 
 - **State fan-in:** `scan_issues`, `log_lines`, `scanned_assets` use `Annotated[list, operator.add]` for parallel aggregation
 - **Correlated results:** stored in `correlated_issues` (non-annotated) to avoid double-appending to `scan_issues`
+- **Correlated evidence:** `correlate_findings()` returns 3-tuple `(issues, count, evidence)` — evidence samples (up to 5 log lines) are threaded via `correlated_evidence` field in both `ScanAgentState` and `PipelineState`
+- **Correlation-aware LLM:** Classify Agent appends `CORRELATION_ADDENDUM` to prompt when evidence present; Report Agent adds "Active Incidents" section
 - **Credentials security:** `_account_with_counts()` strips `credentials_json` from all API responses
 - **Per-user isolation:** all cloud queries filter by `user_email` from `X-User-Email` header
 - **SSE streaming:** scan progress via `sse-starlette` EventSourceResponse
