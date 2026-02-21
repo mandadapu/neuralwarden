@@ -276,15 +276,29 @@ async def trigger_scan(cloud_id: str):
         thread = threading.Thread(target=_run_graph, daemon=True)
         thread.start()
 
-        prev_status = ""
+        # Emit "starting" immediately so the overlay updates before discovery
+        yield {
+            "data": json.dumps({
+                "event": "starting",
+                "total_assets": 0,
+                "assets_scanned": 0,
+            })
+        }
+
+        prev_status = "starting"
         final = {}
         try:
             while True:
-                # Poll the queue from the async loop without blocking the event loop
+                # Poll with short timeout and send keepalive comments to
+                # prevent Cloud Run / proxies from closing the connection.
                 try:
-                    msg = await asyncio.to_thread(event_queue.get, timeout=300)
+                    msg = await asyncio.to_thread(event_queue.get, timeout=15)
                 except Exception:
-                    break
+                    # Queue.get timed out — send keepalive comment and retry
+                    if not thread.is_alive():
+                        break
+                    yield {"comment": "keepalive"}
+                    continue
 
                 kind, payload = msg
                 if kind == "error":
@@ -474,7 +488,7 @@ async def trigger_scan(cloud_id: str):
                 "data": json.dumps({"event": "error", "message": str(e)})
             }
 
-    return EventSourceResponse(scan_generator())
+    return EventSourceResponse(scan_generator(), ping=15)
 
 
 # --------------- Scan Logs ---------------
