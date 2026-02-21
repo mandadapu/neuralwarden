@@ -350,6 +350,16 @@ export async function scanCloudStream(
   }
 }
 
+export async function getScanProgress(
+  cloudId: string
+): Promise<ScanStreamEvent> {
+  const res = await fetch(`${BASE}/clouds/${cloudId}/scan-progress`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) return { event: "idle" };
+  return res.json();
+}
+
 export async function listAllCloudIssues(
   status?: string,
   severity?: string
