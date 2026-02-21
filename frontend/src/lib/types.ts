@@ -230,3 +230,34 @@ export interface ScanLogListItem {
   status: "running" | "success" | "partial" | "error";
   summary_json: string;
 }
+
+// ── Threat Intel ──
+
+export interface ThreatIntelStats {
+  connected: boolean;
+  total_vectors: number;
+}
+
+export interface ThreatIntelEntry {
+  id: string;
+  text: string;
+  metadata: {
+    severity?: string;
+    cvss?: number;
+    cve_id?: string;
+    technique?: string;
+    tactic?: string;
+    category?: string;
+    affected_software?: string;
+    published?: string;
+    framework?: string;
+    control_id?: string;
+  };
+}
+
+export interface ThreatIntelSearchResult {
+  id: string;
+  score: number;
+  text: string;
+  metadata: Record<string, unknown>;
+}

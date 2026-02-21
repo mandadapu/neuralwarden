@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.database import init_db
 from api.cloud_database import init_cloud_tables, seed_cloud_checks
-from api.routers import analyze, clouds, export, gcp_logging, generator, hitl, reports, samples, stream, watcher
+from api.routers import analyze, clouds, export, gcp_logging, generator, hitl, reports, samples, stream, threat_intel, watcher
 
 app = FastAPI(title="NeuralWarden API", version="2.0.0")
 
@@ -56,6 +56,7 @@ app.include_router(samples.router)
 app.include_router(stream.router)
 app.include_router(watcher.router)
 app.include_router(clouds.router)
+app.include_router(threat_intel.router)
 
 
 @app.get("/api/health")

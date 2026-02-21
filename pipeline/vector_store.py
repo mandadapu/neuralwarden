@@ -1,7 +1,9 @@
 """Pinecone vector store for CVE and threat intelligence lookups."""
 
+import json
 import os
 from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 
@@ -58,6 +60,46 @@ def query_threat_intel(query_text: str, top_k: int = 3) -> list[dict[str, Any]]:
         }
         for match in results.get("matches", [])
     ]
+
+
+_SEEDS_PATH = Path(__file__).resolve().parent.parent / "data" / "cve_seeds.json"
+
+
+def get_pinecone_stats() -> dict[str, Any]:
+    """Return Pinecone connection status and vector count."""
+    index = _get_pinecone_index()
+    if index is None:
+        return {"connected": False, "total_vectors": 0}
+    try:
+        stats = index.describe_index_stats()
+        total = stats.get("total_vector_count", 0)
+        return {"connected": True, "total_vectors": total}
+    except Exception:
+        return {"connected": False, "total_vectors": 0}
+
+
+def list_threat_intel_entries(category: str | None = None) -> list[dict[str, Any]]:
+    """Read entries from cve_seeds.json, optionally filtered by category.
+
+    Categories: 'cve' (has cve_id), 'threat_pattern' (THREAT-INTEL-*),
+    'owasp_agentic' (metadata.category == owasp_agentic).
+    """
+    if not _SEEDS_PATH.exists():
+        return []
+    entries: list[dict[str, Any]] = json.loads(_SEEDS_PATH.read_text())
+    if category is None:
+        return entries
+    filtered = []
+    for e in entries:
+        meta = e.get("metadata", {})
+        entry_id: str = e.get("id", "")
+        if category == "cve" and meta.get("cve_id"):
+            filtered.append(e)
+        elif category == "threat_pattern" and entry_id.startswith("THREAT-INTEL-"):
+            filtered.append(e)
+        elif category == "owasp_agentic" and meta.get("category") == "owasp_agentic":
+            filtered.append(e)
+    return filtered
 
 
 def format_threat_intel_context(
