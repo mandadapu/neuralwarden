@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getScanLog } from "@/lib/api";
 import type { ScanLog, ScanLogSummary, ScanLogEntry, ThreatLogEntry, AgentMetrics } from "@/lib/types";
 
@@ -19,6 +19,30 @@ const STATUS_STYLES: Record<string, string> = {
   running: "bg-blue-100 text-blue-800",
 };
 
+const AGENT_COLORS: Record<string, string> = {
+  ingest: "bg-blue-500/15 text-blue-400",
+  detect: "bg-amber-500/15 text-amber-400",
+  validate: "bg-teal-500/15 text-teal-400",
+  classify: "bg-violet-500/15 text-violet-400",
+  report: "bg-emerald-500/15 text-emerald-400",
+};
+
+const SOURCE_COLORS: Record<string, string> = {
+  compute: "bg-sky-500/15 text-sky-400",
+  cloud_logging: "bg-purple-500/15 text-purple-400",
+  iam: "bg-orange-500/15 text-orange-400",
+  storage: "bg-cyan-500/15 text-cyan-400",
+  network: "bg-rose-500/15 text-rose-400",
+};
+
+const LEVEL_COLORS: Record<string, string> = {
+  info: "bg-blue-500/15 text-blue-400",
+  warning: "bg-amber-500/15 text-amber-400",
+  error: "bg-red-500/15 text-red-400",
+};
+
+type LogLevel = "all" | "info" | "warning" | "error";
+
 function StatusBadge({ status }: { status: string }) {
   return (
     <span
@@ -29,19 +53,102 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`transition-transform duration-200 ${open ? "rotate-0" : "-rotate-90"}`}
+    >
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
+function LevelFilterBar({
+  counts,
+  active,
+  onChange,
+}: {
+  counts: Record<string, number>;
+  active: LogLevel;
+  onChange: (level: LogLevel) => void;
+}) {
+  const levels: { key: LogLevel; label: string }[] = [
+    { key: "all", label: "All" },
+    { key: "info", label: "Info" },
+    { key: "warning", label: "Warning" },
+    { key: "error", label: "Error" },
+  ];
+
+  return (
+    <div className="flex items-center gap-1.5 mb-3">
+      {levels.map(({ key, label }) => {
+        const count = key === "all"
+          ? Object.values(counts).reduce((a, b) => a + b, 0)
+          : counts[key] ?? 0;
+        const isActive = active === key;
+        return (
+          <button
+            key={key}
+            onClick={() => onChange(key)}
+            className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+              isActive
+                ? "bg-[#388bfd]/20 text-[#58a6ff]"
+                : "bg-[#21262d] text-[#8b949e] hover:text-[#c9d1d9]"
+            }`}
+          >
+            {label} ({count})
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function parseSource(message: string): { source: string | null; cleanMessage: string } {
+  const prefixMatch = message.match(/^\[(\w+)\]\s*/);
+  if (prefixMatch) {
+    return { source: prefixMatch[1], cleanMessage: message.slice(prefixMatch[0].length) };
+  }
+  return { source: null, cleanMessage: message };
+}
+
+function formatTime(ts: string): string {
+  return new Date(ts).toLocaleTimeString();
+}
+
+function levelCounts(entries: { level: string }[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const e of entries) {
+    counts[e.level] = (counts[e.level] ?? 0) + 1;
+  }
+  return counts;
+}
+
 export default function ScanLogModal({ cloudId, logId, open, onClose }: Props) {
   const [log, setLog] = useState<ScanLog | null>(null);
   const [loading, setLoading] = useState(true);
+  const [threatLogsOpen, setThreatLogsOpen] = useState(true);
+  const [scanLogsOpen, setScanLogsOpen] = useState(true);
+  const [threatLevelFilter, setThreatLevelFilter] = useState<LogLevel>("all");
+  const [scanLevelFilter, setScanLevelFilter] = useState<LogLevel>("all");
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
+    setThreatLevelFilter("all");
+    setScanLevelFilter("all");
     getScanLog(cloudId, logId)
       .then(setLog)
       .finally(() => setLoading(false));
   }, [open, cloudId, logId]);
-
-  if (!open) return null;
 
   const summary: ScanLogSummary | null = log
     ? (() => { try { return JSON.parse(log.summary_json); } catch { return null; } })()
@@ -61,9 +168,23 @@ export default function ScanLogModal({ cloudId, logId, open, onClose }: Props) {
   const totalThreatCost = stageMetrics.reduce((sum, m) => sum + (m.cost_usd ?? 0), 0);
   const totalThreatTokens = stageMetrics.reduce((sum, m) => sum + (m.input_tokens ?? 0) + (m.output_tokens ?? 0), 0);
 
+  const threatLevelCounts = useMemo(() => levelCounts(threatEntries), [threatEntries]);
+  const scanLevelCounts = useMemo(() => levelCounts(entries), [entries]);
+
+  const filteredThreatEntries = useMemo(
+    () => threatLevelFilter === "all" ? threatEntries : threatEntries.filter((e) => e.level === threatLevelFilter),
+    [threatEntries, threatLevelFilter],
+  );
+  const filteredScanEntries = useMemo(
+    () => scanLevelFilter === "all" ? entries : entries.filter((e) => e.level === scanLevelFilter),
+    [entries, scanLevelFilter],
+  );
+
+  if (!open) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-[#1c2128] rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+      <div className="bg-[#1c2128] rounded-2xl shadow-xl w-full max-w-4xl max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#262c34]">
           <div className="flex items-center gap-3">
@@ -85,7 +206,7 @@ export default function ScanLogModal({ cloudId, logId, open, onClose }: Props) {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
           </div>
         ) : (
-          <>
+          <div className="flex-1 overflow-y-auto">
             {/* Summary section */}
             {summary && (
               <div className="px-6 py-4 border-b border-[#262c34] space-y-3">
@@ -127,7 +248,7 @@ export default function ScanLogModal({ cloudId, logId, open, onClose }: Props) {
               </div>
             )}
 
-            {/* Threat Pipeline section */}
+            {/* Threat Pipeline metrics */}
             {hasThreatData && (
               <div className="px-6 py-4 border-b border-[#262c34] space-y-3">
                 <div className="flex items-center justify-between">
@@ -148,7 +269,7 @@ export default function ScanLogModal({ cloudId, logId, open, onClose }: Props) {
                         className="flex items-center justify-between text-sm py-1.5 px-3 rounded-lg bg-[#21262d]"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-500/15 text-violet-400">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${AGENT_COLORS[m.stage] ?? "bg-violet-500/15 text-violet-400"}`}>
                             {m.stage}
                           </span>
                         </div>
@@ -161,72 +282,136 @@ export default function ScanLogModal({ cloudId, logId, open, onClose }: Props) {
                     ))}
                   </div>
                 )}
-                {threatEntries.length > 0 && (
-                  <div className="font-mono text-xs space-y-0.5 bg-gray-900 rounded-lg p-4 text-gray-300 max-h-40 overflow-y-auto">
-                    {threatEntries.map((entry, i) => (
-                      <div
-                        key={i}
-                        className={
-                          entry.level === "error"
-                            ? "text-red-400"
-                            : entry.level === "warning"
-                              ? "text-amber-400"
-                              : "text-gray-300"
-                        }
-                      >
-                        <span className="text-[#8b949e]">
-                          {new Date(entry.ts).toLocaleTimeString()}
-                        </span>{" "}
-                        <span className="text-violet-400 font-semibold">[{entry.agent}]</span>{" "}
-                        {entry.message}
+              </div>
+            )}
+
+            {/* Threat Pipeline Logs — collapsible */}
+            {threatEntries.length > 0 && (
+              <div className="px-6 py-4 border-b border-[#262c34]">
+                <button
+                  onClick={() => setThreatLogsOpen(!threatLogsOpen)}
+                  className="flex items-center gap-2 w-full text-left mb-2 group"
+                >
+                  <ChevronIcon open={threatLogsOpen} />
+                  <h3 className="text-xs font-semibold text-[#8b949e] uppercase tracking-wider group-hover:text-[#c9d1d9] transition-colors">
+                    Threat Pipeline Logs ({threatEntries.length})
+                  </h3>
+                </button>
+
+                {threatLogsOpen && (
+                  <>
+                    <LevelFilterBar
+                      counts={threatLevelCounts}
+                      active={threatLevelFilter}
+                      onChange={setThreatLevelFilter}
+                    />
+                    <div className="rounded-lg border border-[#30363d] overflow-hidden">
+                      <div className="max-h-64 overflow-y-auto divide-y divide-[#21262d]">
+                        {filteredThreatEntries.map((entry, i) => (
+                          <div
+                            key={i}
+                            className={`flex items-start gap-3 px-3 py-2 text-sm ${
+                              entry.level === "error"
+                                ? "bg-red-500/5"
+                                : entry.level === "warning"
+                                  ? "bg-amber-500/5"
+                                  : ""
+                            }`}
+                          >
+                            <span className="text-[#6e7681] text-xs tabular-nums whitespace-nowrap pt-0.5 w-[72px] shrink-0">
+                              {formatTime(entry.ts)}
+                            </span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${AGENT_COLORS[entry.agent] ?? "bg-gray-500/15 text-gray-400"}`}>
+                              {entry.agent}
+                            </span>
+                            <span className={`text-sm leading-relaxed ${
+                              entry.level === "error"
+                                ? "text-red-400"
+                                : entry.level === "warning"
+                                  ? "text-amber-300"
+                                  : "text-[#c9d1d9]"
+                            }`}>
+                              {entry.message}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  </>
                 )}
               </div>
             )}
 
-            {/* Log entries */}
-            <div className="flex-1 overflow-y-auto px-6 py-4">
-              <h3 className="text-xs font-semibold text-[#8b949e] uppercase tracking-wider mb-2">
-                Log Entries
-              </h3>
-              <div className="font-mono text-xs space-y-0.5 bg-gray-900 rounded-lg p-4 text-gray-300">
-                {entries.length === 0 ? (
-                  <span className="text-[#8b949e]">No log entries available</span>
-                ) : (
-                  entries.map((entry, i) => (
-                    <div
-                      key={i}
-                      className={
-                        entry.level === "error"
-                          ? "text-red-400"
-                          : entry.level === "warning"
-                            ? "text-amber-400"
-                            : "text-gray-300"
-                      }
-                    >
-                      <span className="text-[#8b949e]">
-                        {new Date(entry.ts).toLocaleTimeString()}
-                      </span>{" "}
-                      <span
-                        className={`font-semibold ${
-                          entry.level === "error"
-                            ? "text-red-400"
-                            : entry.level === "warning"
-                              ? "text-amber-400"
-                              : "text-emerald-400"
-                        }`}
-                      >
-                        [{entry.level.toUpperCase()}]
-                      </span>{" "}
-                      {entry.message}
-                    </div>
-                  ))
-                )}
-              </div>
+            {/* Scan Log Entries — collapsible */}
+            <div className="px-6 py-4">
+              <button
+                onClick={() => setScanLogsOpen(!scanLogsOpen)}
+                className="flex items-center gap-2 w-full text-left mb-2 group"
+              >
+                <ChevronIcon open={scanLogsOpen} />
+                <h3 className="text-xs font-semibold text-[#8b949e] uppercase tracking-wider group-hover:text-[#c9d1d9] transition-colors">
+                  Log Entries ({entries.length})
+                </h3>
+              </button>
+
+              {scanLogsOpen && (
+                <>
+                  <LevelFilterBar
+                    counts={scanLevelCounts}
+                    active={scanLevelFilter}
+                    onChange={setScanLevelFilter}
+                  />
+                  <div className="rounded-lg border border-[#30363d] overflow-hidden">
+                    {filteredScanEntries.length === 0 ? (
+                      <div className="px-3 py-4 text-sm text-[#8b949e]">
+                        {entries.length === 0 ? "No log entries available" : "No entries match this filter"}
+                      </div>
+                    ) : (
+                      <div className="max-h-64 overflow-y-auto divide-y divide-[#21262d]">
+                        {filteredScanEntries.map((entry, i) => {
+                          const { source, cleanMessage } = parseSource(entry.message);
+                          return (
+                            <div
+                              key={i}
+                              className={`flex items-start gap-3 px-3 py-2 text-sm ${
+                                entry.level === "error"
+                                  ? "bg-red-500/5"
+                                  : entry.level === "warning"
+                                    ? "bg-amber-500/5"
+                                    : ""
+                              }`}
+                            >
+                              <span className="text-[#6e7681] text-xs tabular-nums whitespace-nowrap pt-0.5 w-[72px] shrink-0">
+                                {formatTime(entry.ts)}
+                              </span>
+                              {source ? (
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${SOURCE_COLORS[source] ?? "bg-gray-500/15 text-gray-400"}`}>
+                                  {source}
+                                </span>
+                              ) : (
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${LEVEL_COLORS[entry.level] ?? "bg-gray-500/15 text-gray-400"}`}>
+                                  {entry.level.toUpperCase()}
+                                </span>
+                              )}
+                              <span className={`text-sm leading-relaxed ${
+                                entry.level === "error"
+                                  ? "text-red-400"
+                                  : entry.level === "warning"
+                                    ? "text-amber-300"
+                                    : "text-[#c9d1d9]"
+                              }`}>
+                                {cleanMessage}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
