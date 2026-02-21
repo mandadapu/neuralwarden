@@ -354,7 +354,7 @@ async def trigger_scan(conn_id: str):
 
             # Save results to database
             issues = final_result.get("issues", [])
-            scanned_repos = final_result.get("repos", repos)
+            scanned_repos = final_result.get("assets", repos)
 
             inserted = 0
             if issues:

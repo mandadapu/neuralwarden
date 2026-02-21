@@ -66,11 +66,44 @@ function CodeIcon() {
   );
 }
 
+function ScaIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <polyline points="9 12 11 14 15 10" />
+    </svg>
+  );
+}
+
+function SastIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="11" cy="11" r="8" />
+      <path d="M21 21l-4.35-4.35" />
+      <path d="M11 8v6M8 11h6" />
+    </svg>
+  );
+}
+
+function LicenseIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+    </svg>
+  );
+}
+
 function getTypeIcon(ruleCode: string) {
   const lower = ruleCode.toLowerCase();
   if (lower.startsWith("secret_")) return <SecretsIcon />;
   if (lower.startsWith("dep_")) return <DependencyIcon />;
   if (lower.startsWith("code_")) return <CodeIcon />;
+  if (lower.startsWith("cve_") || lower.startsWith("osv_")) return <ScaIcon />;
+  if (lower.startsWith("sast_")) return <SastIcon />;
+  if (lower.startsWith("license_")) return <LicenseIcon />;
   return <CodeIcon />;
 }
 
@@ -162,6 +195,9 @@ export default function RepoIssuesTab() {
     const matchesType =
       typeFilter === "all" ||
       (typeFilter === "secrets" && ruleCodeLower.startsWith("secret_")) ||
+      (typeFilter === "sca" && (ruleCodeLower.startsWith("cve_") || ruleCodeLower.startsWith("osv_"))) ||
+      (typeFilter === "sast" && ruleCodeLower.startsWith("sast_")) ||
+      (typeFilter === "license" && ruleCodeLower.startsWith("license_")) ||
       (typeFilter === "dependencies" && ruleCodeLower.startsWith("dep_")) ||
       (typeFilter === "code" && ruleCodeLower.startsWith("code_"));
     const matchesSeverity =
@@ -216,8 +252,11 @@ export default function RepoIssuesTab() {
         >
           <option value="all">All types</option>
           <option value="secrets">Secrets</option>
-          <option value="dependencies">Dependencies</option>
-          <option value="code">Code</option>
+          <option value="sca">CVEs (SCA)</option>
+          <option value="sast">Code Analysis (SAST)</option>
+          <option value="license">License</option>
+          <option value="dependencies">Dependencies (Legacy)</option>
+          <option value="code">Code Patterns (Legacy)</option>
         </select>
         <select
           value={severityFilter}
