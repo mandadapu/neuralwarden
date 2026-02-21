@@ -1,6 +1,6 @@
 # API & Developer Documentation
 
-Comprehensive reference for the NeuralWarden platform — REST API, Cloud Scan API, data models, agents, pipeline orchestration, and Next.js dashboard.
+Comprehensive reference for the NeuralWarden platform — REST API, Cloud Scan API, Repository API, Pentests API, data models, agents, pipeline orchestration, and Next.js dashboard.
 
 ---
 
@@ -13,30 +13,14 @@ Comprehensive reference for the NeuralWarden platform — REST API, Cloud Scan A
   - [GET /api/samples/{sample_id}](#get-apisamplessample_id)
   - [GET /api/health](#get-apihealth)
 - [REST API — Cloud Management](#rest-api--cloud-management)
-  - [GET /api/clouds](#get-apiclouds)
-  - [POST /api/clouds](#post-apiclouds)
-  - [GET /api/clouds/{id}](#get-apicloudsid)
-  - [PUT /api/clouds/{id}](#put-apicloudsid)
-  - [DELETE /api/clouds/{id}](#delete-apicloudsid)
-  - [POST /api/clouds/{id}/scan](#post-apicloudsidscan)
-  - [GET /api/clouds/{id}/issues](#get-apicloudsidissues)
-  - [GET /api/clouds/{id}/assets](#get-apicloudsidasssets)
-  - [PATCH /api/clouds/issues/{issue_id}](#patch-apicloudsissuesissue_id)
-  - [GET /api/clouds/checks](#get-apicloudsschecks)
+- [REST API — Repository Management](#rest-api--repository-management)
+- [REST API — Pentests](#rest-api--pentests)
+- [REST API — Reports](#rest-api--reports)
 - [Response Schemas](#response-schemas)
 - [Data Models](#data-models)
-  - [LogEntry](#logentry)
-  - [Threat](#threat)
-  - [ClassifiedThreat](#classifiedthreat)
-  - [ActionStep](#actionstep)
-  - [IncidentReport](#incidentreport)
 - [Pipeline State](#pipeline-state)
 - [Rule-Based Detection](#rule-based-detection)
 - [Agents](#agents)
-  - [Ingest Agent (Haiku 4.5)](#ingest-agent)
-  - [Detect Agent (Sonnet 4.5)](#detect-agent)
-  - [Classify Agent (Sonnet 4.5)](#classify-agent)
-  - [Report Agent (Opus 4.6)](#report-agent)
 - [Pipeline Orchestration](#pipeline-orchestration)
 - [CLI Reference](#cli-reference)
 - [Frontend Architecture](#frontend-architecture)
@@ -100,8 +84,8 @@ Lists available sample log scenarios.
 ```json
 {
   "samples": [
-    { "id": "brute_force", "name": "Brute Force Attack" },
-    { "id": "data_exfiltration", "name": "Data Exfiltration" },
+    { "id": "brute_force", "name": "DAST — Brute Force Attack" },
+    { "id": "data_exfiltration", "name": "Surface Monitoring — Data Exfiltration" },
     { "id": "mixed_threats", "name": "Mixed Threats (Multi-Stage)" },
     { "id": "clean_logs", "name": "Clean Logs (No Threats)" }
   ]
@@ -116,7 +100,7 @@ Returns the content of a specific sample log file.
 ```json
 {
   "id": "brute_force",
-  "name": "Brute Force Attack",
+  "name": "DAST — Brute Force Attack",
   "content": "Feb 10 14:32:01 web-server sshd: Failed password..."
 }
 ```
@@ -176,6 +160,14 @@ Create a new cloud account.
 }
 ```
 
+### GET /api/clouds/all-issues
+
+List all cloud issues across all accounts for the authenticated user.
+
+### GET /api/clouds/checks
+
+List compliance check definitions. Optional query param: `category`.
+
 ### GET /api/clouds/{id}
 
 Get a single cloud account with issue counts.
@@ -199,6 +191,14 @@ All fields are optional — only provided fields are updated.
 ### DELETE /api/clouds/{id}
 
 Delete a cloud account and all its associated issues/assets.
+
+### GET /api/clouds/{id}/probe
+
+Probe cloud account access — validates credentials and permissions.
+
+### POST /api/clouds/{id}/toggle
+
+Toggle cloud account active/inactive status.
 
 ### POST /api/clouds/{id}/scan
 
@@ -225,13 +225,21 @@ data: {"event": "complete", "scan_type": "full", "asset_count": 5, "issue_count"
 | `active_exploits_detected` | `int` | Issues correlated with live log activity |
 | `issue_counts` | `object` | Breakdown by severity (critical/high/medium/low/total) |
 
+### GET /api/clouds/{id}/scan-progress
+
+Get current scan progress for a cloud account.
+
+### GET /api/clouds/{id}/scan-logs
+
+List historical scan logs for a cloud account.
+
+### GET /api/clouds/{id}/scan-logs/{log_id}
+
+Get a specific scan log with full log text.
+
 ### GET /api/clouds/{id}/issues
 
 List issues for a cloud account. Optional query params: `status`, `severity`.
-
-### GET /api/clouds/{id}/assets
-
-List assets for a cloud account. Optional query param: `asset_type`.
 
 ### PATCH /api/clouds/issues/{issue_id}
 
@@ -244,9 +252,184 @@ Update issue status.
 
 Valid statuses: `todo`, `in_progress`, `ignored`, `solved`
 
-### GET /api/clouds/checks
+### PATCH /api/clouds/issues/{issue_id}/severity
 
-List compliance check definitions. Optional query param: `category`.
+Update issue severity.
+
+### GET /api/clouds/{id}/assets
+
+List assets for a cloud account. Optional query param: `asset_type`.
+
+---
+
+## REST API — Repository Management
+
+All repo endpoints require the `X-User-Email` header. Prefix: `/api/repos`.
+
+### GET /api/repos
+
+List repository connections for the authenticated user.
+
+### POST /api/repos
+
+Create a new repository connection.
+
+### GET /api/repos/all-issues
+
+List all repo issues across all connections for the authenticated user.
+
+### GET /api/repos/github/user
+
+Get authenticated GitHub user info (validates token).
+
+### GET /api/repos/github/orgs
+
+List GitHub organizations for the authenticated user.
+
+### GET /api/repos/github/orgs/{org}/repos
+
+List repositories for a GitHub organization.
+
+### GET /api/repos/{conn_id}
+
+Get a single repository connection with issue/asset counts.
+
+### PUT /api/repos/{conn_id}
+
+Update repository connection fields.
+
+### DELETE /api/repos/{conn_id}
+
+Delete a repository connection and all associated data.
+
+### POST /api/repos/{conn_id}/toggle
+
+Toggle repository connection active/inactive status.
+
+### POST /api/repos/{conn_id}/scan
+
+**SSE streaming endpoint.** Triggers repository scanning and streams progress events.
+
+### GET /api/repos/{conn_id}/scan-progress
+
+Get current scan progress.
+
+### GET /api/repos/{conn_id}/scan-logs
+
+List historical scan logs.
+
+### GET /api/repos/{conn_id}/scan-logs/{log_id}
+
+Get a specific scan log.
+
+### GET /api/repos/{conn_id}/issues
+
+List issues for a repository connection. Optional query params: `status`, `severity`.
+
+### PATCH /api/repos/issues/{issue_id}
+
+Update issue status.
+
+### PATCH /api/repos/issues/{issue_id}/severity
+
+Update issue severity.
+
+### GET /api/repos/{conn_id}/repos
+
+List discovered repositories for a connection.
+
+---
+
+## REST API — Pentests
+
+Pentest campaign and findings management. Prefix: `/api/pentests`.
+
+### GET /api/pentests
+
+List pentest campaigns for the authenticated user.
+
+### POST /api/pentests
+
+Create a new pentest campaign.
+
+**Request:**
+```json
+{
+  "name": "Q1 2026 Web App Pentest",
+  "description": "External pentest of production web application",
+  "vendor": "manual",
+  "status": "planned",
+  "severity": "medium",
+  "scope": "*.example.com"
+}
+```
+
+### GET /api/pentests/checks
+
+List pentest check definitions. Optional query param: `group` (owasp, advanced, hardening).
+
+Returns 13 security check categories with subchecks.
+
+### GET /api/pentests/{pentest_id}
+
+Get a single pentest campaign with finding counts.
+
+### PUT /api/pentests/{pentest_id}
+
+Update pentest campaign fields.
+
+### DELETE /api/pentests/{pentest_id}
+
+Delete a pentest campaign and all its findings.
+
+### GET /api/pentests/{pentest_id}/findings
+
+List findings for a pentest. Optional query params: `severity`, `status`.
+
+### POST /api/pentests/{pentest_id}/findings
+
+Create a new finding.
+
+**Request:**
+```json
+{
+  "title": "SQL Injection in Login Form",
+  "description": "Parameterized queries not used in authentication endpoint",
+  "severity": "critical",
+  "status": "open",
+  "cwe_id": "CWE-89",
+  "cve_id": "",
+  "request_data": "POST /login HTTP/1.1\n...",
+  "response_data": "HTTP/1.1 500 Internal Server Error\n...",
+  "validation_status": "confirmed"
+}
+```
+
+### PATCH /api/pentests/findings/{finding_id}
+
+Update finding fields (severity, status, validation_status, notes, etc.).
+
+### POST /api/pentests/{pentest_id}/import
+
+Bulk import findings from external tools.
+
+---
+
+## REST API — Reports
+
+Report history and retrieval. Prefix: `/api/reports`.
+
+### GET /api/reports
+
+List recent analysis reports for the authenticated user.
+
+### GET /api/reports/latest
+
+Get the most recent analysis report.
+
+### GET /api/reports/{analysis_id}
+
+Get a full analysis report by ID.
 
 ---
 
@@ -322,10 +505,10 @@ A detected security threat before risk classification.
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
 | `threat_id` | `str` | *required* | Unique ID (e.g., `RULE-BRUTE-001`, `AI-RECON-001`) |
-| `type` | `str` | *required* | Threat type: `brute_force`, `port_scan`, `privilege_escalation`, `data_exfiltration`, `lateral_movement`, `reconnaissance`, `c2_communication`, `suspicious_activity` |
+| `type` | `str` | *required* | Enterprise security type code: `dast`, `sast`, `cloud_configs`, `surface_monitoring`, `malware`, `exposed_secrets`, `prompt_injection`, `asi_01`, `asi_02`, `ai_pentest`, `open_source_deps`, `license_issues`, `k8s`, `eol_runtimes` |
 | `confidence` | `float` | `0.0–1.0` | Detection confidence score |
 | `source_log_indices` | `list[int]` | — | Indices of triggering log entries |
-| `method` | `Literal["rule_based", "ai_detected"]` | *required* | Detection method used |
+| `method` | `Literal["rule_based", "ai_detected", "validator_detected"]` | *required* | Detection method used |
 | `description` | `str` | *required* | Human-readable description |
 | `source_ip` | `str` | `""` | Primary source IP |
 
@@ -338,12 +521,12 @@ A threat enriched with risk scoring and MITRE ATT&CK mapping. Contains all `Thre
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
 | `risk` | `Literal` | `critical\|high\|medium\|low\|informational` | Severity level |
-| `risk_score` | `float` | `0.0–10.0` | Numeric score (likelihood × impact × exploitability) |
+| `risk_score` | `float` | `0.0–10.0` | Numeric score (likelihood x impact x exploitability) |
 | `mitre_technique` | `str` | — | MITRE ATT&CK technique ID (e.g., `T1110`) |
 | `mitre_tactic` | `str` | — | MITRE ATT&CK tactic (e.g., `Initial Access`) |
 | `business_impact` | `str` | — | Business impact assessment |
 | `affected_systems` | `list[str]` | — | Systems affected |
-| `remediation_priority` | `int` | `≥ 0` | Priority ranking (1 = highest) |
+| `remediation_priority` | `int` | `>= 0` | Priority ranking (1 = highest) |
 
 ### ActionStep
 
@@ -366,7 +549,7 @@ Complete incident report generated by the Report Agent.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `summary` | `str` | *required* | Executive summary (2–3 sentences) |
+| `summary` | `str` | *required* | Executive summary (2-3 sentences) |
 | `threat_count` | `int` | `0` | Total threats detected |
 | `critical_count` | `int` | `0` | Critical-severity threats |
 | `high_count` | `int` | `0` | High-severity threats |
@@ -416,23 +599,25 @@ Complete incident report generated by the Report Agent.
 
 **File:** `rules/detection.py`
 
-Five pattern-matching detectors that run **instantly with zero API cost**. These always execute before AI detection.
+Five pattern-matching detectors that run **instantly with zero API cost**. These always execute before AI detection. Each detector outputs threats using the enterprise taxonomy type codes.
 
 ### `detect_brute_force(logs, threshold=5)`
 
 Detects N+ failed authentication attempts from the same IP.
 
 - **Matches:** `event_type == "failed_auth"` with same `source_ip`
-- **Confidence:** `min(0.5 + count × 0.05, 0.99)`
+- **Confidence:** `min(0.5 + count * 0.05, 0.99)`
 - **Threat ID:** `RULE-BRUTE-{ip}`
+- **Type:** `dast`
 
 ### `detect_port_scan(logs, threshold=10)`
 
 Detects connections to N+ distinct ports from the same source.
 
 - **Matches:** `event_type == "connection"` with port in `details`
-- **Confidence:** `min(0.6 + ports × 0.03, 0.95)`
+- **Confidence:** `min(0.6 + ports * 0.03, 0.95)`
 - **Threat ID:** `RULE-SCAN-{ip}`
+- **Type:** `dast`
 
 ### `detect_privilege_escalation(logs)`
 
@@ -441,6 +626,7 @@ Detects sudo/su usage patterns.
 - **Matches:** `event_type in (privilege_escalation, sudo, su)` or `source in (sudo, su)` or `"USER=root"` in raw text
 - **Confidence:** `0.85` (fixed)
 - **Threat ID:** `RULE-PRIVESC-001`
+- **Type:** `cloud_configs`
 
 ### `detect_data_exfiltration(logs, threshold_mb=100.0)`
 
@@ -448,8 +634,9 @@ Detects large outbound transfers exceeding threshold.
 
 - **Matches:** `event_type in (file_transfer, data_transfer)` with size in raw text
 - **Size parsing:** Supports GB, MB, KB units
-- **Confidence:** `min(0.7 + (total_mb / 1000) × 0.1, 0.95)`
+- **Confidence:** `min(0.7 + (total_mb / 1000) * 0.1, 0.95)`
 - **Threat ID:** `RULE-EXFIL-001`
+- **Type:** `surface_monitoring`
 
 ### `detect_lateral_movement(logs)`
 
@@ -458,6 +645,7 @@ Detects internal-to-internal connections on unusual ports.
 - **Matches:** Both `source_ip` and `dest_ip` are RFC 1918 addresses (`10.x`, `172.16-31.x`, `192.168.x`) with `event_type in (connection, ssh, rdp, smb)`
 - **Confidence:** `0.75` (fixed)
 - **Threat ID:** `RULE-LATERAL-001`
+- **Type:** `malware`
 
 ### `run_all_rules(logs)`
 
@@ -707,7 +895,7 @@ ACTION PLAN
 ## Frontend Architecture
 
 **Stack:** Next.js 16 (App Router) + React 19 + Tailwind CSS v4
-**Theme:** Blue/Navy (`sidebar=#0f172a`, `primary=#2563eb`)
+**Theme:** Green/Dark (`sidebar=#0f1419`, `primary=#00e68a`, `background=#0d1117`)
 
 ### Launch
 
@@ -752,9 +940,11 @@ Global state via React Context (`AnalysisProvider`) wrapping the entire app in `
 
 **`ThreatsTable.tsx`** — Findings table with clickable rows, severity badges, confidence indicators
 
-**`Sidebar.tsx`** — Navigation with live counts from context (feed count, snoozed, ignored, solved)
+**`Sidebar.tsx`** — Navigation with live counts from context (feed count, snoozed, ignored, resolved) — 13 items
 
 **`SeverityGauge.tsx`** — SVG semicircular gauge rendering `risk_score` (0-10) as a colored arc
+
+**`ThreatTypeIcon.tsx`** — SVG icons for 14 enterprise security type codes
 
 ### Routing
 
@@ -764,42 +954,41 @@ Global state via React Context (`AnalysisProvider`) wrapping the entire app in `
 | `/` | `page.tsx` | Main feed: summary cards, findings table, cost breakdown, incident report |
 | `/snoozed` | `snoozed/page.tsx` | Deferred threats table with restore action |
 | `/ignored` | `ignored/page.tsx` | Accepted risk / false positives with restore action |
-| `/solved` | `solved/page.tsx` | Resolved threats with reopen action |
+| `/resolved` | `resolved/page.tsx` | Resolved threats with reopen action |
 | `/autofix` | `autofix/page.tsx` | Automated fix statistics |
 | `/clouds` | `clouds/page.tsx` | Connected GCP accounts with issue counts |
 | `/clouds/connect` | `clouds/connect/page.tsx` | Add new GCP project |
-| `/clouds/[id]` | `clouds/[id]/layout.tsx` | Cloud detail: SSE scan, issues, assets, VMs, checks tabs |
-| `/agents` | `agents/page.tsx` | 11 pipeline agents grouped by Threat Pipeline / Cloud Scan |
+| `/clouds/[id]` | `clouds/[id]/layout.tsx` | Cloud detail: SSE scan, issues, assets, VMs, checks, scan logs tabs |
+| `/repositories` | `repositories/page.tsx` | Connected GitHub repositories with issue counts |
+| `/repositories/connect` | `repositories/connect/page.tsx` | Add new repository connection |
+| `/repositories/[id]` | `repositories/[id]/page.tsx` | Repository detail: SSE scan, issues, assets, scan logs |
+| `/agents` | `agents/page.tsx` | 12 pipeline agents grouped by Threat Pipeline / Cloud Scan |
 | `/mitre` | `mitre/page.tsx` | MITRE ATT&CK reference |
 | `/threat-intel` | `threat-intel/page.tsx` | Pinecone threat intel feed |
 | `/reports` | `reports/page.tsx` | Generated reports with PDF export |
-| `/pentests` | `pentests/page.tsx` | Pentest tracker |
+| `/pentests` | `pentests/page.tsx` | Pentest campaigns list |
+| `/pentests/[id]` | `pentests/[id]/page.tsx` | Pentest detail with findings and timeline |
+| `/pentests/checks` | `pentests/checks/page.tsx` | Security check catalog (13 categories) |
 | `/integrations` | `integrations/page.tsx` | Third-party connections |
 
 ### API Client
 
 **File:** `frontend/src/lib/api.ts`
 
-Calls the FastAPI backend directly on port 8000 (bypasses Next.js rewrite proxy to avoid timeout issues with long-running analysis):
+62 exported functions calling the FastAPI backend directly on port 8000 (bypasses Next.js rewrite proxy to avoid timeout issues with long-running analysis):
 
 ```typescript
 const BASE = `${window.location.protocol}//${window.location.hostname}:8000/api`;
 ```
 
-**Functions:**
-- `analyze(logs: string): Promise<AnalysisResponse>`
-- `resumeHitl(threadId, decision, notes): Promise<AnalysisResponse>`
-- `fetchSamples(): Promise<SampleInfo[]>`
-- `fetchSampleContent(id: string): Promise<string>`
-- `listClouds(): Promise<CloudAccount[]>`
-- `createCloud(data): Promise<CloudAccount>`
-- `getCloud(id): Promise<CloudAccount>`
-- `updateCloud(id, updates): Promise<CloudAccount>`
-- `deleteCloud(id): Promise<void>`
-- `scanCloudStream(id, onEvent): Promise<void>` — SSE streaming
-- `listCloudIssues(id, status?, severity?): Promise<CloudIssue[]>`
-- `listCloudAssets(id, assetType?): Promise<CloudAsset[]>`
-- `listCloudChecks(category?): Promise<CloudCheck[]>`
+**Function groups:**
+- **Analysis & Reports** (6): `analyze`, `resumeHitl`, `analyzeStream`, `listReports`, `getReport`, `getLatestReport`
+- **Samples & Generation** (4): `listSamples`, `getSample`, `listScenarios`, `generateLogs`
+- **Cloud Monitoring** (18): `listClouds`, `createCloud`, `getCloud`, `updateCloud`, `deleteCloud`, `toggleCloud`, `probeCloudAccess`, `scanCloud`, `scanCloudStream`, `getScanProgress`, `listAllCloudIssues`, `listCloudIssues`, `updateIssueStatus`, `updateIssueSeverity`, `listCloudAssets`, `listCloudChecks`, `listScanLogs`, `getScanLog`
+- **Repository Integration** (18): `listRepoConnections`, `createRepoConnection`, `getRepoConnection`, `updateRepoConnection`, `deleteRepoConnection`, `toggleRepoConnection`, `getGitHubUser`, `listGitHubOrgs`, `listGitHubRepos`, `scanRepoConnectionStream`, `getRepoScanProgress`, `listRepoIssues`, `listAllRepoIssues`, `updateRepoIssueStatus`, `updateRepoIssueSeverity`, `listRepoAssets`, `listRepoScanLogs`, `getRepoScanLog`
+- **Pentests** (10): `listPentests`, `createPentest`, `getPentest`, `updatePentest`, `deletePentest`, `listFindings`, `createFinding`, `updateFinding`, `listPentestChecks`, `importFindings`
+- **Threat Intelligence** (3): `getThreatIntelStats`, `listThreatIntelEntries`, `searchThreatIntel`
+- **GCP Logging** (2): `getGcpStatus`, `fetchGcpLogs`
 
 ---
 
@@ -842,25 +1031,44 @@ Normal operational logs (SSH logins, cron jobs, system updates). Expected: 0 thr
 ## Testing
 
 ```bash
-pytest tests/ -v
+.venv/bin/python -m pytest tests/ -v
 ```
 
 ### Test Files
 
-| File | Tests | Coverage |
-|------|-------|----------|
-| `tests/test_correlation_engine.py` | 12 | Correlation rules, severity upgrade, MITRE mapping, case-insensitive matching |
-| `tests/test_cloud_scan_graph.py` | 5 | Pipeline compilation, discovery, mock scan, E2E correlation |
-| `tests/test_cloud_router.py` | 9 | Public/private classification for all asset types |
-| `tests/test_active_scanner.py` | 5 | Firewall, compute, bucket compliance checks |
-| `tests/test_log_analyzer.py` | 4 | Log fetching, error/auth issue generation |
-| `tests/test_cloud_scan_state.py` | 3 | TypedDict structure, fan-in aggregation |
-| `tests/test_detect.py` | — | All 5 rule-based detection patterns, thresholds |
-| `tests/test_classify.py` | — | Fallback classification, model constraints |
-| `tests/test_pipeline.py` | — | Conditional routing, short-circuit paths |
-| `tests/test_ingest.py` | — | LogEntry model validation, edge cases |
+| File | Coverage |
+|------|----------|
+| `test_correlation_engine.py` | Correlation rules, severity upgrade, MITRE mapping, case-insensitive matching, evidence cap |
+| `test_cloud_scan_graph.py` | Pipeline compilation, discovery, mock scan, E2E correlation |
+| `test_cloud_router.py` | Public/private classification for all asset types |
+| `test_active_scanner.py` | Firewall, compute, bucket compliance checks |
+| `test_log_analyzer.py` | Log fetching, error/auth issue generation |
+| `test_cloud_scan_state.py` | TypedDict structure, fan-in aggregation |
+| `test_detect.py` | All 5 rule-based detection patterns, thresholds |
+| `test_classify.py` | Fallback classification, model constraints |
+| `test_pipeline.py` | Conditional routing, short-circuit paths, burst mode |
+| `test_ingest.py` | LogEntry model validation, edge cases |
+| `test_validate.py` | Clean sample selection, fractions, caps |
+| `test_report.py` | Report generation, active incidents section |
+| `test_hitl.py` | HITL interrupt, resume |
+| `test_database.py` | Analysis persistence CRUD |
+| `test_cloud_database.py` | Cloud account/issue/asset CRUD |
+| `test_clouds_router.py` | Cloud API endpoint integration |
+| `test_pentests_router.py` | Pentest API endpoint integration |
+| `test_gcp_scanner.py` | GCP asset discovery |
+| `test_gcp_logging.py` | Cloud Logging client |
+| `test_gcp_router.py` | GCP routing logic |
+| `test_vector_store.py` | RAG vector store queries |
+| `test_threat_intel_api.py` | Threat intelligence endpoints |
+| `test_notifications.py` | Alert formatting |
+| `test_pdf.py` | PDF export generation |
+| `test_pii.py` | PII auto-redaction |
+| `test_stream.py` | Streaming analysis |
+| `test_watcher.py` | Monitoring watchers |
+| `test_generator.py` | Log generation |
+| `test_burst.py` | Burst mode parallel ingestion |
 
-**38+ tests total.** All tests run without API calls — they use mocked or synthetic data.
+**247 tests across 29 files.** All tests run without API calls — they use mocked or synthetic data.
 
 ---
 
@@ -876,7 +1084,7 @@ pytest tests/ -v
 **Cost-saving strategies:**
 - Rule-based detection runs first (free, instant)
 - Conditional routing skips agents when unnecessary
-- Haiku handles high-volume parsing at 12× lower cost than Sonnet
+- Haiku handles high-volume parsing at 12x lower cost than Sonnet
 - Opus is only invoked for final report generation (smallest token volume)
 
-Typical cost per analysis: **~$0.01–0.05** depending on log volume and threat count.
+Typical cost per analysis: **~$0.01-0.05** depending on log volume and threat count.

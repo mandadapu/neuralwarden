@@ -34,7 +34,7 @@ Not every task needs the most expensive model. The pipeline routes by complexity
 Typical analysis cost: **$0.01–0.05** per run.
 
 ### Multi-Tenant by Default
-Per-user data isolation via OAuth identity. Every cloud account, issue, and asset is scoped to `user_email`. Supports both SaaS (multi-tenant) and self-hosted (single-tenant) deployment.
+Per-user data isolation via OAuth identity. Every cloud account, repository, pentest, issue, and asset is scoped to `user_email`. Supports both SaaS (multi-tenant) and self-hosted (single-tenant) deployment.
 
 ### The Neural Core — Intelligence Over Volume
 The Correlation Engine is the "Neural" in NeuralWarden. Rather than presenting a flat list of vulnerabilities, it cross-references static findings with behavioral signals to surface **active exploits** — the 2% of findings that actually matter. It doesn't just see data; it understands the *relationship* between a vulnerability and a log event.
@@ -45,7 +45,7 @@ Claude Sonnet serves as the Neural Engine for high-reasoning classification. Whe
 ### Deterministic First, LLM Second
 Correlation follows a two-layer strategy. The deterministic Correlation Engine ($0) matches scanner rule codes to log patterns via an intelligence matrix — fast, reliable, and free. The LLM layer (Classify Agent powered by Sonnet) then reasons over the correlated evidence. This ensures the expensive model only adds reasoning, not pattern matching.
 
-## Current Capabilities (v2.1)
+## Current Capabilities (v3.0)
 
 ### NeuralWarden Core — Cloud Scan Super Agent (runs first)
 - 6-agent LangGraph pipeline: Discovery → Router → Active Scanner / Log Analyzer (parallel) → Correlation Engine → Remediation Generator
@@ -60,7 +60,7 @@ Correlation follows a two-layer strategy. The deterministic Correlation Engine (
 
 ### Neural Engine — Threat Pipeline (fed by Cloud Scan)
 - 6-agent LangGraph pipeline: Ingest → Detect → Validate → Classify → HITL → Report
-- 5 rule-based detection patterns (brute force, port scan, privilege escalation, data exfil, lateral movement)
+- 5 rule-based detection patterns mapped to enterprise taxonomy (DAST, Cloud Configs, Surface Monitoring, Malware)
 - AI-powered novel threat detection via Sonnet
 - Shadow validation (5% sample of "clean" logs)
 - RAG enrichment via Pinecone threat intel
@@ -69,15 +69,38 @@ Correlation follows a two-layer strategy. The deterministic Correlation Engine (
 - **Correlation-aware Classify Agent**: when correlated evidence is present, injects severity escalation rules, remediation gcloud commands, and MITRE mapping from evidence into the LLM prompt
 - **Active Incidents reporting**: Report Agent leads executive summary with correlated active exploits when evidence is threaded from Cloud Scan
 
+### GitHub Repository Scanning
+- Connect GitHub repositories via personal access token or OAuth
+- Automated code scanning for security issues
+- Repository asset discovery and issue tracking
+- SSE streaming for scan progress
+- Scan history with per-scan execution logs
+
+### Penetration Testing Tracker
+- Campaign management: create, track, and close pentest engagements
+- Finding management with CVE/CWE references, request/response evidence, and validation status
+- 13 security check categories across 3 groups (OWASP Top 10, Advanced, Hardening)
+- Timeline tracking for pentest events
+
+### Security Taxonomy
+- 14 enterprise security type codes across 4 categories
+- AI & Agentic Security: prompt injection, model integrity, autonomous risk, AI pentest
+- Code & Supply Chain: SAST, open-source deps, license issues
+- Infrastructure & Runtime: cloud configs, K8s, exposed secrets, EOL runtimes
+- Threat Intel & Perimeter: DAST, malware, surface monitoring
+
 ### Dashboard
 - OAuth login (Google)
 - Cloud management: connect, configure, scan, view issues/assets
+- Repository management: connect, scan, view issues/assets
+- Pentest campaign tracker with findings and timeline
 - Threat feed with severity, confidence, MITRE mapping
 - Threat detail panel with remediation guidance
 - Snooze/ignore/solve workflow
 - Incident report generation with PDF export
 - Agents page with interactive SVG data flow diagram and 3-column card grid with collapsible groups
 - 12 agents across 2 pipelines with execution-order numbering
+- 13 sidebar navigation items with live issue counts
 
 ## Roadmap
 

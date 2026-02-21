@@ -23,7 +23,7 @@ NeuralWarden is a two-pipeline system: a **Threat Pipeline** for log-based threa
                     └─────────┬───────────────┘
                               │
                     ┌─────────▼───────────┐
-                    │  SQLite Database     │
+                    │  SQLite / PostgreSQL │
                     │  (per-user isolation)│
                     └─────────────────────┘
 ```
@@ -65,6 +65,7 @@ empty_report → END                              clean_report      │        �
 | Agent | File | Model | Purpose |
 |-------|------|-------|---------|
 | Ingest | `pipeline/agents/ingest.py` | Haiku 4.5 | Parse raw logs → LogEntry objects |
+| Ingest Chunk | `pipeline/agents/ingest_chunk.py` | Haiku 4.5 | Parallel batch ingestion for >1000 logs |
 | Detect | `pipeline/agents/detect.py` | Sonnet 4.5 | Rule-based + AI threat detection |
 | Validate | `pipeline/agents/validate.py` | Haiku 4.5 | Shadow-check 5% of clean logs |
 | Classify | `pipeline/agents/classify.py` | Sonnet 4.5 | Risk scoring, MITRE mapping, RAG. Injects `CORRELATION_ADDENDUM` when `correlated_evidence` is present to force-escalate severity and generate remediation commands |
@@ -174,13 +175,27 @@ When correlated: severity → `critical`, title → `[ACTIVE] ...`, MITRE fields
 
 ## Data Layer
 
-### SQLite Database (`data/neuralwarden.db`)
+### Database Abstraction (`api/db.py`)
 
-| Table | Key Columns | Isolation |
-|-------|------------|-----------|
-| `cloud_accounts` | id, user_email, provider, project_id, credentials_json, services | Per user_email |
-| `cloud_issues` | id, cloud_account_id, rule_code, severity, title, status | Per cloud_account |
-| `cloud_assets` | id, cloud_account_id, asset_type, name, metadata_json | Per cloud_account |
+Supports both SQLite (development) and PostgreSQL (Cloud Run production) via `get_conn()`, `adapt_sql()`, `placeholder()`, `insert_or_ignore()`, and `is_postgres()`. Schema DDL is auto-adapted per dialect.
+
+### Tables
+
+| Table | Database File | Key Columns | Isolation |
+|-------|--------------|------------|-----------|
+| `cloud_accounts` | `cloud_database.py` | id, user_email, provider, project_id, credentials_json, services | Per user_email |
+| `cloud_issues` | `cloud_database.py` | id, cloud_account_id, rule_code, severity, title, status | Per cloud_account |
+| `cloud_assets` | `cloud_database.py` | id, cloud_account_id, asset_type, name, metadata_json | Per cloud_account |
+| `cloud_checks` | `cloud_database.py` | id, rule_code, title, description, category, severity | Global |
+| `scan_logs` | `cloud_database.py` | id, cloud_account_id, started_at, status, log_text | Per cloud_account |
+| `repo_connections` | `repo_database.py` | id, user_email, provider, name, token | Per user_email |
+| `repo_assets` | `repo_database.py` | id, connection_id, asset_type, name, metadata_json | Per connection |
+| `repo_issues` | `repo_database.py` | id, connection_id, rule_code, severity, title, status | Per connection |
+| `repo_scan_logs` | `repo_database.py` | id, connection_id, started_at, status, log_text | Per connection |
+| `pentests` | `pentests_database.py` | id, user_email, name, status, target | Per user_email |
+| `pentest_findings` | `pentests_database.py` | id, pentest_id, title, severity, cwe_id, cve_id | Per pentest |
+| `pentest_checks` | `pentests_database.py` | id, rule_code, title, group_name, subchecks_json | Global (seeded) |
+| `analyses` | `database.py` | id, user_email, summary, report_json, created_at | Per user_email |
 
 ### Per-User Isolation
 
@@ -203,19 +218,25 @@ All queries filter by `user_email` from the `X-User-Email` header (set by fronte
 
 | Component | Purpose |
 |-----------|---------|
-| `Sidebar` | Navigation with live counts (12 items) |
+| `Sidebar` | Navigation with live counts (13 items) |
 | `ThreatsTable` | Findings table with severity/confidence/MITRE |
 | `ThreatDetailPanel` | 480px slide-out with gauge, tabs, actions |
 | `CloudConfigModal` | Configure cloud: name, purpose, credentials, services |
+| `RepoConfigModal` | Configure repository connection: name, token, settings |
+| `CreatePentestModal` | Create new pentest campaign |
+| `FindingDetailModal` | Pentest finding detail with CVE/CWE, request/response, validation |
 | `PipelineProgress` | Real-time agent progress bar |
 | `SummaryCards` | KPI cards (open issues, auto-ignored, new, solved) |
 | `PipelineFlowDiagram` | Interactive SVG data flow diagram for both pipelines |
 | `RemediationModal` | Fix modal with gcloud scripts — copy to clipboard or download as `.sh` |
 | `ScanLogModal` | Per-scan execution log with timing and service breakdown |
+| `ThreatTypeIcon` | SVG icons for 14 enterprise security type codes |
+| `ScanProgressOverlay` | Full-screen scan progress indicator |
+| `Topbar` | Top navigation bar |
 
 ### SSE Streaming
 
-Cloud scans stream progress via Server-Sent Events:
+Cloud scans and repository scans stream progress via Server-Sent Events:
 
 | Event | Data |
 |-------|------|
@@ -236,15 +257,20 @@ Cloud scans stream progress via Server-Sent Events:
 
 ## Testing
 
-45+ tests covering:
+247 tests across 29 files covering:
 - Correlation engine (16 tests): all rule codes, edge cases, case-insensitive matching, evidence samples, cap at 5 logs
 - Cloud scan graph (6 tests): pipeline compilation, discovery, E2E correlation, evidence threading to state
+- Cloud router (9 tests): public/private classification per asset type
+- Active scanner (5 tests): firewall, compute, bucket compliance checks
+- Log analyzer (4 tests): log fetching, issue generation
+- Cloud scan state (3 tests): TypedDict structure, fan-in aggregation
 - Classify agent (2 tests): correlation addendum injection, no-addendum without evidence
 - Report agent (2 tests): active incidents section, no section without evidence
-- Active scanner (5 tests): firewall, compute, bucket checks
-- Router (9 tests): public/private classification per asset type
-- Log analyzer (4 tests): log fetching, issue generation
-- State (3 tests): TypedDict structure, fan-in aggregation
+- Detect agent: all 5 rule-based detection patterns, thresholds
+- Pipeline routing: conditional routing, short-circuit paths, burst mode
+- API routers: clouds, pentests, samples, reports endpoints
+- Validate, ingest, HITL, PDF export, notifications, vector store, GCP logging/scanner
+- Database operations, stream analysis, watcher, threat intel
 
 ```bash
 .venv/bin/python -m pytest tests/ -v

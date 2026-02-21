@@ -45,7 +45,7 @@ An agentic cloud security platform that runs a fully **autonomous defense loop**
 │  Next.js 16 Frontend (port 3000)                                            │
 │  ┌──────────┐  ┌──────────────┐  ┌──────────────────┐  ┌───────────────┐   │
 │  │ Sidebar  │  │ Threat Feed  │  │ Cloud Detail     │  │ AutoFix       │   │
-│  │ (11 nav  │  │ + Summary    │  │ SSE Scan Progress│  │ Dashboard     │   │
+│  │ (13 nav  │  │ + Summary    │  │ SSE Scan Progress│  │ Dashboard     │   │
 │  │  items)  │  │   Cards      │  │ Issues/Assets/VMs│  │ + Fix Modal   │   │
 │  └──────────┘  └──────────────┘  └──────────────────┘  └───────────────┘   │
 │  Auth: Auth.js v5 (Google OAuth)  │  State: React Context + localStorage   │
@@ -69,7 +69,8 @@ An agentic cloud security platform that runs a fully **autonomous defense loop**
 │  │  Per-service timing · Success/failure tracking · Historical logs    │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
-│  SQLite: cloud_accounts, cloud_issues, cloud_assets, scan_logs             │
+│  SQLite/PostgreSQL: cloud_accounts, cloud_issues, cloud_assets, scan_logs  │
+│          pentests, pentest_findings, repo_connections, repo_issues, ...     │
 │          (per-user isolation via X-User-Email)                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -159,6 +160,7 @@ cp .env.example .env
 # Optional:
 #   OPENAI_API_KEY     (for RAG embeddings)
 #   PINECONE_API_KEY   (for RAG vector store)
+#   GITHUB_TOKEN       (for repository scanning)
 ```
 
 ### GCP Service Account
@@ -197,7 +199,7 @@ python main.py sample_logs/mixed_threats.txt --hitl
 ```bash
 # Run with project venv (has all deps)
 .venv/bin/python -m pytest tests/ -v
-# 38+ tests covering all agents, correlation engine, and pipeline
+# 247 tests across 29 files covering all agents, correlation engine, pipelines, and API routers
 ```
 
 ## Frontend Pages
@@ -207,24 +209,29 @@ python main.py sample_logs/mixed_threats.txt --hitl
 | `/` | **Feed** | Summary cards, findings table, cost breakdown, incident report |
 | `/snoozed` | **Snoozed** | Deferred threats with restore action |
 | `/ignored` | **Ignored** | False positives / accepted risk |
-| `/solved` | **Solved** | Resolved threats |
+| `/resolved` | **Resolved** | Resolved threats |
 | `/autofix` | **AutoFix** | Live remediation dashboard — available fixes, applied, skipped counts + issue table with "View Fix" |
 | `/clouds` | **Clouds** | Connected GCP accounts with issue counts |
 | `/clouds/connect` | **Connect** | Add new GCP project with service account |
 | `/clouds/[id]` | **Cloud Detail** | SSE scan progress, issues with Fix button, assets, VMs, checks, scan logs |
+| `/repositories` | **Repositories** | Connected GitHub repositories with issue counts |
+| `/repositories/connect` | **Connect Repo** | Add new GitHub repository connection |
+| `/repositories/[id]` | **Repo Detail** | SSE scan progress, issues, assets, scan logs |
 | `/agents` | **Agents** | 12 pipeline agents with status |
 | `/mitre` | **MITRE ATT&CK** | Tactics and techniques reference |
 | `/threat-intel` | **Threat Intel** | Pinecone vector DB threat feed |
 | `/reports` | **Reports** | Generated incident reports with PDF export |
-| `/pentests` | **Pentests** | Penetration testing tracker |
+| `/pentests` | **Pentests** | Penetration testing campaigns |
+| `/pentests/[id]` | **Pentest Detail** | Campaign findings and timeline |
+| `/pentests/checks` | **Pentest Checks** | Security check catalog (13 categories) |
 | `/integrations` | **Integrations** | Third-party service connections |
 
 ## Multi-Tenancy
 
-Each user authenticates via Google OAuth. Cloud accounts, issues, and assets are isolated per `user_email`. The `X-User-Email` header is set by the frontend auth middleware. This supports both:
+Each user authenticates via Google OAuth. Cloud accounts, repositories, pentests, issues, and assets are isolated per `user_email`. The `X-User-Email` header is set by the frontend auth middleware. This supports both:
 
-- **Multi-tenant SaaS** — each user sees only their own clouds
-- **Single-tenant hosted** — deploy for one org with shared GCP credentials
+- **Multi-tenant SaaS** — each user sees only their own data
+- **Single-tenant hosted** — deploy for one org with shared credentials
 
 ## Project Structure
 
@@ -232,24 +239,40 @@ Each user authenticates via Google OAuth. Cloud accounts, issues, and assets are
 neuralwarden/
 ├── api/
 │   ├── main.py                     # FastAPI app (CORS, routers)
+│   ├── db.py                       # DB abstraction (SQLite/PostgreSQL)
 │   ├── cloud_database.py           # Cloud accounts/issues/assets/scan_logs CRUD
+│   ├── repo_database.py            # Repo connections/issues/assets/scan_logs CRUD
+│   ├── pentests_database.py        # Pentests/findings/checks CRUD
+│   ├── database.py                 # Analysis report persistence
 │   ├── gcp_scanner.py              # GCP asset discovery + compliance checks
 │   ├── gcp_logging.py              # Cloud Logging client + deterministic parser
+│   ├── github_scanner.py           # GitHub repository scanning
 │   └── routers/
 │       ├── analyze.py              # POST /api/analyze (threat pipeline)
 │       ├── clouds.py               # Cloud CRUD + SSE scan + issues/assets/scan-logs
+│       ├── repos.py                # Repo CRUD + SSE scan + issues/assets/scan-logs
+│       ├── pentests.py             # Pentest campaigns + findings + checks
+│       ├── reports.py              # Report listing + retrieval
 │       ├── hitl.py                 # Human-in-the-loop resume
-│       └── ...
+│       ├── samples.py              # Sample log scenarios
+│       ├── generator.py            # Log generation
+│       ├── stream.py               # Streaming analysis
+│       ├── gcp_logging.py          # GCP logging status + fetch
+│       ├── threat_intel.py         # Threat intelligence feed
+│       ├── watcher.py              # Monitoring watchers
+│       └── export.py               # Export functionality
 ├── pipeline/
 │   ├── graph.py                    # Threat pipeline LangGraph
 │   ├── cloud_scan_graph.py         # Cloud Scan Super Agent LangGraph
 │   ├── cloud_scan_state.py         # ScanAgentState TypedDict
 │   └── agents/
 │       ├── ingest.py               # Haiku 4.5 log parser
+│       ├── ingest_chunk.py         # Chunked log batch ingestion
 │       ├── detect.py               # Sonnet 4.5 threat detection
 │       ├── validate.py             # Sonnet 4.5 shadow validator
 │       ├── classify.py             # Sonnet 4.5 risk scoring + RAG
 │       ├── report.py               # Opus 4.6 incident reports
+│       ├── hitl.py                 # Human-in-the-loop interrupt
 │       ├── cloud_router.py         # Public/private asset routing
 │       ├── active_scanner.py       # Compliance checks for public assets
 │       ├── log_analyzer.py         # Cloud Logging queries for private assets
@@ -257,14 +280,14 @@ neuralwarden/
 │       └── remediation_generator.py # Deterministic gcloud fix scripts
 ├── frontend/
 │   └── src/
-│       ├── app/(dashboard)/        # All dashboard pages (incl. autofix, scan-logs)
+│       ├── app/(dashboard)/        # All dashboard pages
 │       ├── app/(auth)/login/       # OAuth login
-│       ├── components/             # React components (RemediationModal, ScanLogModal, ...)
+│       ├── components/             # 24 React components
 │       ├── context/                # AnalysisContext (global state)
-│       └── lib/                    # API client, types, constants
+│       └── lib/                    # API client (62 functions), types, taxonomy, remediation
 ├── models/                         # Pydantic data models
 ├── rules/                          # Rule-based detection patterns
-├── tests/                          # 38+ pytest tests
+├── tests/                          # 247 pytest tests across 29 files
 ├── docs/
 │   ├── API.md                      # REST API reference
 │   ├── ARCHITECTURE.md             # System design document
