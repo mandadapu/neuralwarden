@@ -35,6 +35,18 @@ interface AnalysisContextType {
 const AnalysisContext = createContext<AnalysisContextType | null>(null);
 
 const STORAGE_KEY = "neuralwarden_analysis";
+const BUILD_VERSION_KEY = "neuralwarden_build";
+
+function flushStaleCache() {
+  try {
+    const buildId = process.env.NEXT_PUBLIC_BUILD_ID ?? "";
+    const stored = localStorage.getItem(BUILD_VERSION_KEY);
+    if (stored !== buildId) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem(BUILD_VERSION_KEY, buildId);
+    }
+  } catch {}
+}
 
 export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
@@ -54,8 +66,9 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     setApiUserEmail(session?.user?.email ?? "");
   }, [session?.user?.email]);
 
-  // Restore local-only state (snoozed/ignored/resolved lists) from localStorage
+  // Flush stale localStorage on new deploys, then restore local state
   useEffect(() => {
+    flushStaleCache();
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
