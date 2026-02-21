@@ -85,6 +85,7 @@ def run_report(state: PipelineState) -> dict:
             model=MODEL,
             temperature=0.3,
             max_tokens=4096,
+            timeout=120,
         )
 
         with AgentTimer("report", MODEL) as timer:

@@ -357,8 +357,8 @@ export default function ScanProgressOverlay({ open, onClose, progress, scanning 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      {/* Backdrop */}
-      <div className="absolute inset-0" onClick={canClose ? onClose : undefined} />
+      {/* Backdrop — always dismissable */}
+      <div className="absolute inset-0" onClick={onClose} />
 
       <div className="relative bg-[#161b22] rounded-2xl shadow-2xl w-full max-w-4xl mx-4 border border-[#30363d]">
         {/* Header */}
@@ -392,13 +392,11 @@ export default function ScanProgressOverlay({ open, onClose, progress, scanning 
               <p className="text-xs text-[#8b949e]">Cloud Scan Super Agent Pipeline</p>
             </div>
           </div>
-          {canClose && (
-            <button onClick={onClose} className="text-[#8b949e] hover:text-[#c9d1d9] transition-colors cursor-pointer">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          )}
+          <button onClick={onClose} className="text-[#8b949e] hover:text-[#c9d1d9] transition-colors cursor-pointer" title={canClose ? "Close" : "Dismiss scan overlay"}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         {/* Pipeline SVG */}
@@ -591,20 +589,20 @@ export default function ScanProgressOverlay({ open, onClose, progress, scanning 
         </div>
 
         {/* Footer */}
-        {canClose && (
-          <div className="px-6 py-4 border-t border-[#262c34] flex justify-end">
-            <button
-              onClick={onClose}
-              className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
-                isError
-                  ? "bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d]"
-                  : "bg-primary text-white hover:bg-primary-hover"
-              }`}
-            >
-              {isError ? "Dismiss" : "Done"}
-            </button>
-          </div>
-        )}
+        <div className="px-6 py-4 border-t border-[#262c34] flex justify-end">
+          <button
+            onClick={onClose}
+            className={`px-5 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
+              isError
+                ? "bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d]"
+                : isComplete
+                ? "bg-primary text-white hover:bg-primary-hover"
+                : "bg-[#21262d] text-[#c9d1d9] hover:bg-[#30363d]"
+            }`}
+          >
+            {isComplete ? "Done" : isError ? "Dismiss" : "Dismiss"}
+          </button>
+        </div>
       </div>
     </div>
   );

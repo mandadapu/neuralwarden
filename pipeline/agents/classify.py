@@ -111,6 +111,7 @@ def run_classify(state: PipelineState) -> dict:
             model=MODEL,
             temperature=0.1,
             max_tokens=2048,
+            timeout=120,  # 2 min hard timeout to prevent indefinite hangs
         )
 
         # Build the human message
