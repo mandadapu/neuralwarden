@@ -71,7 +71,10 @@ Correlation follows a two-layer strategy. The deterministic Correlation Engine (
 
 ### GitHub Repository Scanning
 - Connect GitHub repositories via personal access token or OAuth
-- Automated code scanning for security issues
+- 3-layer scanning pipeline:
+  - **Secret Detection** — 30+ regex patterns covering 15+ providers (AWS, GCP, GitHub, Stripe, etc.) with suppression comment support
+  - **SCA (Software Composition Analysis)** — parses lockfiles from 12 ecosystems, queries OSV.dev for known CVEs, detects copyleft/missing licenses
+  - **AI SAST** — Claude Haiku-powered code analysis with deterministic regex fallback when API key unavailable
 - Repository asset discovery and issue tracking
 - SSE streaming for scan progress
 - Scan history with per-scan execution logs

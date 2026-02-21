@@ -52,6 +52,9 @@ Two LangGraph pipelines:
 | Pentest endpoints | `api/routers/pentests.py` |
 | GCP scanner | `api/gcp_scanner.py` |
 | GitHub scanner | `api/github_scanner.py` |
+| SAST scanner | `api/sast_scanner.py` (AI-powered via Haiku + regex fallback) |
+| SCA scanner | `api/sca_scanner.py` (lockfile parsing + OSV.dev CVE queries) |
+| Secret patterns | `api/secret_patterns.py` (30+ regex patterns for 15+ providers) |
 | Cloud DB | `api/cloud_database.py` |
 | Repo DB | `api/repo_database.py` |
 | Pentests DB | `api/pentests_database.py` |

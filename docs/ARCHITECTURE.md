@@ -173,6 +173,38 @@ When correlated: severity → `critical`, title → `[ACTIVE] ...`, MITRE fields
 
 **Flow:** `correlate_findings()` → `correlated_evidence[]` in `ScanAgentState` → `threat_pipeline_node` bridges to `PipelineState` → Classify Agent (`CORRELATION_ADDENDUM` injected) → Report Agent ("Active Incidents" section)
 
+## GitHub Repository Scanning
+
+Three-layer scanning pipeline orchestrated by `api/github_scanner.py`:
+
+### Secret Detection (`api/secret_patterns.py`)
+
+Pure data module with 30+ compiled regex patterns for 15+ providers (AWS, GCP, GitHub, Stripe, Slack, etc.). Exports `SECRET_PATTERNS`, `is_ignored(line)`, and `SKIP_EXTENSIONS`. Supports suppression comments (`# nosec`, `// noqa`).
+
+### SCA — Software Composition Analysis (`api/sca_scanner.py`)
+
+Parses lockfiles from 12 ecosystems (npm, pip, Go, Rust, Ruby, PHP, Java, .NET, etc.), queries [OSV.dev](https://osv.dev) for known CVEs. Batch size 200, timeout 30s. Detects copyleft and missing licenses.
+
+### AI SAST — Static Application Security Testing (`api/sast_scanner.py`)
+
+Claude Haiku-powered code analysis with deterministic regex fallback when API key is unavailable. `MAX_FILES_PER_REPO=150`, `MAX_LINES_PER_FILE=300`, batch size 5 files per LLM call.
+
+### Scanning Flow
+
+```
+POST /api/repos/{conn_id}/scan (SSE)
+  │
+  ▼
+[github_scanner.py] ── clone repo ── fan-out:
+  │
+  ├── [secret_patterns.py]   Secret Detection (30+ patterns)
+  ├── [sca_scanner.py]       SCA: lockfile → OSV.dev CVE lookup
+  └── [sast_scanner.py]      AI SAST: Haiku analysis + regex fallback
+  │
+  ▼
+Aggregate → repo_issues + repo_assets → SSE complete
+```
+
 ## Data Layer
 
 ### Database Abstraction (`api/db.py`)
