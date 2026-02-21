@@ -205,6 +205,17 @@ async def delete_cloud(cloud_id: str):
     return {"detail": "deleted"}
 
 
+@router.post("/{cloud_id}/toggle")
+async def toggle_cloud(cloud_id: str):
+    """Toggle a cloud account between active and disabled."""
+    account = get_cloud_account(cloud_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Cloud account not found")
+    new_status = "disabled" if account.get("status") != "disabled" else "active"
+    update_cloud_account(cloud_id, status=new_status)
+    return _account_with_counts(get_cloud_account(cloud_id))
+
+
 # --------------- Scanning ---------------
 
 
@@ -216,6 +227,8 @@ async def trigger_scan(cloud_id: str):
     account = get_cloud_account(cloud_id)
     if not account:
         raise HTTPException(status_code=404, detail="Cloud account not found")
+    if account.get("status") == "disabled":
+        raise HTTPException(status_code=400, detail="Cloud account is disabled. Re-enable it to scan.")
 
     # Always pass None so run_scan live-probes credentials and scans
     # everything the service account can access — no static config needed.

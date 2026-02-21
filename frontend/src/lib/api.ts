@@ -268,6 +268,15 @@ export async function deleteCloud(id: string): Promise<void> {
   if (!res.ok) throw new Error(`Failed to delete cloud: ${res.statusText}`);
 }
 
+export async function toggleCloud(id: string): Promise<CloudAccount> {
+  const res = await fetch(`${BASE}/clouds/${id}/toggle`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to toggle cloud: ${res.statusText}`);
+  return res.json();
+}
+
 export interface ProbeResult {
   services: Record<string, { accessible: boolean; detail: string }>;
   accessible: string[];
