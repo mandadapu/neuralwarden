@@ -27,6 +27,9 @@ type WizardData = {
   name: string;
   purpose: string;
   scanSecrets: boolean;
+  scanSca: boolean;
+  scanSast: boolean;
+  scanLicense: boolean;
   scanDeps: boolean;
   scanCode: boolean;
 };
@@ -46,8 +49,11 @@ export default function ConnectRepoPage() {
     name: "",
     purpose: "production",
     scanSecrets: true,
-    scanDeps: true,
-    scanCode: true,
+    scanSca: true,
+    scanSast: true,
+    scanLicense: true,
+    scanDeps: false,
+    scanCode: false,
   });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -228,11 +234,6 @@ export default function ConnectRepoPage() {
           private: r.private,
         }));
 
-      const scanTypes: string[] = [];
-      if (data.scanSecrets) scanTypes.push("secrets");
-      if (data.scanDeps) scanTypes.push("dependencies");
-      if (data.scanCode) scanTypes.push("code_patterns");
-
       const conn = await createRepoConnection({
         name: data.name,
         org_name: data.org,
@@ -240,6 +241,9 @@ export default function ConnectRepoPage() {
         github_token: data.githubToken,
         scan_config: JSON.stringify({
           secrets: data.scanSecrets,
+          sca: data.scanSca,
+          sast: data.scanSast,
+          license: data.scanLicense,
           dependencies: data.scanDeps,
           code_patterns: data.scanCode,
         }),
@@ -280,8 +284,11 @@ export default function ConnectRepoPage() {
 
   const scanTypeLabels: string[] = [];
   if (data.scanSecrets) scanTypeLabels.push("Secrets Detection");
-  if (data.scanDeps) scanTypeLabels.push("Dependency Scanning");
-  if (data.scanCode) scanTypeLabels.push("Code Patterns");
+  if (data.scanSca) scanTypeLabels.push("CVE Scanning (SCA)");
+  if (data.scanSast) scanTypeLabels.push("AI Code Analysis (SAST)");
+  if (data.scanLicense) scanTypeLabels.push("License Scanning");
+  if (data.scanDeps) scanTypeLabels.push("Dependency Scanning (Legacy)");
+  if (data.scanCode) scanTypeLabels.push("Code Patterns (Legacy)");
 
   return (
     <div className="min-h-screen flex">
@@ -858,37 +865,54 @@ export default function ConnectRepoPage() {
                       <label className="flex items-center gap-3 p-3 border border-[#30363d] rounded-lg hover:bg-[#21262d] cursor-pointer transition-colors">
                         <input
                           type="checkbox"
-                          checked={data.scanDeps}
+                          checked={data.scanSca}
                           onChange={() =>
-                            setData((d) => ({ ...d, scanDeps: !d.scanDeps }))
+                            setData((d) => ({ ...d, scanSca: !d.scanSca }))
                           }
                           className="w-4 h-4 text-primary border-[#30363d] rounded focus:ring-primary"
                         />
                         <div>
                           <span className="text-sm text-[#e6edf3]">
-                            Dependency Scanning
+                            CVE Scanning (SCA)
                           </span>
                           <p className="text-xs text-[#8b949e]">
-                            Check for vulnerable packages and outdated
-                            dependencies
+                            Check lockfiles for known vulnerabilities via OSV.dev
                           </p>
                         </div>
                       </label>
                       <label className="flex items-center gap-3 p-3 border border-[#30363d] rounded-lg hover:bg-[#21262d] cursor-pointer transition-colors">
                         <input
                           type="checkbox"
-                          checked={data.scanCode}
+                          checked={data.scanSast}
                           onChange={() =>
-                            setData((d) => ({ ...d, scanCode: !d.scanCode }))
+                            setData((d) => ({ ...d, scanSast: !d.scanSast }))
                           }
                           className="w-4 h-4 text-primary border-[#30363d] rounded focus:ring-primary"
                         />
                         <div>
                           <span className="text-sm text-[#e6edf3]">
-                            Code Patterns
+                            AI Code Analysis (SAST)
                           </span>
                           <p className="text-xs text-[#8b949e]">
-                            Detect insecure coding patterns and misconfigurations
+                            AI-powered static analysis for vulnerabilities
+                          </p>
+                        </div>
+                      </label>
+                      <label className="flex items-center gap-3 p-3 border border-[#30363d] rounded-lg hover:bg-[#21262d] cursor-pointer transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={data.scanLicense}
+                          onChange={() =>
+                            setData((d) => ({ ...d, scanLicense: !d.scanLicense }))
+                          }
+                          className="w-4 h-4 text-primary border-[#30363d] rounded focus:ring-primary"
+                        />
+                        <div>
+                          <span className="text-sm text-[#e6edf3]">
+                            License Scanning
+                          </span>
+                          <p className="text-xs text-[#8b949e]">
+                            Detect copyleft and missing license declarations
                           </p>
                         </div>
                       </label>

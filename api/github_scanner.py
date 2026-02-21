@@ -180,59 +180,21 @@ def _read_lines(abs_path: str) -> List[str]:
 
 # ── Secrets scanner ───────────────────────────────────────────────
 
-_SECRET_PATTERNS: List[Tuple[re.Pattern, str, str, str]] = [
-    (
-        re.compile(r"AKIA[0-9A-Z]{16}"),
-        "secret_001",
-        "critical",
-        "AWS Access Key ID found",
-    ),
-    (
-        re.compile(r"(?i)aws_secret_access_key\s*[=:]\s*[A-Za-z0-9/+=]{40}"),
-        "secret_002",
-        "critical",
-        "AWS Secret Access Key found",
-    ),
-    (
-        re.compile(r"gh[ps]_[A-Za-z0-9_]{36,}"),
-        "secret_003",
-        "high",
-        "GitHub personal access token found",
-    ),
-    (
-        re.compile(r"(?i)(api[_-]?key|apikey)\s*[=:]\s*['\"][A-Za-z0-9]{20,}['\"]"),
-        "secret_004",
-        "high",
-        "Generic API key found",
-    ),
-    (
-        re.compile(r"-----BEGIN (RSA |EC |DSA )?PRIVATE KEY-----"),
-        "secret_005",
-        "critical",
-        "Private key file detected",
-    ),
-    (
-        re.compile(r"(?i)(password|passwd|pwd)\s*[=:]\s*['\"][^'\"]{8,}['\"]"),
-        "secret_006",
-        "high",
-        "Hardcoded password in source code",
-    ),
-    (
-        re.compile(r"(?i)(mysql|postgres|mongodb|redis)://[^\s'\"]+"),
-        "secret_007",
-        "high",
-        "Database connection URL with credentials",
-    ),
-]
+from api.secret_patterns import SECRET_PATTERNS as _SECRET_PATTERNS, SKIP_EXTENSIONS as _SKIP_EXTENSIONS, is_ignored as _is_ignored
 
 
 def scan_secrets(repo_dir: str, repo_full_name: str) -> List[Dict[str, Any]]:
-    """Scan files for hardcoded secrets and credentials."""
+    """Scan files for hardcoded secrets and credentials (30+ patterns)."""
     issues: List[Dict[str, Any]] = []
 
     for rel_path, abs_path in _walk_files(repo_dir):
+        # Skip binary / media files
+        if Path(abs_path).suffix.lower() in _SKIP_EXTENSIONS:
+            continue
         lines = _read_lines(abs_path)
         for line_no, line in enumerate(lines, start=1):
+            if _is_ignored(line):
+                continue
             for pattern, rule_code, severity, title in _SECRET_PATTERNS:
                 if pattern.search(line):
                     issues.append(
@@ -249,6 +211,7 @@ def scan_secrets(repo_dir: str, repo_full_name: str) -> List[Dict[str, Any]]:
                             "category": "secrets",
                         }
                     )
+                    break  # One match per line is enough
 
     return issues
 
@@ -559,11 +522,17 @@ def run_repo_scan(
     dict with keys ``issues``, ``assets``, ``summary``.
     """
     if scan_config is None:
-        scan_config = {"secrets": True, "dependencies": True, "code_patterns": True}
+        scan_config = {
+            "secrets": True, "sca": True, "sast": True, "license": True,
+            "dependencies": False, "code_patterns": False,
+        }
 
     all_issues: List[Dict[str, Any]] = []
     repo_assets: List[Dict[str, Any]] = []
-    by_type: Dict[str, int] = {"secrets": 0, "dependencies": 0, "code_patterns": 0}
+    by_type: Dict[str, int] = {
+        "secrets": 0, "sca": 0, "sast": 0, "license": 0,
+        "dependencies": 0, "code_patterns": 0,
+    }
 
     for idx, repo in enumerate(repos):
         repo_full_name = repo.get("full_name", f"{org_name}/{repo.get('name', 'unknown')}")
@@ -572,8 +541,8 @@ def run_repo_scan(
 
         if progress_callback:
             progress_callback(
-                "scanning_repo",
-                {"repo": repo_full_name, "index": idx + 1, "total": len(repos)},
+                "progress",
+                {"current_repo": repo_full_name, "repos_scanned": idx, "total_repos": len(repos)},
             )
 
         logger.info("Scanning repo %s (%d/%d)", repo_full_name, idx + 1, len(repos))
@@ -582,11 +551,30 @@ def run_repo_scan(
         try:
             temp_dir = clone_repo(repo_full_name, branch=default_branch, token=token)
 
-            if scan_config.get("secrets"):
+            if scan_config.get("secrets", True):
                 found = scan_secrets(temp_dir, repo_full_name)
                 all_issues.extend(found)
                 by_type["secrets"] += len(found)
 
+            if scan_config.get("sca", True):
+                from api.sca_scanner import scan_sca
+                found = scan_sca(temp_dir, repo_full_name)
+                all_issues.extend(found)
+                by_type["sca"] += len(found)
+
+            if scan_config.get("sast", True):
+                from api.sast_scanner import scan_sast
+                found = scan_sast(temp_dir, repo_full_name)
+                all_issues.extend(found)
+                by_type["sast"] += len(found)
+
+            if scan_config.get("license", True):
+                from api.sca_scanner import scan_license
+                found = scan_license(temp_dir, repo_full_name)
+                all_issues.extend(found)
+                by_type["license"] += len(found)
+
+            # Legacy scanners (disabled by default, kept for backwards compat)
             if scan_config.get("dependencies"):
                 found = scan_dependencies(temp_dir, repo_full_name)
                 all_issues.extend(found)
@@ -642,14 +630,16 @@ def run_repo_scan(
         "by_type": by_type,
     }
 
-    if progress_callback:
-        progress_callback("scan_complete", summary)
-
-    return {
+    result = {
         "issues": all_issues,
         "assets": repo_assets,
         "summary": summary,
     }
+
+    if progress_callback:
+        progress_callback("complete", result)
+
+    return result
 
 
 # ── Sample data generator ────────────────────────────────────────
