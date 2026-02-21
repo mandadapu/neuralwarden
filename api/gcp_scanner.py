@@ -64,13 +64,21 @@ def probe_credential_access(
     installed = probe_available_services()
     results: Dict[str, Any] = {}
     accessible_services: List[str] = []
+    sa_email = ""
 
     credentials = None
     if credentials_json:
         try:
             credentials = _make_credentials(credentials_json)
+            # Extract service account email for diagnostics
+            info = json.loads(credentials_json)
+            sa_email = info.get("client_email", "")
+            sa_project = info.get("project_id", "")
+            logger.info("Credential probe using SA: %s (project in key: %s, scan project: %s)", sa_email, sa_project, project_id)
+            if sa_project and sa_project != project_id:
+                logger.warning("Project mismatch: credentials belong to '%s' but scanning '%s'", sa_project, project_id)
         except Exception as exc:
-            return {"error": str(exc), "services": {}, "accessible": []}
+            return {"error": str(exc), "services": {}, "accessible": [], "service_account": ""}
 
     # ── Compute Engine ──
     if "compute" in installed and credentials:
@@ -138,10 +146,24 @@ def probe_credential_access(
     else:
         results["cloud_logging"] = {"accessible": False, "detail": "No credentials provided"}
 
-    return {
+    result: Dict[str, Any] = {
         "services": results,
         "accessible": accessible_services,
+        "service_account": sa_email,
     }
+    # Flag project mismatch for the UI
+    if credentials_json:
+        try:
+            info = json.loads(credentials_json)
+            sa_project = info.get("project_id", "")
+            if sa_project and sa_project != project_id:
+                result["warning"] = (
+                    f"Credentials belong to project '{sa_project}' but "
+                    f"scanning project '{project_id}'. This may cause permission errors."
+                )
+        except Exception:
+            pass
+    return result
 
 
 # ── Credential helpers ──────────────────────────────────────────────
@@ -570,6 +592,10 @@ def run_scan(
     if credentials_json:
         probe = probe_credential_access(project_id, credentials_json)
         accessible = probe.get("accessible", [])
+        sa_email = probe.get("service_account", "")
+        _log("info", f"Service account: {sa_email}")
+        if probe.get("warning"):
+            _log("warning", probe["warning"])
         _log("info", f"Credential probe: accessible services = {accessible}")
         for svc, detail in probe.get("services", {}).items():
             if not detail["accessible"]:
