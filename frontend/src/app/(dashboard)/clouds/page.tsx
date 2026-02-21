@@ -111,7 +111,10 @@ export default function CloudsPage() {
 
     try {
       await scanCloudStream(cloudId, (event) => {
-        setScanProgress(event);
+        // Only use SSE for terminal events — polling handles progress
+        if (event.event === "complete" || event.event === "error") {
+          setScanProgress(event);
+        }
       });
       await loadClouds();
       window.dispatchEvent(new Event("scanCompleted"));

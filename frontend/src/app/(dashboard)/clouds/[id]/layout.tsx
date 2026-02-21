@@ -106,14 +106,16 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
 
     try {
       await scanCloudStream(id, (event) => {
-        // SSE events still used for final data (complete event carries counts)
-        if (event.threat_stage) lastThreatStage = event.threat_stage;
-        if (lastThreatStage && !event.threat_stage) {
-          event = { ...event, threat_stage: lastThreatStage };
-        }
-        setScanProgress(event);
-        if (event.event === "complete" && event.scan_log_id) {
-          setLastScanLogId(event.scan_log_id);
+        // Only use SSE for terminal events — intermediate progress comes
+        // from polling. Buffered SSE events would replay stages otherwise.
+        if (event.event === "complete" || event.event === "error") {
+          if (lastThreatStage && !event.threat_stage) {
+            event = { ...event, threat_stage: lastThreatStage };
+          }
+          setScanProgress(event);
+          if (event.event === "complete" && event.scan_log_id) {
+            setLastScanLogId(event.scan_log_id);
+          }
         }
       });
       await loadCloud();
