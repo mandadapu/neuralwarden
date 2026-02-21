@@ -18,6 +18,15 @@ export default function Sidebar() {
   const [cloudCount, setCloudCount] = useState(0);
   const [cloudIssueCount, setCloudIssueCount] = useState(0);
 
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Listen for scan completion events from any page
+  useEffect(() => {
+    const handler = () => setRefreshKey((k) => k + 1);
+    window.addEventListener("scanCompleted", handler);
+    return () => window.removeEventListener("scanCompleted", handler);
+  }, []);
+
   useEffect(() => {
     if (!session?.user?.email) return;
     setApiUserEmail(session.user.email);
@@ -29,7 +38,7 @@ export default function Sidebar() {
       );
       setCloudIssueCount(totalIssues);
     }).catch(() => {});
-  }, [session?.user?.email, pathname]);
+  }, [session?.user?.email, pathname, refreshKey]);
 
   const feedCount = pipelineThreatCount + cloudIssueCount;
 

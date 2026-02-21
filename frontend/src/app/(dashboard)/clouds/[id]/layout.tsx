@@ -107,6 +107,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
       });
       await loadCloud();
       setScanVersion((v) => v + 1);
+      window.dispatchEvent(new Event("scanCompleted"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Scan failed");
     } finally {
