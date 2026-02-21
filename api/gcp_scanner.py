@@ -701,7 +701,8 @@ def run_scan(
                 "status": "success", "duration_seconds": elapsed,
                 "asset_count": len(assets), "issue_count": len(issues), "error": None,
             }
-            _log("info", f"[cloud_logging] Completed: {len(assets)} assets, {len(issues)} issues ({elapsed}s)")
+            _log("info", f"[cloud_logging] Completed: {len(assets)} assets, {len(issues)} issues, {len(log_lines)} log lines ({elapsed}s)")
+            logger.info("Cloud Logging returned %d log lines for project %s", len(log_lines), project_id)
         except Exception as exc:
             elapsed = round(time.monotonic() - svc_start, 2)
             service_details["cloud_logging"] = {
