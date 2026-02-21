@@ -308,7 +308,14 @@ Toggle repository connection active/inactive status.
 
 ### POST /api/repos/{conn_id}/scan
 
-**SSE streaming endpoint.** Triggers repository scanning and streams progress events.
+**SSE streaming endpoint.** Triggers the 3-layer repository scanning pipeline and streams progress events.
+
+**Scanning layers:**
+1. **Secret Detection** — 30+ regex patterns for 15+ providers (AWS, GCP, GitHub, Stripe, etc.)
+2. **SCA** — parses lockfiles from 12 ecosystems, queries OSV.dev for known CVEs, detects copyleft/missing licenses
+3. **AI SAST** — Claude Haiku code analysis with regex fallback when API key unavailable
+
+**Implementation:** `api/github_scanner.py` orchestrates `api/secret_patterns.py`, `api/sca_scanner.py`, `api/sast_scanner.py`
 
 ### GET /api/repos/{conn_id}/scan-progress
 

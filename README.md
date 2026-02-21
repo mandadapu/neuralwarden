@@ -246,7 +246,10 @@ neuralwarden/
 │   ├── database.py                 # Analysis report persistence
 │   ├── gcp_scanner.py              # GCP asset discovery + compliance checks
 │   ├── gcp_logging.py              # Cloud Logging client + deterministic parser
-│   ├── github_scanner.py           # GitHub repository scanning
+│   ├── github_scanner.py           # GitHub repository scanning (orchestrator)
+│   ├── sast_scanner.py             # AI SAST via Haiku + regex fallback
+│   ├── sca_scanner.py              # SCA: lockfile parsing + OSV.dev CVE queries
+│   ├── secret_patterns.py          # 30+ regex patterns for secret detection
 │   └── routers/
 │       ├── analyze.py              # POST /api/analyze (threat pipeline)
 │       ├── clouds.py               # Cloud CRUD + SSE scan + issues/assets/scan-logs
