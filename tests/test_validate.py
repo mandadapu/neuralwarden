@@ -18,7 +18,7 @@ def _make_log(index, event_type="system", source_ip="", is_valid=True):
 def _make_threat(threat_id, indices):
     return Threat(
         threat_id=threat_id,
-        type="brute_force",
+        type="dast",
         confidence=0.9,
         source_log_indices=indices,
         method="rule_based",

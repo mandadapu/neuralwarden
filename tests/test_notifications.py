@@ -29,11 +29,11 @@ class TestNotifyCriticalThreats:
     @patch("pipeline.notifications.send_slack_notification", return_value=True)
     def test_formats_message_correctly(self, mock_send):
         threats = [
-            {"type": "brute_force", "risk_score": 9.5, "source_ip": "10.0.0.1", "description": "SSH attack"}
+            {"type": "dast", "risk_score": 9.5, "source_ip": "10.0.0.1", "description": "SSH attack"}
         ]
         result = notify_critical_threats(threats, report_summary="Test summary")
         assert result is True
         call_args = mock_send.call_args[0][0]
         assert "Critical Threat" in call_args
-        assert "Brute Force" in call_args
+        assert "Dast" in call_args
         assert "10.0.0.1" in call_args

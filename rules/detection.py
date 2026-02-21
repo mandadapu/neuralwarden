@@ -22,7 +22,7 @@ def detect_brute_force(logs: list[LogEntry], threshold: int = 5) -> list[Threat]
             threats.append(
                 Threat(
                     threat_id=f"RULE-BRUTE-{ip.replace('.', '_')}",
-                    type="brute_force",
+                    type="dast",
                     confidence=min(0.5 + len(indices) * 0.05, 0.99),
                     source_log_indices=indices,
                     method="rule_based",
@@ -52,7 +52,7 @@ def detect_port_scan(logs: list[LogEntry], threshold: int = 10) -> list[Threat]:
             threats.append(
                 Threat(
                     threat_id=f"RULE-SCAN-{ip.replace('.', '_')}",
-                    type="port_scan",
+                    type="dast",
                     confidence=min(0.6 + len(ports) * 0.03, 0.95),
                     source_log_indices=indices_by_ip[ip],
                     method="rule_based",
@@ -79,7 +79,7 @@ def detect_privilege_escalation(logs: list[LogEntry]) -> list[Threat]:
         threats.append(
             Threat(
                 threat_id="RULE-PRIVESC-001",
-                type="privilege_escalation",
+                type="cloud_configs",
                 confidence=0.85,
                 source_log_indices=priv_indices,
                 method="rule_based",
@@ -118,7 +118,7 @@ def detect_data_exfiltration(
         threats.append(
             Threat(
                 threat_id="RULE-EXFIL-001",
-                type="data_exfiltration",
+                type="surface_monitoring",
                 confidence=min(0.7 + (total_size / 1000) * 0.1, 0.95),
                 source_log_indices=exfil_indices,
                 method="rule_based",
@@ -158,7 +158,7 @@ def detect_lateral_movement(logs: list[LogEntry]) -> list[Threat]:
         return [
             Threat(
                 threat_id="RULE-LATERAL-001",
-                type="lateral_movement",
+                type="malware",
                 confidence=0.75,
                 source_log_indices=lateral_indices,
                 method="rule_based",

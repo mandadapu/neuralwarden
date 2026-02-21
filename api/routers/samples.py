@@ -11,8 +11,8 @@ router = APIRouter(prefix="/api", tags=["samples"])
 SAMPLES_DIR = Path(__file__).resolve().parent.parent.parent / "sample_logs"
 
 SAMPLE_MAP = {
-    "brute_force": "Brute Force Attack",
-    "data_exfiltration": "Data Exfiltration",
+    "brute_force": "DAST — Brute Force Attack",
+    "data_exfiltration": "Surface Monitoring — Data Exfiltration",
     "mixed_threats": "Mixed Threats (Multi-Stage)",
     "clean_logs": "Clean Logs (No Threats)",
 }

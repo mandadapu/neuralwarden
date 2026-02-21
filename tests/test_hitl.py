@@ -7,7 +7,7 @@ from pipeline.graph import should_hitl
 def _make_classified(threat_id, risk="medium"):
     return ClassifiedThreat(
         threat_id=threat_id,
-        type="brute_force",
+        type="dast",
         confidence=0.9,
         method="rule_based",
         description="test",

@@ -29,7 +29,7 @@ Analyze each log entry carefully for:
 For each missed threat you find, respond with a JSON array:
 [{
   "threat_id": "VAL-<TYPE>-<NUMBER>",
-  "type": "brute_force|port_scan|privilege_escalation|data_exfiltration|lateral_movement|reconnaissance|c2_communication|suspicious_activity",
+  "type": "prompt_injection|asi_01|asi_02|ai_pentest|sast|open_source_deps|license_issues|cloud_configs|k8s|exposed_secrets|eol_runtimes|dast|malware|surface_monitoring",
   "confidence": 0.0-1.0,
   "source_log_indices": [original indices],
   "description": "Why this was missed and why it's a threat",
@@ -126,7 +126,7 @@ def run_validate(state: PipelineState) -> dict:
         for entry in findings_data:
             threat = Threat(
                 threat_id=entry.get("threat_id", "VAL-UNKNOWN-001"),
-                type=entry.get("type", "suspicious_activity"),
+                type=entry.get("type", "surface_monitoring"),
                 confidence=float(entry.get("confidence", 0.5)),
                 source_log_indices=entry.get("source_log_indices", []),
                 method="validator_detected",

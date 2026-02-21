@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { PendingThreat } from "@/lib/types";
+import { getTypeLabel } from "@/lib/taxonomy";
 
 export default function HitlReviewPanel({
   threats,
@@ -34,7 +35,7 @@ export default function HitlReviewPanel({
             className="p-3 bg-[#1c2128] rounded-lg border border-red-500/30"
           >
             <div className="font-semibold text-red-400">
-              {pt.type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+              {getTypeLabel(pt.type)}
             </div>
             <div className="text-sm text-[#e6edf3] mt-1">{pt.description}</div>
             <div className="text-xs text-[#8b949e] mt-1">

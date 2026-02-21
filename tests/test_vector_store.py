@@ -23,7 +23,7 @@ class TestQueryThreatIntel:
 class TestFormatThreatIntelContext:
     def test_returns_empty_when_no_results(self):
         with patch("pipeline.vector_store.query_threat_intel", return_value=[]):
-            result = format_threat_intel_context("test threat", "brute_force")
+            result = format_threat_intel_context("test threat", "dast")
             assert result == ""
 
     def test_formats_with_metadata(self):
@@ -41,7 +41,7 @@ class TestFormatThreatIntelContext:
             }
         ]
         with patch("pipeline.vector_store.query_threat_intel", return_value=mock_results):
-            result = format_threat_intel_context("SSH attack", "brute_force")
+            result = format_threat_intel_context("SSH attack", "dast")
             assert "Relevant Threat Intelligence" in result
             assert "CVE-2024-6387" in result
             assert "critical" in result

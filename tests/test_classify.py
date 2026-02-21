@@ -7,7 +7,7 @@ from models.threat import ClassifiedThreat, Threat
 from pipeline.agents.classify import _fallback_classify, run_classify, CORRELATION_ADDENDUM
 
 
-def _make_threat(threat_id: str = "TEST-001", threat_type: str = "brute_force") -> Threat:
+def _make_threat(threat_id: str = "TEST-001", threat_type: str = "dast") -> Threat:
     return Threat(
         threat_id=threat_id,
         type=threat_type,
@@ -28,10 +28,10 @@ class TestFallbackClassify:
         assert classified.remediation_priority == 1
 
     def test_preserves_threat_fields(self):
-        threat = _make_threat(threat_id="RULE-BRUTE-001", threat_type="brute_force")
+        threat = _make_threat(threat_id="RULE-BRUTE-001", threat_type="dast")
         classified = _fallback_classify(threat, priority=3)
         assert classified.threat_id == "RULE-BRUTE-001"
-        assert classified.type == "brute_force"
+        assert classified.type == "dast"
         assert classified.confidence == 0.9
         assert classified.source_ip == "10.0.0.1"
         assert classified.method == "rule_based"
@@ -41,7 +41,7 @@ class TestClassifiedThreatModel:
     def test_risk_score_bounds(self):
         ct = ClassifiedThreat(
             threat_id="T-001",
-            type="brute_force",
+            type="dast",
             confidence=0.9,
             method="rule_based",
             description="test",

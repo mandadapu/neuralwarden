@@ -7,6 +7,7 @@ import SeverityBadge from "./SeverityBadge";
 import SeverityGauge from "./SeverityGauge";
 import ThreatTypeIcon from "./ThreatTypeIcon";
 import { getRemediation } from "@/lib/remediation";
+import { getTypeLabel, getCategoryLabel } from "@/lib/taxonomy";
 
 interface ThreatDetailPanelProps {
   threat: ClassifiedThreat;
@@ -91,7 +92,7 @@ export default function ThreatDetailPanel({
   }, [currentIndex, threats.length, handleClose, onNavigate, actionsOpen]);
 
   const ct = threat;
-  const typeName = ct.type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const typeName = getTypeLabel(ct.type);
   const methodLabel = ct.method === "rule_based" ? "Rule Based" : ct.method === "ai_detected" ? "AI Detected" : "Validator";
   const remediation = getRemediation(ct.type, ct.risk);
 

@@ -4,10 +4,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import type { ClassifiedThreat } from "@/lib/types";
 import SeverityBadge from "./SeverityBadge";
 import ThreatTypeIcon from "./ThreatTypeIcon";
-
-function extractTypeName(type: string) {
-  return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
+import { THREAT_TAXONOMY, getTypeLabel, TYPE_TO_CATEGORY } from "@/lib/taxonomy";
 
 export default function ThreatsTable({
   threats,
@@ -39,16 +36,26 @@ export default function ThreatsTable({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const uniqueTypes = useMemo(() => {
-    const names = new Set(threats.map((t) => extractTypeName(t.type)));
-    return Array.from(names).sort();
+  // Build category-grouped types from current threats
+  const activeTypes = useMemo(() => {
+    const typeIds = new Set(threats.map((t) => t.type));
+    return THREAT_TAXONOMY.map((cat) => ({
+      ...cat,
+      types: cat.types.filter((t) => typeIds.has(t.id)),
+    })).filter((cat) => cat.types.length > 0);
+  }, [threats]);
+
+  // Also include any types not in taxonomy
+  const unmappedTypes = useMemo(() => {
+    const knownIds = new Set(THREAT_TAXONOMY.flatMap((c) => c.types.map((t) => t.id)));
+    return Array.from(new Set(threats.map((t) => t.type))).filter((id) => !knownIds.has(id)).sort();
   }, [threats]);
 
   const filtered = useMemo(
     () =>
       threats.filter((t) => {
         if (sourceFilter === "ai" && t.method === "rule_based") return false;
-        if (typeFilter !== "all" && extractTypeName(t.type) !== typeFilter) return false;
+        if (typeFilter !== "all" && t.type !== typeFilter) return false;
         if (severityFilter !== "all" && t.risk !== severityFilter) return false;
         if (search) {
           const q = search.toLowerCase();
@@ -116,14 +123,14 @@ export default function ThreatsTable({
               className="flex items-center gap-1.5 px-3.5 py-2 bg-[#1c2128] border border-[#30363d] rounded-lg cursor-pointer"
             >
               <span className="text-[13px] text-[#e6edf3]">
-                {typeFilter === "all" ? "All types" : typeFilter}
+                {typeFilter === "all" ? "All types" : getTypeLabel(typeFilter)}
               </span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8b949e" strokeWidth="2">
                 <path d="M6 9l6 6 6-6" />
               </svg>
             </button>
             {typesOpen && (
-              <div className="absolute top-full left-0 mt-1 bg-[#1c2128] border border-[#30363d] rounded-lg shadow-lg z-20 min-w-[180px] py-1 max-h-[260px] overflow-y-auto">
+              <div className="absolute top-full left-0 mt-1 bg-[#1c2128] border border-[#30363d] rounded-lg shadow-lg z-20 min-w-[220px] py-1 max-h-[320px] overflow-y-auto">
                 <button
                   onClick={() => { setTypeFilter("all"); setTypesOpen(false); }}
                   className={`w-full text-left px-3.5 py-2 text-[13px] hover:bg-[#21262d] cursor-pointer ${
@@ -132,15 +139,33 @@ export default function ThreatsTable({
                 >
                   All types
                 </button>
-                {uniqueTypes.map((name) => (
+                {activeTypes.map((cat) => (
+                  <div key={cat.id}>
+                    <div className="px-3.5 pt-3 pb-1 text-[10px] font-bold uppercase tracking-wider text-[#8b949e]">
+                      {cat.label}
+                    </div>
+                    {cat.types.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => { setTypeFilter(t.id); setTypesOpen(false); }}
+                        className={`w-full text-left px-5 py-1.5 text-[13px] hover:bg-[#21262d] cursor-pointer ${
+                          typeFilter === t.id ? "text-[#00e68a]" : "text-[#e6edf3]"
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+                {unmappedTypes.map((id) => (
                   <button
-                    key={name}
-                    onClick={() => { setTypeFilter(name); setTypesOpen(false); }}
+                    key={id}
+                    onClick={() => { setTypeFilter(id); setTypesOpen(false); }}
                     className={`w-full text-left px-3.5 py-2 text-[13px] hover:bg-[#21262d] cursor-pointer ${
-                      typeFilter === name ? "text-[#00e68a]" : "text-[#e6edf3]"
+                      typeFilter === id ? "text-[#00e68a]" : "text-[#e6edf3]"
                     }`}
                   >
-                    {name}
+                    {getTypeLabel(id)}
                   </button>
                 ))}
               </div>
@@ -239,7 +264,7 @@ function ThreatRow({ threat: ct, onClick }: { threat: ClassifiedThreat; onClick?
       </td>
       <td className="px-4 py-3.5">
         <div className="font-medium text-white text-[13px]">
-          {extractTypeName(ct.type)}
+          {getTypeLabel(ct.type)}
           {ct.mitre_technique && (
             <span className="text-[#8b949e] text-[11px] ml-1">({ct.mitre_technique})</span>
           )}

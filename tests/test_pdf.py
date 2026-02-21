@@ -30,7 +30,7 @@ def _make_analysis_data(
 SAMPLE_THREATS = [
     {
         "threat_id": "RULE-BF-001",
-        "type": "brute_force",
+        "type": "dast",
         "risk": "critical",
         "risk_score": 95,
         "description": "Multiple failed SSH login attempts",
@@ -39,7 +39,7 @@ SAMPLE_THREATS = [
     },
     {
         "threat_id": "RULE-EXFIL-002",
-        "type": "data_exfiltration",
+        "type": "surface_monitoring",
         "risk": "high",
         "risk_score": 80,
         "description": "Large outbound data transfer detected",

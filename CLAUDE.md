@@ -77,6 +77,23 @@ Two LangGraph pipelines:
 - **SSE streaming:** scan progress via `sse-starlette` EventSourceResponse
 - **Services JSON:** `cloud_accounts.services` stored as JSON string, parsed on read
 
+## NeuralWarden Security Taxonomy
+
+All threat and issue types follow this 4-category taxonomy. The source of truth is `frontend/src/lib/taxonomy.ts`.
+
+| Category | ID | Description | Types |
+|----------|-----|------------|-------|
+| **AI & Agentic Security** | `ai_native` | Threats targeting LLM-powered agents, prompt pipelines, and AI model integrity. | `prompt_injection`, `asi_01`, `asi_02`, `ai_pentest` |
+| **Code & Supply Chain** | `supply_chain` | Vulnerabilities in source code, dependencies, build pipelines, and software delivery. | `sast`, `open_source_deps`, `license_issues` |
+| **Infrastructure & Runtime** | `infrastructure` | Runtime threats against cloud resources, containers, hosts, and identity systems. | `cloud_configs`, `k8s`, `exposed_secrets`, `eol_runtimes` |
+| **Threat Intel & Perimeter** | `threat_intel` | External reconnaissance, perimeter probing, malware indicators, and dynamic testing. | `dast`, `malware`, `surface_monitoring` |
+
+When adding new threat types:
+1. Add to the correct category in `frontend/src/lib/taxonomy.ts`
+2. Add an icon in `frontend/src/components/ThreatTypeIcon.tsx`
+3. Add remediation steps in `frontend/src/lib/remediation.ts`
+4. Update the detect agent prompt in `pipeline/agents/detect.py`
+
 ## Common Pitfalls
 
 - Use `.venv/bin/python` for tests — system Python 3.8 is missing `Annotated`, `pydantic`, `langgraph`

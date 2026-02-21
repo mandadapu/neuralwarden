@@ -3,6 +3,7 @@
 import { useAnalysisContext } from "@/context/AnalysisContext";
 import PageShell from "@/components/PageShell";
 import SeverityBadge from "@/components/SeverityBadge";
+import { getTypeLabel } from "@/lib/taxonomy";
 import ThreatTypeIcon from "@/components/ThreatTypeIcon";
 
 export default function ResolvedPage() {
@@ -41,7 +42,7 @@ export default function ResolvedPage() {
                     <td className="px-4 py-3.5"><ThreatTypeIcon type={ct.type} /></td>
                     <td className="px-4 py-3.5">
                       <div className="font-medium text-white text-[13px]">
-                        {ct.type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                        {getTypeLabel(ct.type)}
                       </div>
                       <div className="text-[#8b949e] text-xs mt-0.5">
                         {ct.description.length > 90 ? ct.description.slice(0, 90) + "..." : ct.description}
