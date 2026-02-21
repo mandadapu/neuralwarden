@@ -34,30 +34,31 @@ _MAX_FILE_SIZE = 1_048_576
 # ── GitHub API helpers ─────────────────────────────────────────────
 
 
-def _gh_headers() -> Dict[str, str]:
+def _gh_headers(token: str = "") -> Dict[str, str]:
     """Return standard headers for GitHub API requests."""
+    t = token or GITHUB_TOKEN
     return {
-        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Authorization": f"Bearer {t}",
         "Accept": "application/vnd.github+json",
         "User-Agent": "NeuralWarden-Scanner/1.0",
     }
 
 
-def get_authenticated_user() -> Dict[str, Any]:
+def get_authenticated_user(token: str = "") -> Dict[str, Any]:
     """GET /user -- return the authenticated user's profile."""
-    resp = httpx.get(f"{GITHUB_API}/user", headers=_gh_headers(), timeout=15)
+    resp = httpx.get(f"{GITHUB_API}/user", headers=_gh_headers(token), timeout=15)
     resp.raise_for_status()
     return resp.json()
 
 
-def list_user_orgs() -> List[Dict[str, Any]]:
+def list_user_orgs(token: str = "") -> List[Dict[str, Any]]:
     """GET /user/orgs -- return organisations the authenticated user belongs to."""
-    resp = httpx.get(f"{GITHUB_API}/user/orgs", headers=_gh_headers(), timeout=15)
+    resp = httpx.get(f"{GITHUB_API}/user/orgs", headers=_gh_headers(token), timeout=15)
     resp.raise_for_status()
     return resp.json()
 
 
-def list_org_repos(org: str) -> List[Dict[str, Any]]:
+def list_org_repos(org: str, token: str = "") -> List[Dict[str, Any]]:
     """Return all repos for *org*, paginating through all pages.
 
     Falls back to ``GET /users/{org}/repos`` if the org endpoint 404s
@@ -69,14 +70,14 @@ def list_org_repos(org: str) -> List[Dict[str, Any]]:
     while True:
         resp = httpx.get(
             f"{GITHUB_API}/orgs/{org}/repos",
-            headers=_gh_headers(),
+            headers=_gh_headers(token),
             params={"per_page": 100, "page": page},
             timeout=30,
         )
 
         # Fall back to user repos endpoint for personal accounts
         if resp.status_code == 404:
-            return _list_user_repos_fallback(org)
+            return _list_user_repos_fallback(org, token)
 
         resp.raise_for_status()
         batch = resp.json()
@@ -88,7 +89,7 @@ def list_org_repos(org: str) -> List[Dict[str, Any]]:
     return repos
 
 
-def _list_user_repos_fallback(user: str) -> List[Dict[str, Any]]:
+def _list_user_repos_fallback(user: str, token: str = "") -> List[Dict[str, Any]]:
     """GET /users/{user}/repos -- fallback when org endpoint 404s."""
     repos: List[Dict[str, Any]] = []
     page = 1
@@ -96,7 +97,7 @@ def _list_user_repos_fallback(user: str) -> List[Dict[str, Any]]:
     while True:
         resp = httpx.get(
             f"{GITHUB_API}/users/{user}/repos",
-            headers=_gh_headers(),
+            headers=_gh_headers(token),
             params={"per_page": 100, "page": page},
             timeout=30,
         )
@@ -113,14 +114,16 @@ def _list_user_repos_fallback(user: str) -> List[Dict[str, Any]]:
 # ── Clone / cleanup ───────────────────────────────────────────────
 
 
-def clone_repo(repo_full_name: str, branch: str = "main") -> str:
+def clone_repo(repo_full_name: str, branch: str = "main", token: str = "") -> str:
     """Shallow-clone a repo into a temporary directory and return its path.
 
-    Uses ``GITHUB_TOKEN`` for authentication.  If the requested *branch*
-    does not exist, retries without ``--branch`` to get the default branch.
+    Uses the provided *token* (or ``GITHUB_TOKEN`` env var) for authentication.
+    If the requested *branch* does not exist, retries without ``--branch``
+    to get the default branch.
     """
+    t = token or GITHUB_TOKEN
     temp_dir = tempfile.mkdtemp(prefix="nw_scan_")
-    clone_url = f"https://{GITHUB_TOKEN}@github.com/{repo_full_name}.git"
+    clone_url = f"https://{t}@github.com/{repo_full_name}.git"
 
     try:
         subprocess.run(
@@ -462,7 +465,7 @@ _CODE_PATTERNS: List[Tuple[re.Pattern, str, str, str]] = [
     ),
     (
         re.compile(
-            r"(?i)(os\.system|subprocess\.call|exec)\s*\([^)]*\+|(?i)child_process"
+            r"(?i)(os\.system|subprocess\.call|exec)\s*\([^)]*\+|child_process"
         ),
         "code_003",
         "critical",
@@ -534,6 +537,7 @@ def run_repo_scan(
     repos: List[Dict[str, Any]],
     scan_config: Dict[str, Any] | None = None,
     progress_callback: Callable[[str, Any], None] | None = None,
+    token: str = "",
 ) -> Dict[str, Any]:
     """Scan a list of repositories and return aggregated results.
 
@@ -576,7 +580,7 @@ def run_repo_scan(
 
         temp_dir: Optional[str] = None
         try:
-            temp_dir = clone_repo(repo_full_name, branch=default_branch)
+            temp_dir = clone_repo(repo_full_name, branch=default_branch, token=token)
 
             if scan_config.get("secrets"):
                 found = scan_secrets(temp_dir, repo_full_name)
