@@ -17,6 +17,13 @@ import type {
   Pentest,
   PentestFinding,
   PentestCheck,
+  RepoConnection,
+  RepoAsset,
+  RepoIssue,
+  GitHubOrg,
+  GitHubRepo,
+  RepoScanStreamEvent,
+  ScanLogListItem as RepoScanLogListItem,
 } from "./types";
 
 const BASE =
@@ -624,5 +631,214 @@ export async function importFindings(
     body: JSON.stringify({ findings }),
   });
   if (!res.ok) throw new Error(`Failed to import findings: ${res.statusText}`);
+  return res.json();
+}
+
+// --- GitHub Repository Integration ---
+
+export async function listRepoConnections(): Promise<RepoConnection[]> {
+  const res = await fetch(`${BASE}/repos`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Failed to list repos: ${res.statusText}`);
+  return res.json();
+}
+
+export async function createRepoConnection(data: {
+  name: string;
+  org_name: string;
+  purpose?: string;
+  scan_config?: string;
+  repos?: Array<{ full_name: string; name: string; language: string | null; default_branch: string; private: boolean }>;
+}): Promise<RepoConnection> {
+  const res = await fetch(`${BASE}/repos`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`Failed to create repo connection: ${res.statusText}`);
+  return res.json();
+}
+
+export async function getRepoConnection(id: string): Promise<RepoConnection> {
+  const res = await fetch(`${BASE}/repos/${id}`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Failed to get repo connection: ${res.statusText}`);
+  return res.json();
+}
+
+export async function updateRepoConnection(
+  id: string,
+  updates: Partial<Pick<RepoConnection, "name" | "purpose" | "scan_config">>
+): Promise<RepoConnection> {
+  const res = await fetch(`${BASE}/repos/${id}`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) throw new Error(`Failed to update repo connection: ${res.statusText}`);
+  return res.json();
+}
+
+export async function deleteRepoConnection(id: string): Promise<void> {
+  const res = await fetch(`${BASE}/repos/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to delete repo connection: ${res.statusText}`);
+}
+
+export async function toggleRepoConnection(id: string): Promise<RepoConnection> {
+  const res = await fetch(`${BASE}/repos/${id}/toggle`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to toggle repo connection: ${res.statusText}`);
+  return res.json();
+}
+
+export async function listGitHubOrgs(): Promise<GitHubOrg[]> {
+  const res = await fetch(`${BASE}/repos/github/orgs`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Failed to list GitHub orgs: ${res.statusText}`);
+  return res.json();
+}
+
+export async function listGitHubRepos(org: string): Promise<GitHubRepo[]> {
+  const res = await fetch(`${BASE}/repos/github/orgs/${org}/repos`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Failed to list GitHub repos: ${res.statusText}`);
+  return res.json();
+}
+
+export async function scanRepoConnectionStream(
+  connId: string,
+  onEvent: (event: RepoScanStreamEvent) => void
+): Promise<void> {
+  const res = await fetch(`${BASE}/repos/${connId}/scan`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Scan failed: ${res.statusText}`);
+  if (!res.body) throw new Error("No response body");
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  const MIN_EVENT_GAP = 400;
+  let lastEventTime = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("data: ")) {
+        try {
+          const data = JSON.parse(trimmed.slice(6));
+          const elapsed = Date.now() - lastEventTime;
+          if (elapsed < MIN_EVENT_GAP) {
+            await new Promise((r) => setTimeout(r, MIN_EVENT_GAP - elapsed));
+          }
+          onEvent(data);
+          lastEventTime = Date.now();
+        } catch {
+          // skip unparseable lines
+        }
+      }
+    }
+  }
+}
+
+export async function getRepoScanProgress(
+  connId: string
+): Promise<RepoScanStreamEvent> {
+  const res = await fetch(`${BASE}/repos/${connId}/scan-progress`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) return { event: "idle" };
+  return res.json();
+}
+
+export async function listRepoIssues(
+  connId: string,
+  status?: string,
+  severity?: string
+): Promise<RepoIssue[]> {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  if (severity) params.set("severity", severity);
+  const res = await fetch(`${BASE}/repos/${connId}/issues?${params}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to list repo issues: ${res.statusText}`);
+  return res.json();
+}
+
+export async function listAllRepoIssues(
+  status?: string,
+  severity?: string
+): Promise<RepoIssue[]> {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  if (severity) params.set("severity", severity);
+  const res = await fetch(`${BASE}/repos/all-issues?${params}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to list all repo issues: ${res.statusText}`);
+  return res.json();
+}
+
+export async function updateRepoIssueStatus(
+  issueId: string,
+  status: string
+): Promise<void> {
+  const res = await fetch(`${BASE}/repos/issues/${issueId}`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error(`Failed to update repo issue: ${res.statusText}`);
+}
+
+export async function updateRepoIssueSeverity(
+  issueId: string,
+  severity: string
+): Promise<void> {
+  const res = await fetch(`${BASE}/repos/issues/${issueId}/severity`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify({ severity }),
+  });
+  if (!res.ok) throw new Error(`Failed to update repo issue severity: ${res.statusText}`);
+}
+
+export async function listRepoAssets(connId: string): Promise<RepoAsset[]> {
+  const res = await fetch(`${BASE}/repos/${connId}/repos`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to list repo assets: ${res.statusText}`);
+  return res.json();
+}
+
+export async function listRepoScanLogs(
+  connId: string,
+  limit = 20
+): Promise<RepoScanLogListItem[]> {
+  const res = await fetch(`${BASE}/repos/${connId}/scan-logs?limit=${limit}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to list repo scan logs: ${res.statusText}`);
+  return res.json();
+}
+
+export async function getRepoScanLog(
+  connId: string,
+  logId: string
+): Promise<Record<string, unknown>> {
+  const res = await fetch(`${BASE}/repos/${connId}/scan-logs/${logId}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to get repo scan log: ${res.statusText}`);
   return res.json();
 }
