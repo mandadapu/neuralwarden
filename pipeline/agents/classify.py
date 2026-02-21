@@ -1,6 +1,7 @@
 """Classify Agent — Sonnet 4.5: Risk-scores threats with MITRE ATT&CK mappings."""
 
 import json
+import logging
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -172,7 +173,7 @@ def run_classify(state: PipelineState) -> dict:
         }
 
     except Exception as e:
-        print(f"[Classify] Classification failed, using fallback: {e}")
+        logging.getLogger(__name__).error("Classification failed, using fallback: %s", e, exc_info=True)
         classified = [
             _fallback_classify(t, i + 1) for i, t in enumerate(threats)
         ]

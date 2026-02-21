@@ -1,6 +1,7 @@
 """Detect Agent — Sonnet 4.5: Finds threats using rules + AI detection."""
 
 import json
+import logging
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -129,7 +130,7 @@ def run_detect(state: PipelineState) -> dict:
             )
     except Exception as e:
         # Graceful degradation: rule-based results are still valid
-        print(f"[Detect] AI detection failed, using rules only: {e}")
+        logging.getLogger(__name__).error("AI detection failed, using rules only: %s", e, exc_info=True)
 
     all_threats = rule_threats + ai_threats
     detect_metrics = timer.metrics if "timer" in locals() else {}
