@@ -212,6 +212,13 @@ export interface ScanLogEntry {
   message: string;
 }
 
+export interface ThreatLogEntry {
+  ts: string;
+  level: "info" | "error" | "warning";
+  agent: string;
+  message: string;
+}
+
 export interface ScanLog {
   id: string;
   cloud_account_id: string;
@@ -220,6 +227,8 @@ export interface ScanLog {
   status: "running" | "success" | "partial" | "error";
   summary_json: string;
   log_entries_json: string;
+  threat_metrics_json: string;
+  threat_log_entries_json: string;
 }
 
 export interface ScanLogListItem {

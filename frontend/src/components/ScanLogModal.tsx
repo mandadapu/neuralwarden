@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getScanLog } from "@/lib/api";
-import type { ScanLog, ScanLogSummary, ScanLogEntry } from "@/lib/types";
+import type { ScanLog, ScanLogSummary, ScanLogEntry, ThreatLogEntry, AgentMetrics } from "@/lib/types";
 
 interface Props {
   cloudId: string;
@@ -49,6 +49,17 @@ export default function ScanLogModal({ cloudId, logId, open, onClose }: Props) {
   const entries: ScanLogEntry[] = log
     ? (() => { try { return JSON.parse(log.log_entries_json); } catch { return []; } })()
     : [];
+  const threatMetrics: Record<string, AgentMetrics> = log?.threat_metrics_json
+    ? (() => { try { return JSON.parse(log.threat_metrics_json); } catch { return {}; } })()
+    : {};
+  const threatEntries: ThreatLogEntry[] = log?.threat_log_entries_json
+    ? (() => { try { return JSON.parse(log.threat_log_entries_json); } catch { return []; } })()
+    : [];
+  const hasThreatData = Object.keys(threatMetrics).length > 0 || threatEntries.length > 0;
+  const STAGE_ORDER = ["ingest", "detect", "validate", "classify", "report"];
+  const stageMetrics = STAGE_ORDER.filter((s) => threatMetrics[s]).map((s) => ({ stage: s, ...threatMetrics[s] }));
+  const totalThreatCost = stageMetrics.reduce((sum, m) => sum + (m.cost_usd ?? 0), 0);
+  const totalThreatTokens = stageMetrics.reduce((sum, m) => sum + (m.input_tokens ?? 0) + (m.output_tokens ?? 0), 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -113,6 +124,65 @@ export default function ScanLogModal({ cloudId, logId, open, onClose }: Props) {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Threat Pipeline section */}
+            {hasThreatData && (
+              <div className="px-6 py-4 border-b border-[#262c34] space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-semibold text-[#8b949e] uppercase tracking-wider">
+                    Threat Pipeline
+                  </h3>
+                  {stageMetrics.length > 0 && (
+                    <span className="text-xs text-[#8b949e]">
+                      {totalThreatTokens.toLocaleString()} tokens &middot; ${totalThreatCost.toFixed(4)}
+                    </span>
+                  )}
+                </div>
+                {stageMetrics.length > 0 && (
+                  <div className="space-y-1.5">
+                    {stageMetrics.map((m) => (
+                      <div
+                        key={m.stage}
+                        className="flex items-center justify-between text-sm py-1.5 px-3 rounded-lg bg-[#21262d]"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-500/15 text-violet-400">
+                            {m.stage}
+                          </span>
+                        </div>
+                        <span className="text-[#8b949e] text-xs tabular-nums">
+                          {((m.latency_ms ?? 0) / 1000).toFixed(1)}s &middot;{" "}
+                          {((m.input_tokens ?? 0) + (m.output_tokens ?? 0)).toLocaleString()} tokens &middot;{" "}
+                          ${(m.cost_usd ?? 0).toFixed(4)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {threatEntries.length > 0 && (
+                  <div className="font-mono text-xs space-y-0.5 bg-gray-900 rounded-lg p-4 text-gray-300 max-h-40 overflow-y-auto">
+                    {threatEntries.map((entry, i) => (
+                      <div
+                        key={i}
+                        className={
+                          entry.level === "error"
+                            ? "text-red-400"
+                            : entry.level === "warning"
+                              ? "text-amber-400"
+                              : "text-gray-300"
+                        }
+                      >
+                        <span className="text-[#8b949e]">
+                          {new Date(entry.ts).toLocaleTimeString()}
+                        </span>{" "}
+                        <span className="text-violet-400 font-semibold">[{entry.agent}]</span>{" "}
+                        {entry.message}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

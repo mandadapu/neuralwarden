@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import time
+from datetime import datetime, timezone
 from typing import Any
 
 from langgraph.graph import END, START, StateGraph
@@ -32,10 +34,25 @@ _thread_local = threading.local()
 def set_progress_queue(q):
     """Set the progress queue on the current thread (called from SSE runner)."""
     _thread_local.progress_queue = q
+    _thread_local.threat_log_entries = []
 
 
 def _get_progress_queue():
     return getattr(_thread_local, "progress_queue", None)
+
+
+def _get_threat_log() -> list[dict]:
+    return getattr(_thread_local, "threat_log_entries", [])
+
+
+def _threat_log(level: str, agent: str, message: str) -> None:
+    entries = _get_threat_log()
+    entries.append({
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "level": level,
+        "agent": agent,
+        "message": message,
+    })
 
 
 # -- Discovery Node --
@@ -209,14 +226,33 @@ def threat_pipeline_node(state: ScanAgentState) -> dict:
     progress_queue = _get_progress_queue()
     result = {}
     last_stage = None
+    stage_start: dict[str, float] = {}
+    pipeline_start = time.time()
+
+    log_count = len(state.get("log_lines", []))
+    _threat_log("info", "pipeline", f"Threat pipeline started — {log_count} log lines to analyze")
 
     for chunk in threat_graph.stream(initial_state, stream_mode="updates"):
         # chunk is {node_name: state_update}
         for node_name, update in chunk.items():
             stage = _map_threat_node_to_stage(node_name)
-            if stage and stage != last_stage and progress_queue is not None:
-                progress_queue.put(("threat_stage", stage))
+            if stage and stage != last_stage:
+                # Log completion of previous stage
+                if last_stage and last_stage in stage_start:
+                    prev_metrics = update.get("agent_metrics", result.get("agent_metrics", {}))
+                    m = prev_metrics.get(last_stage, {})
+                    elapsed = round(time.time() - stage_start[last_stage], 1)
+                    cost = m.get("cost_usd", 0)
+                    tokens = m.get("input_tokens", 0) + m.get("output_tokens", 0)
+                    _threat_log("info", last_stage, f"{last_stage.capitalize()} complete ({elapsed}s, {tokens} tokens, ${cost:.4f})")
+
+                # Log start of new stage
+                stage_start[stage] = time.time()
+                _threat_log("info", stage, f"{stage.capitalize()} started")
+                if progress_queue is not None:
+                    progress_queue.put(("threat_stage", stage))
                 last_stage = stage
+
             # Accumulate fields we care about from the final state
             if "classified_threats" in update:
                 result["classified_threats"] = update["classified_threats"]
@@ -225,10 +261,24 @@ def threat_pipeline_node(state: ScanAgentState) -> dict:
             if "agent_metrics" in update:
                 result["agent_metrics"] = update["agent_metrics"]
 
+    # Log completion of final stage
+    if last_stage and last_stage in stage_start:
+        m = result.get("agent_metrics", {}).get(last_stage, {})
+        elapsed = round(time.time() - stage_start[last_stage], 1)
+        cost = m.get("cost_usd", 0)
+        tokens = m.get("input_tokens", 0) + m.get("output_tokens", 0)
+        _threat_log("info", last_stage, f"{last_stage.capitalize()} complete ({elapsed}s, {tokens} tokens, ${cost:.4f})")
+
+    pipeline_elapsed = round(time.time() - pipeline_start, 1)
+    total_cost = sum(m.get("cost_usd", 0) for m in result.get("agent_metrics", {}).values())
+    threats_found = len(result.get("classified_threats", []))
+    _threat_log("info", "pipeline", f"Threat pipeline complete: {threats_found} threats classified ({pipeline_elapsed}s, ${total_cost:.4f})")
+
     return {
         "classified_threats": result.get("classified_threats", []),
         "report": result.get("report"),
         "agent_metrics": result.get("agent_metrics", {}),
+        "threat_log_entries": _get_threat_log(),
     }
 
 

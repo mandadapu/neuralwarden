@@ -86,6 +86,8 @@ CREATE TABLE IF NOT EXISTS scan_logs (
     status TEXT NOT NULL DEFAULT 'running',
     summary_json TEXT DEFAULT '{}',
     log_entries_json TEXT DEFAULT '[]',
+    threat_metrics_json TEXT DEFAULT '{}',
+    threat_log_entries_json TEXT DEFAULT '[]',
     FOREIGN KEY (cloud_account_id) REFERENCES cloud_accounts(id)
 )
 """
@@ -105,6 +107,8 @@ def init_cloud_tables() -> None:
         for migration in [
             "ALTER TABLE cloud_issues ADD COLUMN remediation_script TEXT DEFAULT ''",
             "ALTER TABLE cloud_accounts ADD COLUMN status TEXT DEFAULT 'active'",
+            "ALTER TABLE scan_logs ADD COLUMN threat_metrics_json TEXT DEFAULT '{}'",
+            "ALTER TABLE scan_logs ADD COLUMN threat_log_entries_json TEXT DEFAULT '[]'",
         ]:
             try:
                 if is_postgres():
@@ -570,6 +574,28 @@ def complete_scan_log(
                    WHERE id = ?"""
             ),
             (status, completed_at, summary_json, log_entries_json, log_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def update_scan_log_threat_data(
+    log_id: str,
+    threat_metrics_json: str,
+    threat_log_entries_json: str,
+) -> None:
+    """Attach threat pipeline metrics and log entries to a scan log."""
+    conn = get_conn()
+    try:
+        conn.execute(
+            adapt_sql(
+                """UPDATE scan_logs
+                   SET threat_metrics_json = ?,
+                       threat_log_entries_json = ?
+                   WHERE id = ?"""
+            ),
+            (threat_metrics_json, threat_log_entries_json, log_id),
         )
         conn.commit()
     finally:
