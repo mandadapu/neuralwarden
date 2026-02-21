@@ -276,6 +276,11 @@ async def trigger_scan(cloud_id: str):
         thread = threading.Thread(target=_run_graph, daemon=True)
         thread.start()
 
+        # Cloud Run's reverse proxy buffers small responses. Send a large
+        # padding comment (~4 KB) to exceed the buffer threshold and force
+        # the proxy to start streaming immediately.
+        yield {"comment": " " * 4096}
+
         # Emit "starting" immediately so the overlay updates before discovery
         yield {
             "data": json.dumps({
