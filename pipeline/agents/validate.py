@@ -1,6 +1,7 @@
 """Validator Agent — Sonnet 4.5: Shadow-checks a sample of 'clean' logs for missed threats."""
 
 import json
+import logging
 import random
 
 from langchain_anthropic import ChatAnthropic
@@ -155,7 +156,7 @@ def run_validate(state: PipelineState) -> dict:
         }
 
     except Exception as e:
-        print(f"[Validate] Validation failed, continuing without: {e}")
+        logging.getLogger(__name__).error("Validation failed, continuing without: %s", e, exc_info=True)
         return {
             "validator_findings": [],
             "validator_sample_size": len(sample),
