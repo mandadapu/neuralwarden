@@ -130,7 +130,7 @@ def run_detect(state: PipelineState) -> dict:
             )
     except Exception as e:
         # Graceful degradation: rule-based results are still valid
-        logging.getLogger(__name__).error("AI detection failed, using rules only: %s", e, exc_info=True)
+        logging.getLogger(__name__).error("AI detection failed [%s]: %s", type(e).__name__, e)
 
     all_threats = rule_threats + ai_threats
     detect_metrics = timer.metrics if "timer" in locals() else {}

@@ -173,7 +173,7 @@ def run_classify(state: PipelineState) -> dict:
         }
 
     except Exception as e:
-        logging.getLogger(__name__).error("Classification failed, using fallback: %s", e, exc_info=True)
+        logging.getLogger(__name__).error("Classification failed [%s]: %s", type(e).__name__, e)
         classified = [
             _fallback_classify(t, i + 1) for i, t in enumerate(threats)
         ]
