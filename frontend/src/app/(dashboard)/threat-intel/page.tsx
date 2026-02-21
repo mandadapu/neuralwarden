@@ -137,23 +137,27 @@ export default function ThreatIntelPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {searchResults.map((r) => (
+              {searchResults.map((r) => {
+                const sev = r.metadata.severity as string | undefined;
+                const tech = r.metadata.technique as string | undefined;
+                const tac = r.metadata.tactic as string | undefined;
+                return (
                 <div key={r.id} className="p-4 bg-white rounded-xl border border-gray-200 hover:border-gray-300 transition-colors">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className="text-xs font-mono font-semibold text-primary">{r.id}</span>
-                        {r.metadata?.severity && (
-                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${SEVERITY_STYLES[r.metadata.severity as string] ?? "bg-gray-100 text-gray-600"}`}>
-                            {r.metadata.severity as string}
+                        {sev && (
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${SEVERITY_STYLES[sev] ?? "bg-gray-100 text-gray-600"}`}>
+                            {sev}
                           </span>
                         )}
                       </div>
                       <p className="text-sm text-gray-700 leading-relaxed">{r.text}</p>
-                      {(r.metadata?.technique || r.metadata?.tactic) && (
+                      {(tech || tac) && (
                         <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
-                          {r.metadata.technique && <span className="font-mono">{r.metadata.technique as string}</span>}
-                          {r.metadata.tactic && <span>{r.metadata.tactic as string}</span>}
+                          {tech && <span className="font-mono">{tech}</span>}
+                          {tac && <span>{tac}</span>}
                         </div>
                       )}
                     </div>
@@ -163,7 +167,8 @@ export default function ThreatIntelPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
