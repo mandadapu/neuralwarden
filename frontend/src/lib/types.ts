@@ -331,3 +331,76 @@ export interface PentestCheck {
   severity_default: "critical" | "high" | "medium" | "low";
   cwe_ids: string;
 }
+
+// ── GitHub Repository Integration ──
+
+export interface RepoConnection {
+  id: string;
+  user_email: string;
+  provider: string;
+  name: string;
+  org_name: string;
+  installation_id: string;
+  purpose: string;
+  scan_config: string;
+  last_scan_at: string | null;
+  created_at: string;
+  status: string;
+  issue_counts?: IssueCounts;
+  asset_counts?: { total: number; by_language: Record<string, number> };
+}
+
+export interface RepoAsset {
+  id: string;
+  connection_id: string;
+  repo_full_name: string;
+  repo_name: string;
+  language: string;
+  default_branch: string;
+  is_private: boolean | number;
+  metadata_json: string;
+  discovered_at: string;
+}
+
+export interface RepoIssue {
+  id: string;
+  connection_id: string;
+  repo_asset_id: string | null;
+  rule_code: string;
+  title: string;
+  description: string;
+  severity: "critical" | "high" | "medium" | "low";
+  location: string;
+  fix_time: string;
+  status: "todo" | "in_progress" | "ignored" | "resolved";
+  remediation_script: string;
+  discovered_at: string;
+}
+
+export interface GitHubOrg {
+  login: string;
+  avatar_url: string;
+  description: string | null;
+}
+
+export interface GitHubRepo {
+  full_name: string;
+  name: string;
+  language: string | null;
+  default_branch: string;
+  private: boolean;
+  stargazers_count: number;
+  pushed_at: string | null;
+  description: string | null;
+}
+
+export interface RepoScanStreamEvent {
+  event: string;
+  total_repos?: number;
+  repos_scanned?: number;
+  current_repo?: string;
+  issue_count?: number;
+  issue_counts?: IssueCounts;
+  message?: string;
+  scan_log_id?: string;
+}
