@@ -312,4 +312,22 @@ export interface PentestFinding {
   evidence: string;
   discovered_at: string;
   resolved_at: string | null;
+  cwe_id: string;
+  cve_id: string;
+  request_data: string;
+  response_data: string;
+  validation_status: "unverified" | "confirmed" | "false_positive";
+  validation_notes: string;
+  check_rule_code: string;
+}
+
+export interface PentestCheck {
+  id: string;
+  rule_code: string;
+  title: string;
+  description: string;
+  group_name: "owasp" | "advanced" | "hardening";
+  subchecks: string[];
+  severity_default: "critical" | "high" | "medium" | "low";
+  cwe_ids: string;
 }

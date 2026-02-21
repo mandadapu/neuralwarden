@@ -21,6 +21,18 @@ const STATUSES = [
 
 const SEVERITIES = ["critical", "high", "medium", "low"];
 
+const VALIDATION_STATUSES = [
+  { id: "unverified", label: "Unverified" },
+  { id: "confirmed", label: "Confirmed" },
+  { id: "false_positive", label: "False Positive" },
+];
+
+const VALIDATION_STYLES: Record<string, string> = {
+  unverified: "bg-[#30363d] text-[#8b949e]",
+  confirmed: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
+  false_positive: "bg-red-500/10 text-red-400 border-red-500/30",
+};
+
 interface FindingDetailModalProps {
   finding: PentestFinding;
   open: boolean;
@@ -37,6 +49,8 @@ export default function FindingDetailModal({
   const [status, setStatus] = useState(finding.status);
   const [severity, setSeverity] = useState(finding.severity);
   const [remediationNotes, setRemediationNotes] = useState(finding.remediation_notes);
+  const [validationStatus, setValidationStatus] = useState(finding.validation_status);
+  const [validationNotes, setValidationNotes] = useState(finding.validation_notes);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,6 +59,8 @@ export default function FindingDetailModal({
       setStatus(finding.status);
       setSeverity(finding.severity);
       setRemediationNotes(finding.remediation_notes);
+      setValidationStatus(finding.validation_status);
+      setValidationNotes(finding.validation_notes);
       setError(null);
     }
   }, [open, finding]);
@@ -59,6 +75,8 @@ export default function FindingDetailModal({
       if (status !== finding.status) updates.status = status;
       if (severity !== finding.severity) updates.severity = severity;
       if (remediationNotes !== finding.remediation_notes) updates.remediation_notes = remediationNotes;
+      if (validationStatus !== finding.validation_status) updates.validation_status = validationStatus;
+      if (validationNotes !== finding.validation_notes) updates.validation_notes = validationNotes;
 
       if (Object.keys(updates).length > 0) {
         const updated = await updateFinding(finding.id, updates as Parameters<typeof updateFinding>[1]);
@@ -74,6 +92,9 @@ export default function FindingDetailModal({
   }
 
   const sevStyle = SEVERITY_STYLES[finding.severity] ?? "bg-gray-500/10 text-gray-400";
+  const valStyle = VALIDATION_STYLES[finding.validation_status] ?? VALIDATION_STYLES.unverified;
+  const hasReferences = finding.cwe_id || finding.cve_id || finding.check_rule_code;
+  const hasRequestResponse = finding.request_data || finding.response_data;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -84,13 +105,16 @@ export default function FindingDetailModal({
         <div className="px-6 py-5 border-b border-[#262c34]">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2.5 mb-1">
+              <div className="flex items-center gap-2.5 mb-1 flex-wrap">
                 <h2 className="text-lg font-bold text-white truncate">{finding.title}</h2>
                 <span className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${sevStyle}`}>
                   {finding.severity}
                 </span>
+                <span className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${valStyle}`}>
+                  {finding.validation_status.replace("_", " ")}
+                </span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-[#8b949e]">
+              <div className="flex items-center gap-3 text-xs text-[#8b949e] flex-wrap">
                 {finding.cvss_score !== null && (
                   <span className="font-mono">CVSS {finding.cvss_score}</span>
                 )}
@@ -111,6 +135,30 @@ export default function FindingDetailModal({
 
         {/* Body */}
         <div className="px-6 py-5 space-y-5">
+          {/* References */}
+          {hasReferences && (
+            <div>
+              <label className="block text-xs font-semibold text-[#8b949e] uppercase tracking-wider mb-2">References</label>
+              <div className="flex items-center gap-2 flex-wrap">
+                {finding.cwe_id && (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    {finding.cwe_id}
+                  </span>
+                )}
+                {finding.cve_id && (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-red-500/10 text-red-400 border border-red-500/20">
+                    {finding.cve_id}
+                  </span>
+                )}
+                {finding.check_rule_code && (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                    {finding.check_rule_code}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Description */}
           {finding.description && (
             <div>
@@ -129,6 +177,31 @@ export default function FindingDetailModal({
             </div>
           )}
 
+          {/* Request / Response */}
+          {hasRequestResponse && (
+            <div>
+              <label className="block text-xs font-semibold text-[#8b949e] uppercase tracking-wider mb-2">Request / Response</label>
+              <div className="grid grid-cols-1 gap-3">
+                {finding.request_data && (
+                  <div>
+                    <div className="text-[10px] font-semibold text-[#8b949e] uppercase mb-1">Request</div>
+                    <pre className="text-xs text-[#c9d1d9] bg-[#21262d] p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono max-h-40 overflow-y-auto">
+                      {finding.request_data}
+                    </pre>
+                  </div>
+                )}
+                {finding.response_data && (
+                  <div>
+                    <div className="text-[10px] font-semibold text-[#8b949e] uppercase mb-1">Response</div>
+                    <pre className="text-xs text-[#c9d1d9] bg-[#21262d] p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono max-h-40 overflow-y-auto">
+                      {finding.response_data}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Evidence */}
           {finding.evidence && (
             <div>
@@ -139,8 +212,8 @@ export default function FindingDetailModal({
             </div>
           )}
 
-          {/* Status + Severity controls */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Status + Severity + Validation controls */}
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-[#8b949e] uppercase tracking-wider mb-1.5">Status</label>
               <select
@@ -165,6 +238,18 @@ export default function FindingDetailModal({
                 ))}
               </select>
             </div>
+            <div>
+              <label className="block text-xs font-semibold text-[#8b949e] uppercase tracking-wider mb-1.5">Validation</label>
+              <select
+                value={validationStatus}
+                onChange={(e) => setValidationStatus(e.target.value as PentestFinding["validation_status"])}
+                className="w-full px-4 py-2.5 border border-[#30363d] rounded-lg text-sm bg-[#1c2128] text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              >
+                {VALIDATION_STATUSES.map((v) => (
+                  <option key={v.id} value={v.id}>{v.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Remediation Notes */}
@@ -175,6 +260,18 @@ export default function FindingDetailModal({
               onChange={(e) => setRemediationNotes(e.target.value)}
               placeholder="Steps taken or planned for remediation..."
               rows={3}
+              className="w-full px-4 py-2.5 border border-[#30363d] rounded-lg text-sm bg-[#1c2128] text-white placeholder:text-[#484f58] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+            />
+          </div>
+
+          {/* Validation Notes */}
+          <div>
+            <label className="block text-xs font-semibold text-[#8b949e] uppercase tracking-wider mb-1.5">Validation Notes</label>
+            <textarea
+              value={validationNotes}
+              onChange={(e) => setValidationNotes(e.target.value)}
+              placeholder="Notes on how this finding was validated..."
+              rows={2}
               className="w-full px-4 py-2.5 border border-[#30363d] rounded-lg text-sm bg-[#1c2128] text-white placeholder:text-[#484f58] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
             />
           </div>

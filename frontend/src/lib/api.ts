@@ -16,6 +16,7 @@ import type {
   ThreatIntelSearchResult,
   Pentest,
   PentestFinding,
+  PentestCheck,
 } from "./types";
 
 const BASE =
@@ -572,6 +573,13 @@ export async function createFinding(
     remediation_notes?: string;
     evidence?: string;
     discovered_at?: string;
+    cwe_id?: string;
+    cve_id?: string;
+    request_data?: string;
+    response_data?: string;
+    validation_status?: string;
+    validation_notes?: string;
+    check_rule_code?: string;
   }
 ): Promise<PentestFinding> {
   const res = await fetch(`${BASE}/pentests/${pentestId}/findings`, {
@@ -585,7 +593,7 @@ export async function createFinding(
 
 export async function updateFinding(
   findingId: string,
-  updates: Partial<Pick<PentestFinding, "title" | "description" | "severity" | "cvss_score" | "status" | "category" | "affected_url" | "remediation_notes" | "evidence" | "resolved_at">>
+  updates: Partial<Pick<PentestFinding, "title" | "description" | "severity" | "cvss_score" | "status" | "category" | "affected_url" | "remediation_notes" | "evidence" | "resolved_at" | "cwe_id" | "cve_id" | "request_data" | "response_data" | "validation_status" | "validation_notes" | "check_rule_code">>
 ): Promise<PentestFinding> {
   const res = await fetch(`${BASE}/pentests/findings/${findingId}`, {
     method: "PATCH",
@@ -593,6 +601,16 @@ export async function updateFinding(
     body: JSON.stringify(updates),
   });
   if (!res.ok) throw new Error(`Failed to update finding: ${res.statusText}`);
+  return res.json();
+}
+
+export async function listPentestChecks(group?: string): Promise<PentestCheck[]> {
+  const params = new URLSearchParams();
+  if (group) params.set("group", group);
+  const res = await fetch(`${BASE}/pentests/checks?${params}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to list checks: ${res.statusText}`);
   return res.json();
 }
 
