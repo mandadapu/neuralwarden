@@ -102,18 +102,20 @@ def init_cloud_tables() -> None:
         conn.execute(_CREATE_SCAN_LOGS)
         # Migrations — add columns that may not exist on older DBs
         # Use SAVEPOINT for PostgreSQL so a failure doesn't abort the transaction
-        try:
-            if is_postgres():
-                conn.execute("SAVEPOINT alter_migration")
-            conn.execute(
-                "ALTER TABLE cloud_issues ADD COLUMN remediation_script TEXT DEFAULT ''"
-            )
-            if is_postgres():
-                conn.execute("RELEASE SAVEPOINT alter_migration")
-        except Exception:
-            if is_postgres():
-                conn.execute("ROLLBACK TO SAVEPOINT alter_migration")
-            # column already exists — safe to ignore
+        for migration in [
+            "ALTER TABLE cloud_issues ADD COLUMN remediation_script TEXT DEFAULT ''",
+            "ALTER TABLE cloud_accounts ADD COLUMN status TEXT DEFAULT 'active'",
+        ]:
+            try:
+                if is_postgres():
+                    conn.execute("SAVEPOINT alter_migration")
+                conn.execute(migration)
+                if is_postgres():
+                    conn.execute("RELEASE SAVEPOINT alter_migration")
+            except Exception:
+                if is_postgres():
+                    conn.execute("ROLLBACK TO SAVEPOINT alter_migration")
+                # column already exists — safe to ignore
         conn.commit()
     finally:
         conn.close()
