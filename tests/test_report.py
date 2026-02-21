@@ -17,7 +17,7 @@ def _make_classified_threat(
 ) -> ClassifiedThreat:
     return ClassifiedThreat(
         threat_id=threat_id,
-        type="brute_force",
+        type="dast",
         confidence=0.95,
         method="rule_based",
         description=description,

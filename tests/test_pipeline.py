@@ -36,7 +36,7 @@ class TestConditionalRouting:
             "threats": [
                 Threat(
                     threat_id="T1",
-                    type="brute_force",
+                    type="dast",
                     confidence=0.9,
                     method="rule_based",
                     description="test",

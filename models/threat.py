@@ -8,7 +8,7 @@ class Threat(BaseModel):
 
     threat_id: str = Field(description="Unique threat identifier (e.g., RULE-BRUTE-001)")
     type: str = Field(
-        description="Threat type (e.g., brute_force, port_scan, privilege_escalation, data_exfiltration, lateral_movement)"
+        description="Threat type (e.g., dast, sast, cloud_configs, malware, surface_monitoring, prompt_injection)"
     )
     confidence: float = Field(ge=0.0, le=1.0, description="Confidence score 0-1")
     source_log_indices: list[int] = Field(

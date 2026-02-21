@@ -57,7 +57,7 @@ class TestDatabase:
                 "total_logs": 50,
             },
             "classified_threats": [
-                {"threat_id": "RULE-BF-001", "type": "brute_force", "risk": "critical"}
+                {"threat_id": "RULE-BF-001", "type": "dast", "risk": "critical"}
             ],
             "report": {"summary": "Test report summary"},
             "agent_metrics": {

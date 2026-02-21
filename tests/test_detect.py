@@ -29,7 +29,7 @@ class TestBruteForce:
         logs = [_make_log(i, "failed_auth", source_ip="10.0.0.1") for i in range(6)]
         threats = detect_brute_force(logs, threshold=5)
         assert len(threats) == 1
-        assert threats[0].type == "brute_force"
+        assert threats[0].type == "dast"
         assert threats[0].method == "rule_based"
 
     def test_below_threshold(self):
@@ -59,7 +59,7 @@ class TestPortScan:
         ]
         threats = detect_port_scan(logs, threshold=10)
         assert len(threats) == 1
-        assert threats[0].type == "port_scan"
+        assert threats[0].type == "dast"
 
     def test_below_threshold(self):
         logs = [
@@ -77,7 +77,7 @@ class TestPrivilegeEscalation:
         ]
         threats = detect_privilege_escalation(logs)
         assert len(threats) == 1
-        assert threats[0].type == "privilege_escalation"
+        assert threats[0].type == "cloud_configs"
 
     def test_detects_user_root_pattern(self):
         logs = [
@@ -99,7 +99,7 @@ class TestDataExfiltration:
         ]
         threats = detect_data_exfiltration(logs, threshold_mb=100)
         assert len(threats) == 1
-        assert threats[0].type == "data_exfiltration"
+        assert threats[0].type == "surface_monitoring"
 
     def test_detects_gb_transfer(self):
         logs = [
@@ -123,7 +123,7 @@ class TestLateralMovement:
         ]
         threats = detect_lateral_movement(logs)
         assert len(threats) == 1
-        assert threats[0].type == "lateral_movement"
+        assert threats[0].type == "malware"
 
     def test_ignores_external_to_internal(self):
         logs = [
@@ -139,8 +139,8 @@ class TestRunAllRules:
         logs.append(_make_log(6, "sudo", source="sudo", raw_text="sudo: admin : USER=root"))
         threats = run_all_rules(logs)
         types = {t.type for t in threats}
-        assert "brute_force" in types
-        assert "privilege_escalation" in types
+        assert "dast" in types
+        assert "cloud_configs" in types
 
     def test_empty_logs(self):
         threats = run_all_rules([])
