@@ -14,6 +14,8 @@ import type {
   ThreatIntelStats,
   ThreatIntelEntry,
   ThreatIntelSearchResult,
+  Pentest,
+  PentestFinding,
 } from "./types";
 
 const BASE =
@@ -484,5 +486,125 @@ export async function searchThreatIntel(query: string, topK = 5): Promise<{ resu
     body: JSON.stringify({ query, top_k: topK }),
   });
   if (!res.ok) throw new Error(`Threat intel search failed: ${res.statusText}`);
+  return res.json();
+}
+
+// --- Pentests ---
+
+export async function listPentests(): Promise<Pentest[]> {
+  const res = await fetch(`${BASE}/pentests`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Failed to list pentests: ${res.statusText}`);
+  return res.json();
+}
+
+export async function createPentest(data: {
+  name: string;
+  description?: string;
+  vendor?: string;
+  vendor_id?: string;
+  status?: string;
+  severity?: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  scope?: string;
+}): Promise<Pentest> {
+  const res = await fetch(`${BASE}/pentests`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`Failed to create pentest: ${res.statusText}`);
+  return res.json();
+}
+
+export async function getPentest(id: string): Promise<Pentest> {
+  const res = await fetch(`${BASE}/pentests/${id}`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Failed to get pentest: ${res.statusText}`);
+  return res.json();
+}
+
+export async function updatePentest(
+  id: string,
+  updates: Partial<Pick<Pentest, "name" | "description" | "vendor" | "vendor_id" | "status" | "severity" | "start_date" | "end_date" | "scope">>
+): Promise<Pentest> {
+  const res = await fetch(`${BASE}/pentests/${id}`, {
+    method: "PUT",
+    headers: authHeaders(),
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) throw new Error(`Failed to update pentest: ${res.statusText}`);
+  return res.json();
+}
+
+export async function deletePentest(id: string): Promise<void> {
+  const res = await fetch(`${BASE}/pentests/${id}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to delete pentest: ${res.statusText}`);
+}
+
+export async function listFindings(
+  pentestId: string,
+  status?: string,
+  severity?: string
+): Promise<PentestFinding[]> {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  if (severity) params.set("severity", severity);
+  const res = await fetch(`${BASE}/pentests/${pentestId}/findings?${params}`, {
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to list findings: ${res.statusText}`);
+  return res.json();
+}
+
+export async function createFinding(
+  pentestId: string,
+  data: {
+    title: string;
+    description?: string;
+    severity?: string;
+    cvss_score?: number | null;
+    status?: string;
+    category?: string;
+    affected_url?: string;
+    remediation_notes?: string;
+    evidence?: string;
+    discovered_at?: string;
+  }
+): Promise<PentestFinding> {
+  const res = await fetch(`${BASE}/pentests/${pentestId}/findings`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error(`Failed to create finding: ${res.statusText}`);
+  return res.json();
+}
+
+export async function updateFinding(
+  findingId: string,
+  updates: Partial<Pick<PentestFinding, "title" | "description" | "severity" | "cvss_score" | "status" | "category" | "affected_url" | "remediation_notes" | "evidence" | "resolved_at">>
+): Promise<PentestFinding> {
+  const res = await fetch(`${BASE}/pentests/findings/${findingId}`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) throw new Error(`Failed to update finding: ${res.statusText}`);
+  return res.json();
+}
+
+export async function importFindings(
+  pentestId: string,
+  findings: Array<Record<string, unknown>>
+): Promise<{ imported: number }> {
+  const res = await fetch(`${BASE}/pentests/${pentestId}/import`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ findings }),
+  });
+  if (!res.ok) throw new Error(`Failed to import findings: ${res.statusText}`);
   return res.json();
 }
