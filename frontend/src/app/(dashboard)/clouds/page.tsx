@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import PageShell from "@/components/PageShell";
-import { listClouds, scanCloudStream, setApiUserEmail } from "@/lib/api";
+import { listClouds, scanCloudStream, deleteCloud, toggleCloud, setApiUserEmail } from "@/lib/api";
 import type { CloudAccount, ScanStreamEvent } from "@/lib/types";
 import ScanProgressOverlay from "@/components/ScanProgressOverlay";
 
@@ -68,6 +68,32 @@ export default function CloudsPage() {
   const [scanningId, setScanningId] = useState<string | null>(null);
   const [scanProgress, setScanProgress] = useState<ScanStreamEvent | null>(null);
   const [showOverlay, setShowOverlay] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  async function handleDelete(e: React.MouseEvent, cloudId: string) {
+    e.stopPropagation();
+    if (confirmDeleteId !== cloudId) {
+      setConfirmDeleteId(cloudId);
+      return;
+    }
+    try {
+      await deleteCloud(cloudId);
+      setClouds((prev) => prev.filter((c) => String(c.id) !== cloudId));
+      setConfirmDeleteId(null);
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
+  }
+
+  async function handleToggle(e: React.MouseEvent, cloudId: string) {
+    e.stopPropagation();
+    try {
+      const updated = await toggleCloud(cloudId);
+      setClouds((prev) => prev.map((c) => (String(c.id) === cloudId ? updated : c)));
+    } catch (err) {
+      console.error("Toggle failed:", err);
+    }
+  }
 
   async function handleSync(e: React.MouseEvent, cloudId: string) {
     e.stopPropagation();
@@ -116,8 +142,8 @@ export default function CloudsPage() {
       description="Connected cloud accounts"
       icon={<CloudIcon />}
     >
-      {/* Header row + Search (only when clouds exist) */}
-      {!loading && clouds.length > 0 && (
+      {/* Header row + Search */}
+      {!loading && (
         <>
           <div className="flex items-center justify-between mt-4 mb-5">
             <div className="flex items-center gap-3">
@@ -125,13 +151,15 @@ export default function CloudsPage() {
                 {clouds.length} connection{clouds.length !== 1 ? "s" : ""}
               </span>
             </div>
-            <Link
-              href="/clouds/connect"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-hover transition-colors"
-            >
-              <PlusIcon />
-              Connect Cloud
-            </Link>
+            {clouds.length > 0 && (
+              <Link
+                href="/clouds/connect"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-hover transition-colors"
+              >
+                <PlusIcon />
+                Connect Cloud
+              </Link>
+            )}
           </div>
 
           <div className="flex items-center gap-3 mb-5">
@@ -206,11 +234,13 @@ export default function CloudsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#262c34]">
-              {filtered.map((cloud) => (
+              {filtered.map((cloud) => {
+                const isDisabled = cloud.status === "disabled";
+                return (
                 <tr
                   key={cloud.id}
                   onClick={() => router.push(`/clouds/${cloud.id}`)}
-                  className="hover:bg-[#21262d] cursor-pointer transition-colors"
+                  className={`hover:bg-[#21262d] cursor-pointer transition-colors ${isDisabled ? "opacity-50" : ""}`}
                 >
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
@@ -219,7 +249,12 @@ export default function CloudsPage() {
                     </div>
                   </td>
                   <td className="px-5 py-3.5">
-                    <span className="text-sm font-medium text-white">{cloud.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-white">{cloud.name}</span>
+                      {isDisabled && (
+                        <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-[#30363d] text-[#8b949e] uppercase">Disabled</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-5 py-3.5">
                     <span className="text-sm text-[#c9d1d9] capitalize">{cloud.purpose || "—"}</span>
@@ -237,29 +272,62 @@ export default function CloudsPage() {
                     <span className="text-sm text-[#8b949e]">{relativeTime(cloud.last_scan_at)}</span>
                   </td>
                   <td className="px-5 py-3.5 text-right">
-                    <button
-                      onClick={(e) => handleSync(e, String(cloud.id))}
-                      disabled={scanningId === String(cloud.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-[#00e68a]/30 text-[#00e68a] hover:bg-[#00e68a]/10 transition-colors disabled:opacity-50 cursor-pointer"
-                    >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        className={scanningId === String(cloud.id) ? "animate-spin" : ""}
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={(e) => handleToggle(e, String(cloud.id))}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
+                          isDisabled
+                            ? "border-[#00e68a]/30 text-[#00e68a] hover:bg-[#00e68a]/10"
+                            : "border-yellow-500/30 text-yellow-400 hover:bg-yellow-950/20"
+                        }`}
                       >
-                        <path d="M23 4v6h-6" />
-                        <path d="M1 20v-6h6" />
-                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                      </svg>
-                      {scanningId === String(cloud.id) ? "Scanning..." : "Sync"}
-                    </button>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          {isDisabled ? (
+                            <><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></>
+                          ) : (
+                            <><circle cx="12" cy="12" r="10" /><path d="M4.93 4.93l14.14 14.14" /></>
+                          )}
+                        </svg>
+                        {isDisabled ? "Enable" : "Disable"}
+                      </button>
+                      <button
+                        onClick={(e) => handleSync(e, String(cloud.id))}
+                        disabled={scanningId === String(cloud.id) || isDisabled}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-[#00e68a]/30 text-[#00e68a] hover:bg-[#00e68a]/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className={scanningId === String(cloud.id) ? "animate-spin" : ""}
+                        >
+                          <path d="M23 4v6h-6" />
+                          <path d="M1 20v-6h6" />
+                          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                        </svg>
+                        {scanningId === String(cloud.id) ? "Scanning..." : "Sync"}
+                      </button>
+                      <button
+                        onClick={(e) => handleDelete(e, String(cloud.id))}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
+                          confirmDeleteId === String(cloud.id)
+                            ? "border-red-500/50 text-red-400 bg-red-950/20 hover:bg-red-950/40"
+                            : "border-[#30363d] text-[#8b949e] hover:text-red-400 hover:border-red-500/30 hover:bg-red-950/10"
+                        }`}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        {confirmDeleteId === String(cloud.id) ? "Confirm" : "Delete"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>

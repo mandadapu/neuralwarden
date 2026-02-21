@@ -15,6 +15,8 @@ interface CloudContextValue {
   refresh: () => void;
   /** Increments after each scan completes — child pages can watch this to refetch. */
   scanVersion: number;
+  /** True when the cloud account is disabled — child pages should be read-only. */
+  isDisabled: boolean;
 }
 
 const CloudContext = createContext<CloudContextValue>({
@@ -22,6 +24,7 @@ const CloudContext = createContext<CloudContextValue>({
   loading: true,
   refresh: () => {},
   scanVersion: 0,
+  isDisabled: false,
 });
 
 export function useCloudContext() {
@@ -114,6 +117,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
 
   const basePath = `/clouds/${id}`;
   const totalIssues = cloud?.issue_counts?.total ?? 0;
+  const isDisabled = cloud?.status === "disabled";
 
   function progressMessage(): string {
     if (!scanProgress) return "Starting scan...";
@@ -145,7 +149,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
   const isError = scanProgress?.event === "error";
 
   return (
-    <CloudContext.Provider value={{ cloud, loading, refresh: loadCloud, scanVersion }}>
+    <CloudContext.Provider value={{ cloud, loading, refresh: loadCloud, scanVersion, isDisabled: isDisabled ?? false }}>
       <div className="px-7 py-6">
         {/* Loading */}
         {loading && !cloud && (
@@ -197,8 +201,8 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
                 </button>
                 <button
                   onClick={handleScan}
-                  disabled={scanning}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50"
+                  disabled={scanning || isDisabled}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {scanning ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -212,6 +216,16 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
                 </button>
               </div>
             </div>
+
+            {/* Disabled banner */}
+            {isDisabled && (
+              <div className="mb-4 p-3 rounded-xl border border-yellow-500/30 bg-yellow-950/20 text-yellow-400 text-sm flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" /><path d="M4.93 4.93l14.14 14.14" />
+                </svg>
+                This cloud connection is disabled. Re-enable it from Cloud Connections to scan.
+              </div>
+            )}
 
             {/* Scan progress panel */}
             {(scanning || scanProgress) && (

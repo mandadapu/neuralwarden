@@ -59,7 +59,7 @@ function DocIcon() {
 export default function IssuesTab() {
   const params = useParams();
   const cloudId = params.id as string;
-  const { scanVersion } = useCloudContext();
+  const { scanVersion, isDisabled } = useCloudContext();
 
   const [issues, setIssues] = useState<CloudIssue[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,11 +153,13 @@ export default function IssuesTab() {
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
           </svg>
         </button>
-        <select className="px-3 py-2 border border-[#30363d] rounded-lg text-sm bg-[#21262d] text-[#c9d1d9]">
-          <option>Actions</option>
-          <option>Mark selected as Ignored</option>
-          <option>Mark selected as Resolved</option>
-        </select>
+        {!isDisabled && (
+          <select className="px-3 py-2 border border-[#30363d] rounded-lg text-sm bg-[#21262d] text-[#c9d1d9]">
+            <option>Actions</option>
+            <option>Mark selected as Ignored</option>
+            <option>Mark selected as Resolved</option>
+          </select>
+        )}
       </div>
 
       {/* Loading */}
@@ -226,7 +228,7 @@ export default function IssuesTab() {
                     <span className="text-sm text-[#c9d1d9]">{issue.fix_time || "—"}</span>
                   </td>
                   <td className="px-5 py-3.5">
-                    {issue.remediation_script ? (
+                    {issue.remediation_script && !isDisabled ? (
                       <button
                         onClick={() => setFixIssue(issue)}
                         className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary/10 text-primary rounded-lg text-xs font-semibold hover:bg-primary/20 transition-colors"
@@ -241,30 +243,38 @@ export default function IssuesTab() {
                     )}
                   </td>
                   <td className="px-5 py-3.5 relative" ref={statusDropdownId === issue.id ? dropdownRef : undefined}>
-                    <button
-                      onClick={() => setStatusDropdownId(statusDropdownId === issue.id ? null : issue.id)}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${STATUS_STYLES[issue.status] ?? ""}`}
-                    >
-                      {STATUS_LABELS[issue.status] ?? issue.status}
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M6 9l6 6 6-6" />
-                      </svg>
-                    </button>
+                    {isDisabled ? (
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${STATUS_STYLES[issue.status] ?? ""}`}>
+                        {STATUS_LABELS[issue.status] ?? issue.status}
+                      </span>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => setStatusDropdownId(statusDropdownId === issue.id ? null : issue.id)}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${STATUS_STYLES[issue.status] ?? ""}`}
+                        >
+                          {STATUS_LABELS[issue.status] ?? issue.status}
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M6 9l6 6 6-6" />
+                          </svg>
+                        </button>
 
-                    {statusDropdownId === issue.id && (
-                      <div className="absolute right-0 bottom-full mb-1 w-36 bg-[#1c2128] border border-[#30363d] rounded-lg shadow-lg z-20 py-1">
-                        {ALL_STATUSES.map((s) => (
-                          <button
-                            key={s}
-                            onClick={() => changeStatus(issue.id, s)}
-                            className={`w-full text-left px-3 py-2 text-sm hover:bg-[#21262d] transition-colors ${
-                              issue.status === s ? "font-semibold text-primary" : "text-[#e6edf3]"
-                            }`}
-                          >
-                            {STATUS_LABELS[s]}
-                          </button>
-                        ))}
-                      </div>
+                        {statusDropdownId === issue.id && (
+                          <div className="absolute right-0 bottom-full mb-1 w-36 bg-[#1c2128] border border-[#30363d] rounded-lg shadow-lg z-20 py-1">
+                            {ALL_STATUSES.map((s) => (
+                              <button
+                                key={s}
+                                onClick={() => changeStatus(issue.id, s)}
+                                className={`w-full text-left px-3 py-2 text-sm hover:bg-[#21262d] transition-colors ${
+                                  issue.status === s ? "font-semibold text-primary" : "text-[#e6edf3]"
+                                }`}
+                              >
+                                {STATUS_LABELS[s]}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     )}
                   </td>
                 </tr>

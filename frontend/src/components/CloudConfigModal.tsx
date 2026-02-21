@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { updateCloud, deleteCloud } from "@/lib/api";
+import { updateCloud, deleteCloud, toggleCloud } from "@/lib/api";
 import type { CloudAccount } from "@/lib/types";
 
 const PURPOSES = ["production", "staging", "development"];
@@ -31,6 +31,8 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [enabling, setEnabling] = useState(false);
+  const isDisabled = cloud.status === "disabled";
 
   // Reset form when cloud changes or modal opens
   useEffect(() => {
@@ -100,6 +102,19 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
     }
   }
 
+  async function handleEnable() {
+    setEnabling(true);
+    setError(null);
+    try {
+      const updated = await toggleCloud(cloud.id);
+      onSave(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to enable cloud");
+    } finally {
+      setEnabling(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
@@ -127,6 +142,15 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
 
         {/* Body */}
         <div className="px-6 py-5 space-y-5">
+          {isDisabled && (
+            <div className="p-3 rounded-lg border border-yellow-500/30 bg-yellow-950/20 text-yellow-400 text-sm flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" /><path d="M4.93 4.93l14.14 14.14" />
+              </svg>
+              This connection is disabled. Enable it to make changes.
+            </div>
+          )}
+
           {/* Name */}
           <div>
             <label className="block text-sm font-medium text-[#e6edf3] mb-1.5">Cloud Name</label>
@@ -134,7 +158,8 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2.5 border border-[#30363d] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              disabled={isDisabled}
+              className="w-full px-4 py-2.5 border border-[#30363d] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -144,7 +169,8 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
             <select
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
-              className="w-full px-4 py-2.5 border border-[#30363d] rounded-lg text-sm bg-[#1c2128] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              disabled={isDisabled}
+              className="w-full px-4 py-2.5 border border-[#30363d] rounded-lg text-sm bg-[#1c2128] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {PURPOSES.map((p) => (
                 <option key={p} value={p}>
@@ -162,16 +188,18 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
               <span className="text-sm text-[#c9d1d9]">Connected &middot; {cloud.project_id}</span>
             </div>
             {!showCredentials ? (
-              <button
-                onClick={() => setShowCredentials(true)}
-                className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                </svg>
-                Update credentials
-              </button>
+              !isDisabled && (
+                <button
+                  onClick={() => setShowCredentials(true)}
+                  className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                  Update credentials
+                </button>
+              )
             ) : (
               <div>
                 <textarea
@@ -197,7 +225,9 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
                 return (
                   <label
                     key={svc.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                      isDisabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                    } ${
                       checked
                         ? "border-primary/30 bg-primary/5"
                         : "border-[#30363d] hover:bg-[#21262d]"
@@ -206,7 +236,7 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
                     <input
                       type="checkbox"
                       checked={checked}
-                      disabled={isRequired}
+                      disabled={isRequired || isDisabled}
                       onChange={() => toggleService(svc.id)}
                       className="w-4 h-4 text-primary rounded border-[#30363d] focus:ring-primary/20"
                     />
@@ -251,7 +281,7 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
             {confirmDelete ? "Confirm Delete" : "Delete Cloud"}
           </button>
 
-          {/* Cancel + Save */}
+          {/* Cancel + Save / Enable */}
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
@@ -259,16 +289,29 @@ export default function CloudConfigModal({ cloud, open, onClose, onSave, onDelet
             >
               Cancel
             </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50"
-            >
-              {saving && (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              )}
-              {saving ? "Saving..." : "Save Changes"}
-            </button>
+            {isDisabled ? (
+              <button
+                onClick={handleEnable}
+                disabled={enabling}
+                className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50"
+              >
+                {enabling && (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                )}
+                {enabling ? "Enabling..." : "Enable Cloud"}
+              </button>
+            ) : (
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50"
+              >
+                {saving && (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                )}
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+            )}
           </div>
         </div>
       </div>
