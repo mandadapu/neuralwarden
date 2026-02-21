@@ -83,10 +83,10 @@ All threat and issue types follow this 4-category taxonomy. The source of truth 
 
 | Category | ID | Description | Types |
 |----------|-----|------------|-------|
-| **AI & Agentic Security** | `ai_native` | Threats targeting LLM-powered agents, prompt pipelines, and AI model integrity. | `prompt_injection`, `asi_01`, `asi_02`, `ai_pentest` |
-| **Code & Supply Chain** | `supply_chain` | Vulnerabilities in source code, dependencies, build pipelines, and software delivery. | `sast`, `open_source_deps`, `license_issues` |
-| **Infrastructure & Runtime** | `infrastructure` | Runtime threats against cloud resources, containers, hosts, and identity systems. | `cloud_configs`, `k8s`, `exposed_secrets`, `eol_runtimes` |
-| **Threat Intel & Perimeter** | `threat_intel` | External reconnaissance, perimeter probing, malware indicators, and dynamic testing. | `dast`, `malware`, `surface_monitoring` |
+| **AI & Agentic Security** | `ai_native` | Detects subversion of AI goal-setting and autonomous actions. | `prompt_injection`, `asi_01`, `asi_02`, `ai_pentest` |
+| **Code & Supply Chain** | `supply_chain` | Scans source code and third-party libraries for known vulnerabilities. | `sast`, `open_source_deps`, `license_issues` |
+| **Infrastructure & Runtime** | `infrastructure` | Monitors cloud environments, containers, and leaked credentials. | `cloud_configs`, `k8s`, `exposed_secrets`, `eol_runtimes` |
+| **Threat Intel & Perimeter** | `threat_intel` | Active detection of malware and external surface probes. | `dast`, `malware`, `surface_monitoring` |
 
 When adding new threat types:
 1. Add to the correct category in `frontend/src/lib/taxonomy.ts`

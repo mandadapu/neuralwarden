@@ -23,7 +23,7 @@ export const THREAT_TAXONOMY: ThreatCategory[] = [
   {
     id: "ai_native",
     label: "AI & Agentic Security",
-    description: "Threats targeting LLM-powered agents, prompt pipelines, and AI model integrity.",
+    description: "Detects subversion of AI goal-setting and autonomous actions.",
     types: [
       { id: "prompt_injection", label: "Prompt Injection", description: "Direct or indirect manipulation of LLM system prompts to bypass safety controls or exfiltrate data." },
       { id: "asi_01", label: "ASI-01: Model Integrity", description: "Model poisoning, training data corruption, adversarial inputs targeting AI model accuracy and safety." },
@@ -34,7 +34,7 @@ export const THREAT_TAXONOMY: ThreatCategory[] = [
   {
     id: "supply_chain",
     label: "Code & Supply Chain",
-    description: "Vulnerabilities in source code, dependencies, build pipelines, and software delivery.",
+    description: "Scans source code and third-party libraries for known vulnerabilities.",
     types: [
       { id: "sast", label: "SAST", description: "Static Application Security Testing findings — SQL injection, XSS, code injection, insecure patterns." },
       { id: "open_source_deps", label: "Open-Source Deps", description: "Vulnerable dependencies, compromised upstream packages, and supply chain attacks." },
@@ -44,7 +44,7 @@ export const THREAT_TAXONOMY: ThreatCategory[] = [
   {
     id: "infrastructure",
     label: "Infrastructure & Runtime",
-    description: "Runtime threats against cloud resources, containers, hosts, and identity systems.",
+    description: "Monitors cloud environments, containers, and leaked credentials.",
     types: [
       { id: "cloud_configs", label: "Cloud Configs", description: "Cloud misconfigurations — public buckets, overly permissive IAM, missing encryption, privilege escalation." },
       { id: "k8s", label: "K8s", description: "Kubernetes security issues — pod security, RBAC misconfig, network policies, container escapes." },
@@ -55,7 +55,7 @@ export const THREAT_TAXONOMY: ThreatCategory[] = [
   {
     id: "threat_intel",
     label: "Threat Intel & Perimeter",
-    description: "External reconnaissance, perimeter probing, malware indicators, and dynamic testing.",
+    description: "Active detection of malware and external surface probes.",
     types: [
       { id: "dast", label: "DAST", description: "Dynamic Application Security Testing — brute force, authentication bypass, runtime injection, port scanning." },
       { id: "malware", label: "Malware", description: "Command & control beaconing, lateral movement, malicious payloads, and persistence mechanisms." },
@@ -70,9 +70,12 @@ export const TYPE_TO_CATEGORY: Record<string, string> = {};
 export const TYPE_LABELS: Record<string, string> = {};
 /** Flat lookup: category ID -> label */
 export const CATEGORY_LABELS: Record<string, string> = {};
+/** Flat lookup: category ID -> technical description */
+export const CATEGORY_DESCRIPTIONS: Record<string, string> = {};
 
 for (const cat of THREAT_TAXONOMY) {
   CATEGORY_LABELS[cat.id] = cat.label;
+  CATEGORY_DESCRIPTIONS[cat.id] = cat.description;
   for (const t of cat.types) {
     TYPE_TO_CATEGORY[t.id] = cat.id;
     TYPE_LABELS[t.id] = t.label;
