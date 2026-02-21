@@ -53,6 +53,9 @@ class ScanAgentState(TypedDict, total=False):
     active_exploits_detected: int
     correlated_evidence: list[dict]
 
+    # ── Threat pipeline log ──
+    threat_log_entries: list[dict]
+
     # ── Scan log ──
     scan_log_data: dict
 

@@ -31,6 +31,7 @@ from api.cloud_database import (
     list_cloud_checks,
     create_scan_log,
     complete_scan_log,
+    update_scan_log_threat_data,
     list_scan_logs,
     get_scan_log,
 )
@@ -424,6 +425,19 @@ async def trigger_scan(cloud_id: str):
                         scan_log_data.get("log_entries", [])
                     ),
                 )
+                # Attach threat pipeline metrics + log entries
+                if scan_log_id:
+                    threat_metrics = final.get("agent_metrics", {})
+                    threat_entries = final.get("threat_log_entries", [])
+                    if threat_metrics or threat_entries:
+                        update_scan_log_threat_data(
+                            scan_log_id,
+                            json.dumps(
+                                {k: _to_dict(v) for k, v in threat_metrics.items()}
+                                if threat_metrics else {}
+                            ),
+                            json.dumps(threat_entries),
+                        )
             except Exception:
                 logger.warning("Failed to save scan log", exc_info=True)
 

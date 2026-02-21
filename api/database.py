@@ -9,7 +9,7 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-from api.db import get_conn, adapt_sql, placeholder
+from api.db import get_conn, adapt_sql, is_postgres, placeholder
 
 
 def _json_serial(obj):
@@ -38,21 +38,26 @@ CREATE TABLE IF NOT EXISTS analyses (
 )
 """
 
-_MIGRATE_USER_EMAIL = """
-ALTER TABLE analyses ADD COLUMN user_email TEXT DEFAULT ''
-"""
-
 
 def init_db() -> None:
     """Initialize the database schema."""
     conn = get_conn()
     try:
         conn.execute(_CREATE_TABLE)
-        # Migrate: add user_email column if missing
-        try:
-            conn.execute(_MIGRATE_USER_EMAIL)
-        except Exception:
-            pass  # column already exists
+        # Migrations — use SAVEPOINT on PostgreSQL so failures don't abort the transaction
+        for migration in [
+            "ALTER TABLE analyses ADD COLUMN user_email TEXT DEFAULT ''",
+        ]:
+            try:
+                if is_postgres():
+                    conn.execute("SAVEPOINT analyses_migration")
+                conn.execute(migration)
+                if is_postgres():
+                    conn.execute("RELEASE SAVEPOINT analyses_migration")
+            except Exception:
+                if is_postgres():
+                    conn.execute("ROLLBACK TO SAVEPOINT analyses_migration")
+                # column already exists — safe to ignore
         conn.commit()
     finally:
         conn.close()
