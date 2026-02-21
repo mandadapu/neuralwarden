@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import PageShell from "@/components/PageShell";
-import { listClouds, scanCloudStream, deleteCloud, toggleCloud, setApiUserEmail } from "@/lib/api";
+import { listClouds, scanCloudStream, getScanProgress, deleteCloud, toggleCloud, setApiUserEmail } from "@/lib/api";
 import type { CloudAccount, ScanStreamEvent } from "@/lib/types";
 import ScanProgressOverlay from "@/components/ScanProgressOverlay";
 
@@ -100,6 +100,15 @@ export default function CloudsPage() {
     setScanningId(cloudId);
     setScanProgress(null);
     setShowOverlay(true);
+
+    // Poll for progress every 2s — reliable even when Cloud Run buffers SSE
+    const pollInterval = setInterval(async () => {
+      try {
+        const progress = await getScanProgress(cloudId);
+        if (progress.event !== "idle") setScanProgress(progress);
+      } catch { /* ignore */ }
+    }, 2000);
+
     try {
       await scanCloudStream(cloudId, (event) => {
         setScanProgress(event);
@@ -109,6 +118,7 @@ export default function CloudsPage() {
     } catch (err) {
       console.error("Scan failed:", err);
     } finally {
+      clearInterval(pollInterval);
       setScanningId(null);
     }
   }

@@ -6,7 +6,7 @@ import { useParams, usePathname, useRouter } from "next/navigation";
 import CloudConfigModal from "@/components/CloudConfigModal";
 import ScanLogModal from "@/components/ScanLogModal";
 import ScanProgressOverlay from "@/components/ScanProgressOverlay";
-import { getCloud, scanCloudStream } from "@/lib/api";
+import { getCloud, scanCloudStream, getScanProgress } from "@/lib/api";
 import type { CloudAccount, ScanStreamEvent } from "@/lib/types";
 
 interface CloudContextValue {
@@ -89,14 +89,25 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
     setLastScanLogId(null);
     setError(null);
     setShowOverlay(true);
-    try {
-      let lastThreatStage: string | undefined;
-      await scanCloudStream(id, (event) => {
-        // Preserve the last threat_stage so the overlay can show
-        // sub-stages even after the "complete" event arrives.
-        if (event.threat_stage) {
-          lastThreatStage = event.threat_stage;
+
+    // Poll for progress every 2s — reliable even when Cloud Run buffers SSE
+    let lastThreatStage: string | undefined;
+    const pollInterval = setInterval(async () => {
+      try {
+        const progress = await getScanProgress(id);
+        if (progress.event === "idle") return;
+        if (progress.threat_stage) lastThreatStage = progress.threat_stage;
+        if (lastThreatStage && !progress.threat_stage) {
+          progress.threat_stage = lastThreatStage;
         }
+        setScanProgress(progress);
+      } catch { /* ignore poll errors */ }
+    }, 2000);
+
+    try {
+      await scanCloudStream(id, (event) => {
+        // SSE events still used for final data (complete event carries counts)
+        if (event.threat_stage) lastThreatStage = event.threat_stage;
         if (lastThreatStage && !event.threat_stage) {
           event = { ...event, threat_stage: lastThreatStage };
         }
@@ -111,6 +122,7 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
     } catch (err) {
       setError(err instanceof Error ? err.message : "Scan failed");
     } finally {
+      clearInterval(pollInterval);
       setScanning(false);
     }
   }

@@ -40,6 +40,10 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/clouds", tags=["clouds"])
 
+# In-memory scan progress for polling (keyed by cloud_account_id).
+# Each entry is a dict with event data matching ScanStreamEvent.
+_scan_progress: dict[str, dict] = {}
+
 
 # --------------- schemas ---------------
 
@@ -276,30 +280,20 @@ async def trigger_scan(cloud_id: str):
         thread = threading.Thread(target=_run_graph, daemon=True)
         thread.start()
 
-        # Cloud Run's reverse proxy buffers small responses. Send a large
-        # padding comment (~4 KB) to exceed the buffer threshold and force
-        # the proxy to start streaming immediately.
-        yield {"comment": " " * 4096}
+        # Write initial progress for polling clients
+        _scan_progress[cloud_id] = {"event": "starting", "total_assets": 0, "assets_scanned": 0}
 
-        # Emit "starting" immediately so the overlay updates before discovery
-        yield {
-            "data": json.dumps({
-                "event": "starting",
-                "total_assets": 0,
-                "assets_scanned": 0,
-            })
-        }
+        # Also emit via SSE (may be buffered by Cloud Run)
+        yield {"comment": " " * 4096}
+        yield {"data": json.dumps(_scan_progress[cloud_id])}
 
         prev_status = "starting"
         final = {}
         try:
             while True:
-                # Poll with short timeout and send keepalive comments to
-                # prevent Cloud Run / proxies from closing the connection.
                 try:
                     msg = await asyncio.to_thread(event_queue.get, timeout=15)
                 except Exception:
-                    # Queue.get timed out — send keepalive comment and retry
                     if not thread.is_alive():
                         break
                     yield {"comment": "keepalive"}
@@ -314,12 +308,9 @@ async def trigger_scan(cloud_id: str):
 
                 # Threat pipeline sub-stage event
                 if kind == "threat_stage":
-                    yield {
-                        "data": json.dumps({
-                            "event": "threat_stage",
-                            "threat_stage": payload,
-                        })
-                    }
+                    progress_data = {"event": "threat_stage", "threat_stage": payload}
+                    _scan_progress[cloud_id] = progress_data
+                    yield {"data": json.dumps(progress_data)}
                     continue
 
                 # kind == "event" — emit SSE progress on status changes
@@ -328,16 +319,16 @@ async def trigger_scan(cloud_id: str):
                 status = event.get("scan_status", "")
                 if status != prev_status:
                     prev_status = status
-                    yield {
-                        "data": json.dumps({
-                            "event": status,
-                            "total_assets": event.get("total_assets", 0),
-                            "assets_scanned": event.get("assets_scanned", 0),
-                            "scan_type": event.get("scan_type", ""),
-                            "public_count": len(event.get("public_assets", [])),
-                            "private_count": len(event.get("private_assets", [])),
-                        })
+                    progress_data = {
+                        "event": status,
+                        "total_assets": event.get("total_assets", 0),
+                        "assets_scanned": event.get("assets_scanned", 0),
+                        "scan_type": event.get("scan_type", ""),
+                        "public_count": len(event.get("public_assets", [])),
+                        "private_count": len(event.get("private_assets", [])),
                     }
+                    _scan_progress[cloud_id] = progress_data
+                    yield {"data": json.dumps(progress_data)}
 
             # Save results to database — prefer correlated issues over raw
             issues = final.get("correlated_issues") or final.get("scan_issues", [])
@@ -460,18 +451,18 @@ async def trigger_scan(cloud_id: str):
             except Exception:
                 logger.warning("Failed to save scan log", exc_info=True)
 
-            yield {
-                "data": json.dumps({
-                    "event": "complete",
-                    "scan_type": final.get("scan_type", "unknown"),
-                    "asset_count": len(assets),
-                    "issue_count": len(issues),
-                    "active_exploits_detected": active_exploits,
-                    "issue_counts": get_issue_counts(cloud_id),
-                    "has_report": final.get("report") is not None,
-                    "scan_log_id": scan_log_id,
-                })
+            complete_data = {
+                "event": "complete",
+                "scan_type": final.get("scan_type", "unknown"),
+                "asset_count": len(assets),
+                "issue_count": len(issues),
+                "active_exploits_detected": active_exploits,
+                "issue_counts": get_issue_counts(cloud_id),
+                "has_report": final.get("report") is not None,
+                "scan_log_id": scan_log_id,
             }
+            _scan_progress[cloud_id] = complete_data
+            yield {"data": json.dumps(complete_data)}
 
         except Exception as e:
             logger.exception("Scan failed")
@@ -489,11 +480,24 @@ async def trigger_scan(cloud_id: str):
                 )
             except Exception:
                 logger.warning("Failed to save error scan log")
+            _scan_progress[cloud_id] = {"event": "error", "message": str(e)}
             yield {
                 "data": json.dumps({"event": "error", "message": str(e)})
             }
+        finally:
+            # Clean up progress after a short delay so final poll can read it
+            async def _cleanup():
+                await asyncio.sleep(10)
+                _scan_progress.pop(cloud_id, None)
+            asyncio.ensure_future(_cleanup())
 
     return EventSourceResponse(scan_generator(), ping=15)
+
+
+@router.get("/{cloud_id}/scan-progress")
+async def get_scan_progress(cloud_id: str):
+    """Return the current scan progress for polling-based overlay updates."""
+    return _scan_progress.get(cloud_id, {"event": "idle"})
 
 
 # --------------- Scan Logs ---------------
