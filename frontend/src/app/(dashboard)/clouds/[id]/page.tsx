@@ -66,6 +66,9 @@ export default function IssuesTab() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [severityFilter, setSeverityFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [statusDropdownId, setStatusDropdownId] = useState<string | null>(null);
   const [fixIssue, setFixIssue] = useState<CloudIssue | null>(null);
   const dropdownRef = useRef<HTMLTableCellElement>(null);
@@ -111,17 +114,66 @@ export default function IssuesTab() {
     setStatusDropdownId(null);
   }
 
+  async function bulkChangeStatus(newStatus: string) {
+    if (selectedIds.size === 0) return;
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) => updateIssueStatus(id, newStatus))
+      );
+      setIssues((prev) =>
+        prev.map((issue) =>
+          selectedIds.has(issue.id) ? { ...issue, status: newStatus as CloudIssue["status"] } : issue
+        )
+      );
+      setSelectedIds(new Set());
+    } catch (err) {
+      console.error("Failed to bulk update status:", err);
+    }
+  }
+
+  // Clear selection when filters change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [search, typeFilter, severityFilter, statusFilter]);
+
   const filtered = issues.filter((issue) => {
     const matchesSearch =
       issue.title.toLowerCase().includes(search.toLowerCase()) ||
       issue.description.toLowerCase().includes(search.toLowerCase()) ||
       issue.rule_code.toLowerCase().includes(search.toLowerCase());
+    const ruleCodeLower = issue.rule_code.toLowerCase();
     const matchesType =
       typeFilter === "all" ||
-      (typeFilter === "config" && !issue.rule_code.startsWith("LOG_")) ||
-      (typeFilter === "log" && issue.rule_code.startsWith("LOG_"));
-    return matchesSearch && matchesType;
+      (typeFilter === "config" && !ruleCodeLower.startsWith("log_")) ||
+      (typeFilter === "log" && ruleCodeLower.startsWith("log_"));
+    const matchesSeverity =
+      severityFilter === "all" || issue.severity === severityFilter;
+    const matchesStatus =
+      statusFilter === "all" || issue.status === statusFilter;
+    return matchesSearch && matchesType && matchesSeverity && matchesStatus;
   });
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((issue) => selectedIds.has(issue.id));
+
+  function toggleSelectAll() {
+    if (allFilteredSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((issue) => issue.id)));
+    }
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
 
   return (
     <div>
@@ -148,16 +200,43 @@ export default function IssuesTab() {
           <option value="config">Config issues</option>
           <option value="log">Log issues</option>
         </select>
-        <button className="p-2 border border-[#30363d] rounded-lg text-[#8b949e] hover:bg-[#21262d] transition-colors">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-          </svg>
-        </button>
+        <select
+          value={severityFilter}
+          onChange={(e) => setSeverityFilter(e.target.value)}
+          className="px-3 py-2 border border-[#30363d] rounded-lg text-sm bg-[#21262d] text-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          <option value="all">All severities</option>
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="px-3 py-2 border border-[#30363d] rounded-lg text-sm bg-[#21262d] text-white focus:outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          <option value="all">All statuses</option>
+          {ALL_STATUSES.map((s) => (
+            <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+          ))}
+        </select>
         {!isDisabled && (
-          <select className="px-3 py-2 border border-[#30363d] rounded-lg text-sm bg-[#21262d] text-[#c9d1d9]">
-            <option>Actions</option>
-            <option>Mark selected as Ignored</option>
-            <option>Mark selected as Resolved</option>
+          <select
+            value=""
+            disabled={selectedIds.size === 0}
+            onChange={(e) => {
+              if (e.target.value) bulkChangeStatus(e.target.value);
+            }}
+            className="px-3 py-2 border border-[#30363d] rounded-lg text-sm bg-[#21262d] text-[#c9d1d9] disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="">
+              {selectedIds.size > 0 ? `Actions (${selectedIds.size})` : "Actions"}
+            </option>
+            <option value="ignored">Mark as Ignored</option>
+            <option value="resolved">Mark as Resolved</option>
+            <option value="in_progress">Mark as In Progress</option>
+            <option value="todo">Mark as To Do</option>
           </select>
         )}
       </div>
@@ -195,6 +274,16 @@ export default function IssuesTab() {
           <table className="w-full">
             <thead>
               <tr className="bg-[#21262d] border-b border-[#30363d]">
+                {!isDisabled && (
+                  <th className="px-5 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={allFilteredSelected}
+                      onChange={toggleSelectAll}
+                      className="rounded border-[#30363d] bg-[#21262d] text-primary focus:ring-primary/20 cursor-pointer"
+                    />
+                  </th>
+                )}
                 <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3 w-10">Type</th>
                 <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Issue</th>
                 <th className="text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider px-5 py-3">Severity</th>
@@ -206,10 +295,20 @@ export default function IssuesTab() {
             </thead>
             <tbody className="divide-y divide-[#262c34]">
               {filtered.map((issue) => (
-                <tr key={issue.id} className="hover:bg-[#21262d] transition-colors">
+                <tr key={issue.id} className={`hover:bg-[#21262d] transition-colors ${selectedIds.has(issue.id) ? "bg-[#21262d]/50" : ""}`}>
+                  {!isDisabled && (
+                    <td className="px-5 py-3.5">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(issue.id)}
+                        onChange={() => toggleSelect(issue.id)}
+                        className="rounded border-[#30363d] bg-[#21262d] text-primary focus:ring-primary/20 cursor-pointer"
+                      />
+                    </td>
+                  )}
                   <td className="px-5 py-3.5">
                     <div className="text-[#8b949e]">
-                      {issue.rule_code.startsWith("LOG_") ? <DocIcon /> : <CloudConfigIcon />}
+                      {issue.rule_code.toLowerCase().startsWith("log_") ? <DocIcon /> : <CloudConfigIcon />}
                     </div>
                   </td>
                   <td className="px-5 py-3.5">
