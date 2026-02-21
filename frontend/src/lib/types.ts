@@ -270,3 +270,46 @@ export interface ThreatIntelSearchResult {
   text: string;
   metadata: Record<string, unknown>;
 }
+
+// ── Pentests ──
+
+export interface FindingCounts {
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  total: number;
+}
+
+export interface Pentest {
+  id: string;
+  user_email: string;
+  name: string;
+  description: string;
+  vendor: "manual" | "synack" | "hackerone" | "intigriti";
+  vendor_id: string;
+  status: "planned" | "in_progress" | "completed" | "cancelled";
+  severity: "critical" | "high" | "medium" | "low";
+  start_date: string | null;
+  end_date: string | null;
+  scope: string;
+  created_at: string;
+  updated_at: string;
+  finding_counts?: FindingCounts;
+}
+
+export interface PentestFinding {
+  id: string;
+  pentest_id: string;
+  title: string;
+  description: string;
+  severity: "critical" | "high" | "medium" | "low";
+  cvss_score: number | null;
+  status: "open" | "in_progress" | "resolved" | "accepted_risk" | "false_positive";
+  category: string;
+  affected_url: string;
+  remediation_notes: string;
+  evidence: string;
+  discovered_at: string;
+  resolved_at: string | null;
+}
