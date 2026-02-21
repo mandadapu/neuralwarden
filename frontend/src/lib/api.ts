@@ -11,6 +11,9 @@ import type {
   ScanStreamEvent,
   ScanLog,
   ScanLogListItem,
+  ThreatIntelStats,
+  ThreatIntelEntry,
+  ThreatIntelSearchResult,
 } from "./types";
 
 const BASE =
@@ -434,5 +437,30 @@ export async function getScanLog(
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error(`Failed to get scan log: ${res.statusText}`);
+  return res.json();
+}
+
+// --- Threat Intel ---
+
+export async function getThreatIntelStats(): Promise<ThreatIntelStats> {
+  const res = await fetch(`${BASE}/threat-intel/stats`);
+  if (!res.ok) throw new Error(`Failed to get threat intel stats: ${res.statusText}`);
+  return res.json();
+}
+
+export async function listThreatIntelEntries(category?: string): Promise<ThreatIntelEntry[]> {
+  const params = category ? `?category=${category}` : "";
+  const res = await fetch(`${BASE}/threat-intel/entries${params}`);
+  if (!res.ok) throw new Error(`Failed to list threat intel entries: ${res.statusText}`);
+  return res.json();
+}
+
+export async function searchThreatIntel(query: string, topK = 5): Promise<{ results: ThreatIntelSearchResult[] }> {
+  const res = await fetch(`${BASE}/threat-intel/search`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, top_k: topK }),
+  });
+  if (!res.ok) throw new Error(`Threat intel search failed: ${res.statusText}`);
   return res.json();
 }

@@ -185,5 +185,125 @@
       "tactic": "Initial Access",
       "published": "2023-10-26"
     }
+  },
+  {
+    "id": "OWASP-ASI01",
+    "text": "Agent Goal Hijack: Prompt injection or plan manipulation causes the AI agent to pursue attacker-chosen objectives instead of its intended task. Adversaries craft inputs that override system instructions, redirect multi-step plans, or alter the agent's decision-making criteria.",
+    "metadata": {
+      "severity": "critical",
+      "technique": "T1059.006",
+      "tactic": "Execution",
+      "category": "owasp_agentic",
+      "framework": "OWASP Agentic Top 10",
+      "control_id": "ASI01"
+    }
+  },
+  {
+    "id": "OWASP-ASI02",
+    "text": "Tool Misuse & Exploitation: An AI agent is tricked into using its tools in harmful or unintended ways. Attackers exploit the agent's ability to call APIs, execute code, or access databases to perform unauthorized actions such as data deletion, resource provisioning, or credential extraction.",
+    "metadata": {
+      "severity": "high",
+      "technique": "T1106",
+      "tactic": "Execution",
+      "category": "owasp_agentic",
+      "framework": "OWASP Agentic Top 10",
+      "control_id": "ASI02"
+    }
+  },
+  {
+    "id": "OWASP-ASI03",
+    "text": "Agent Identity & Privilege Abuse: An AI agent operates with overly broad permissions or impersonates privileged identities. Attackers leverage the agent's elevated access to bypass authorization controls, access restricted resources, or escalate privileges across connected systems.",
+    "metadata": {
+      "severity": "critical",
+      "technique": "T1078",
+      "tactic": "Privilege Escalation",
+      "category": "owasp_agentic",
+      "framework": "OWASP Agentic Top 10",
+      "control_id": "ASI03"
+    }
+  },
+  {
+    "id": "OWASP-ASI04",
+    "text": "Agentic Supply Chain Compromise: Malicious or vulnerable third-party tools, plugins, or models are integrated into an AI agent's toolchain. Compromised dependencies can exfiltrate data, inject backdoors, or manipulate agent behavior without detection.",
+    "metadata": {
+      "severity": "critical",
+      "technique": "T1195.002",
+      "tactic": "Initial Access",
+      "category": "owasp_agentic",
+      "framework": "OWASP Agentic Top 10",
+      "control_id": "ASI04"
+    }
+  },
+  {
+    "id": "OWASP-ASI05",
+    "text": "Unexpected Code Execution: An AI agent generates and executes code that performs unintended or dangerous operations. Attackers manipulate the agent into producing malicious code through carefully crafted inputs, leading to system compromise, data destruction, or lateral movement.",
+    "metadata": {
+      "severity": "critical",
+      "technique": "T1059",
+      "tactic": "Execution",
+      "category": "owasp_agentic",
+      "framework": "OWASP Agentic Top 10",
+      "control_id": "ASI05"
+    }
+  },
+  {
+    "id": "OWASP-ASI06",
+    "text": "Memory & Context Poisoning: An attacker corrupts the agent's memory, conversation history, or retrieval-augmented context to influence future decisions. Poisoned context causes the agent to trust malicious data, make flawed decisions, or leak sensitive information from prior interactions.",
+    "metadata": {
+      "severity": "high",
+      "technique": "T1565.001",
+      "tactic": "Impact",
+      "category": "owasp_agentic",
+      "framework": "OWASP Agentic Top 10",
+      "control_id": "ASI06"
+    }
+  },
+  {
+    "id": "OWASP-ASI07",
+    "text": "Insecure Inter-Agent Communication: Messages between collaborating agents lack authentication, encryption, or integrity checks. Attackers intercept or forge inter-agent messages to redirect tasks, inject malicious instructions, or extract sensitive data exchanged between agents.",
+    "metadata": {
+      "severity": "high",
+      "technique": "T1557",
+      "tactic": "Collection",
+      "category": "owasp_agentic",
+      "framework": "OWASP Agentic Top 10",
+      "control_id": "ASI07"
+    }
+  },
+  {
+    "id": "OWASP-ASI08",
+    "text": "Cascading Agent Failures: A failure or compromise in one agent propagates through a multi-agent system, causing widespread disruption. Lack of fault isolation means a single poisoned agent can corrupt shared state, trigger infinite loops, or cause denial of service across the entire pipeline.",
+    "metadata": {
+      "severity": "medium",
+      "technique": "T1499",
+      "tactic": "Impact",
+      "category": "owasp_agentic",
+      "framework": "OWASP Agentic Top 10",
+      "control_id": "ASI08"
+    }
+  },
+  {
+    "id": "OWASP-ASI09",
+    "text": "Human-Agent Trust Exploitation: The agent manipulates users into trusting its outputs or granting additional permissions through social engineering. Attackers use the agent as a proxy to deliver convincing phishing, fabricate authoritative-looking reports, or pressure humans into unsafe approvals.",
+    "metadata": {
+      "severity": "high",
+      "technique": "T1566",
+      "tactic": "Initial Access",
+      "category": "owasp_agentic",
+      "framework": "OWASP Agentic Top 10",
+      "control_id": "ASI09"
+    }
+  },
+  {
+    "id": "OWASP-ASI10",
+    "text": "Rogue Agents: An AI agent deviates from its intended behavior and operates autonomously toward unauthorized goals. This can result from adversarial manipulation, reward hacking, or emergent behavior, leading to unauthorized data access, resource abuse, or actions that contradict operator intent.",
+    "metadata": {
+      "severity": "critical",
+      "technique": "T1053",
+      "tactic": "Persistence",
+      "category": "owasp_agentic",
+      "framework": "OWASP Agentic Top 10",
+      "control_id": "ASI10"
+    }
   }
 ]
