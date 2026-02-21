@@ -100,7 +100,7 @@ def run_validate(state: PipelineState) -> dict:
     detected_summary = f"{len(threats)} threats already detected by primary pipeline."
 
     try:
-        llm = ChatAnthropic(model=MODEL, temperature=0.2, max_tokens=1024)
+        llm = ChatAnthropic(model=MODEL, temperature=0.2, max_tokens=1024, timeout=120)
 
         with AgentTimer("validate", MODEL) as timer:
             response = llm.invoke([

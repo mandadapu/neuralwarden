@@ -110,6 +110,7 @@ def run_ingest(state: PipelineState) -> dict:
         model=MODEL,
         temperature=0,
         max_tokens=4096,
+        timeout=120,
     )
 
     try:

@@ -91,6 +91,7 @@ def run_detect(state: PipelineState) -> dict:
             model=MODEL,
             temperature=0.2,
             max_tokens=2048,
+            timeout=120,
         )
 
         log_text = _format_logs_for_prompt(valid_logs)
