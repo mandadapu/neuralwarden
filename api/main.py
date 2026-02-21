@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.database import init_db
 from api.cloud_database import init_cloud_tables, seed_cloud_checks
-from api.pentests_database import init_pentest_tables
+from api.pentests_database import init_pentest_tables, seed_pentest_checks
 from api.routers import analyze, clouds, export, gcp_logging, generator, hitl, pentests, reports, samples, stream, threat_intel, watcher
 
 app = FastAPI(title="NeuralWarden API", version="2.0.0")
@@ -30,6 +30,7 @@ for _attempt in range(5):
         init_cloud_tables()
         seed_cloud_checks()
         init_pentest_tables()
+        seed_pentest_checks()
         break
     except Exception as _e:
         if _attempt < 4:
