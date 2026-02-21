@@ -90,7 +90,16 @@ export default function CloudDetailLayout({ children }: { children: React.ReactN
     setError(null);
     setShowOverlay(true);
     try {
+      let lastThreatStage: string | undefined;
       await scanCloudStream(id, (event) => {
+        // Preserve the last threat_stage so the overlay can show
+        // sub-stages even after the "complete" event arrives.
+        if (event.threat_stage) {
+          lastThreatStage = event.threat_stage;
+        }
+        if (lastThreatStage && !event.threat_stage) {
+          event = { ...event, threat_stage: lastThreatStage };
+        }
         setScanProgress(event);
         if (event.event === "complete" && event.scan_log_id) {
           setLastScanLogId(event.scan_log_id);
