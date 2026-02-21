@@ -10,7 +10,7 @@ export default function CostBreakdown({
   const entries = Object.entries(agentMetrics);
   if (entries.length === 0) return null;
 
-  const totalCost = entries.reduce((sum, [, m]) => sum + m.cost_usd, 0);
+  const totalCost = entries.reduce((sum, [, m]) => sum + (m.cost_usd ?? 0), 0);
 
   return (
     <div className="mx-7 my-4 p-5 bg-[#1c2128] rounded-xl border border-[#30363d] text-[13px]">
@@ -25,13 +25,13 @@ export default function CostBreakdown({
         {entries.map(([name, m]) => (
           <div key={name} className="p-2.5 bg-[#21262d] rounded-lg">
             <div className="font-semibold text-[#e6edf3] text-xs">{name}</div>
-            <div className="text-[#00e68a] font-bold">${m.cost_usd.toFixed(4)}</div>
-            <div className="text-[#8b949e] text-[11px]">{m.latency_ms.toFixed(0)}ms</div>
+            <div className="text-[#00e68a] font-bold">${(m.cost_usd ?? 0).toFixed(4)}</div>
+            <div className="text-[#8b949e] text-[11px]">{(m.latency_ms ?? 0).toFixed(0)}ms</div>
           </div>
         ))}
       </div>
       <div className="mt-3 pt-3 border-t border-[#30363d] font-bold text-[#00e68a]">
-        Total: ${totalCost.toFixed(4)} in {pipelineTime.toFixed(1)}s
+        Total: ${totalCost.toFixed(4)} in {(pipelineTime ?? 0).toFixed(1)}s
       </div>
     </div>
   );

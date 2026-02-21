@@ -85,9 +85,9 @@ export default function ReportsPage() {
                       <span className="text-[#8b949e]">0</span>
                     )}
                   </td>
-                  <td className="px-5 py-3.5 text-[#c9d1d9]">{r.pipeline_time.toFixed(1)}s</td>
+                  <td className="px-5 py-3.5 text-[#c9d1d9]">{(r.pipeline_time ?? 0).toFixed(1)}s</td>
                   <td className="px-5 py-3.5 text-[#c9d1d9]">
-                    ${r.pipeline_cost.toFixed(4)}
+                    ${(r.pipeline_cost ?? 0).toFixed(4)}
                   </td>
                   <td className="px-5 py-3.5 text-center">
                     <button
