@@ -116,6 +116,8 @@ export async function analyzeStream(
         try {
           const data = JSON.parse(trimmed.slice(6));
           onEvent(data);
+          // Yield to event loop so React re-renders between batched SSE events
+          await new Promise((r) => setTimeout(r, 0));
         } catch {
           // skip unparseable lines
         }
@@ -315,6 +317,10 @@ export async function scanCloudStream(
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  // Minimum ms between dispatching events so the overlay visibly progresses
+  // even when Cloud Run delivers multiple SSE frames in a single chunk.
+  const MIN_EVENT_GAP = 400;
+  let lastEventTime = 0;
 
   while (true) {
     const { done, value } = await reader.read();
@@ -329,7 +335,13 @@ export async function scanCloudStream(
       if (trimmed.startsWith("data: ")) {
         try {
           const data = JSON.parse(trimmed.slice(6));
+          // Ensure minimum gap between events so each stage is visible
+          const elapsed = Date.now() - lastEventTime;
+          if (elapsed < MIN_EVENT_GAP) {
+            await new Promise((r) => setTimeout(r, MIN_EVENT_GAP - elapsed));
+          }
           onEvent(data);
+          lastEventTime = Date.now();
         } catch {
           // skip unparseable lines
         }
