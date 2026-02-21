@@ -17,11 +17,9 @@ COPY models/ ./models/
 COPY rules/ ./rules/
 COPY scripts/ ./scripts/
 COPY sample_logs/ ./sample_logs/
+COPY data/ ./data/
 
 RUN pip install --no-cache-dir ".[gcp]"
-
-# Create data directory for SQLite fallback
-RUN mkdir -p /app/data
 
 # Cloud Run injects PORT (default 8080)
 ENV PORT=8080
