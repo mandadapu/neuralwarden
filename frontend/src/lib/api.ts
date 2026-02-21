@@ -647,6 +647,7 @@ export async function createRepoConnection(data: {
   org_name: string;
   purpose?: string;
   scan_config?: string;
+  github_token?: string;
   repos?: Array<{ full_name: string; name: string; language: string | null; default_branch: string; private: boolean }>;
 }): Promise<RepoConnection> {
   const res = await fetch(`${BASE}/repos`, {
@@ -694,14 +695,26 @@ export async function toggleRepoConnection(id: string): Promise<RepoConnection> 
   return res.json();
 }
 
-export async function listGitHubOrgs(): Promise<GitHubOrg[]> {
-  const res = await fetch(`${BASE}/repos/github/orgs`, { headers: authHeaders() });
+export async function getGitHubUser(githubToken?: string): Promise<{ login: string; avatar_url: string; name: string }> {
+  const h = authHeaders();
+  if (githubToken) h["X-GitHub-Token"] = githubToken;
+  const res = await fetch(`${BASE}/repos/github/user`, { headers: h });
+  if (!res.ok) throw new Error(`Failed to get GitHub user: ${res.statusText}`);
+  return res.json();
+}
+
+export async function listGitHubOrgs(githubToken?: string): Promise<GitHubOrg[]> {
+  const h = authHeaders();
+  if (githubToken) h["X-GitHub-Token"] = githubToken;
+  const res = await fetch(`${BASE}/repos/github/orgs`, { headers: h });
   if (!res.ok) throw new Error(`Failed to list GitHub orgs: ${res.statusText}`);
   return res.json();
 }
 
-export async function listGitHubRepos(org: string): Promise<GitHubRepo[]> {
-  const res = await fetch(`${BASE}/repos/github/orgs/${org}/repos`, { headers: authHeaders() });
+export async function listGitHubRepos(org: string, githubToken?: string): Promise<GitHubRepo[]> {
+  const h = authHeaders();
+  if (githubToken) h["X-GitHub-Token"] = githubToken;
+  const res = await fetch(`${BASE}/repos/github/orgs/${org}/repos`, { headers: h });
   if (!res.ok) throw new Error(`Failed to list GitHub repos: ${res.statusText}`);
   return res.json();
 }

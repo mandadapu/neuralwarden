@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   createRepoConnection,
+  getGitHubUser,
   listGitHubOrgs,
   listGitHubRepos,
   scanRepoConnectionStream,
@@ -17,6 +18,7 @@ const PURPOSES = ["production", "staging", "development"];
 
 type WizardData = {
   source: "real" | "sample" | "";
+  githubToken: string;
   org: string;
   orgAvatar: string;
   repos: GitHubRepo[];
@@ -35,6 +37,7 @@ export default function ConnectRepoPage() {
   const [step, setStep] = useState(1);
   const [data, setData] = useState<WizardData>({
     source: "",
+    githubToken: "",
     org: "",
     orgAvatar: "",
     repos: [],
@@ -66,23 +69,46 @@ export default function ConnectRepoPage() {
     }
   }, [session]);
 
-  // Fetch orgs when entering step 2
+  // Track whether we've fetched orgs for the current token
+  const [orgsFetchedForToken, setOrgsFetchedForToken] = useState("");
+  // GitHub username from the token (for personal account)
+  const [ghLogin, setGhLogin] = useState("");
+  const [ghAvatar, setGhAvatar] = useState("");
+
+  // Fetch orgs when token is provided and we enter step 2
+  function fetchOrgs() {
+    if (!data.githubToken.trim()) {
+      setOrgsError("Please enter a GitHub personal access token.");
+      return;
+    }
+    setOrgsLoading(true);
+    setOrgsError(null);
+    setOrgsFetchedForToken("");
+    // Fetch both user profile and orgs in parallel
+    Promise.all([
+      getGitHubUser(data.githubToken),
+      listGitHubOrgs(data.githubToken),
+    ])
+      .then(([user, orgsList]) => {
+        setGhLogin(user.login);
+        setGhAvatar(user.avatar_url);
+        setOrgs(orgsList);
+        setOrgsFetchedForToken(data.githubToken);
+      })
+      .catch((err) => {
+        setOrgsError(
+          err.message?.includes("401") || err.message?.includes("Unauthorized")
+            ? "Invalid token. Check your GitHub personal access token."
+            : err.message
+        );
+      })
+      .finally(() => setOrgsLoading(false));
+  }
+
+  // Auto-fetch orgs when entering step 2 with a token already set
   useEffect(() => {
-    if (step === 2) {
-      setOrgsLoading(true);
-      setOrgsError(null);
-      listGitHubOrgs()
-        .then((result) => {
-          setOrgs(result);
-        })
-        .catch((err) => {
-          setOrgsError(
-            err.message?.includes("Failed")
-              ? "GitHub token not configured. Ask your admin to set GITHUB_TOKEN."
-              : err.message
-          );
-        })
-        .finally(() => setOrgsLoading(false));
+    if (step === 2 && data.githubToken.trim() && orgsFetchedForToken !== data.githubToken) {
+      fetchOrgs();
     }
   }, [step]);
 
@@ -91,7 +117,7 @@ export default function ConnectRepoPage() {
     if (step === 3 && data.org) {
       setReposLoading(true);
       setReposError(null);
-      listGitHubRepos(data.org)
+      listGitHubRepos(data.org, data.githubToken)
         .then((result) => {
           setData((d) => ({
             ...d,
@@ -211,6 +237,7 @@ export default function ConnectRepoPage() {
         name: data.name,
         org_name: data.org,
         purpose: data.purpose,
+        github_token: data.githubToken,
         scan_config: JSON.stringify({
           secrets: data.scanSecrets,
           dependencies: data.scanDeps,
@@ -464,9 +491,40 @@ export default function ConnectRepoPage() {
               <h3 className="text-xl font-bold text-white mb-1">
                 Select organization
               </h3>
-              <p className="text-sm text-[#8b949e] mb-8">
-                Choose the GitHub organization or personal account to scan.
+              <p className="text-sm text-[#8b949e] mb-6">
+                Enter your GitHub personal access token, then choose an organization.
               </p>
+
+              {/* Token input */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-[#c9d1d9] mb-2">
+                  GitHub Personal Access Token
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                    value={data.githubToken}
+                    onChange={(e) =>
+                      setData((d) => ({ ...d, githubToken: e.target.value }))
+                    }
+                    className="flex-1 bg-[#21262d] border border-[#30363d] rounded-lg px-3 py-2.5 text-white text-sm placeholder-[#484f58] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                  <button
+                    onClick={fetchOrgs}
+                    disabled={!data.githubToken.trim() || orgsLoading}
+                    className="px-4 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    {orgsLoading ? "Loading..." : "Connect"}
+                  </button>
+                </div>
+                <p className="mt-1.5 text-xs text-[#484f58]">
+                  Needs <code className="text-[#8b949e]">repo</code> and <code className="text-[#8b949e]">read:org</code> scopes.{" "}
+                  <a href="https://github.com/settings/tokens/new?scopes=repo,read:org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    Create one
+                  </a>
+                </p>
+              </div>
 
               {orgsLoading && (
                 <div className="flex flex-col items-center justify-center py-16">
@@ -494,23 +552,20 @@ export default function ConnectRepoPage() {
                 </div>
               )}
 
-              {!orgsLoading && !orgsError && (
+              {!orgsLoading && !orgsError && orgsFetchedForToken && (
                 <div className="space-y-3">
                   {/* Personal account option */}
-                  {session?.user && (
+                  {ghLogin && (
                     <button
                       onClick={() =>
-                        selectOrg(
-                          session.user?.name ?? session.user?.email ?? "personal",
-                          session.user?.image ?? ""
-                        )
+                        selectOrg(ghLogin, ghAvatar)
                       }
                       className="w-full flex items-center gap-4 p-4 border-2 border-[#30363d] rounded-xl hover:border-primary hover:bg-primary/5 transition-all text-left cursor-pointer"
                     >
                       <div className="w-10 h-10 rounded-full bg-[#21262d] overflow-hidden flex items-center justify-center flex-shrink-0">
-                        {session.user.image ? (
+                        {ghAvatar ? (
                           <img
-                            src={session.user.image}
+                            src={ghAvatar}
                             alt=""
                             className="w-10 h-10 rounded-full"
                           />
@@ -530,7 +585,7 @@ export default function ConnectRepoPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="font-semibold text-white truncate">
-                          {session.user.name ?? session.user.email}
+                          {ghLogin}
                         </div>
                         <div className="text-sm text-[#8b949e]">
                           Personal Account

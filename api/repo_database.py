@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS repo_connections (
     name TEXT NOT NULL,
     org_name TEXT NOT NULL,
     installation_id TEXT DEFAULT '',
+    github_token TEXT DEFAULT '',
     purpose TEXT DEFAULT 'production',
     scan_config TEXT DEFAULT '{}',
     last_scan_at TEXT,
@@ -90,6 +91,15 @@ def init_repo_tables() -> None:
         conn.execute(_CREATE_REPO_ISSUES)
         conn.execute(_CREATE_REPO_SCAN_LOGS)
         conn.commit()
+
+        # Migration: add github_token column if missing
+        try:
+            conn.execute("SAVEPOINT add_github_token")
+            conn.execute("ALTER TABLE repo_connections ADD COLUMN github_token TEXT DEFAULT ''")
+            conn.execute("RELEASE SAVEPOINT add_github_token")
+            conn.commit()
+        except Exception:
+            conn.execute("ROLLBACK TO SAVEPOINT add_github_token")
     finally:
         conn.close()
 
@@ -103,6 +113,7 @@ def create_repo_connection(
     name: str = "",
     org_name: str = "",
     installation_id: str = "",
+    github_token: str = "",
     purpose: str = "production",
     scan_config: str = "{}",
 ) -> str:
@@ -115,8 +126,8 @@ def create_repo_connection(
         conn.execute(
             f"""INSERT INTO repo_connections
                (id, user_email, provider, name, org_name, installation_id,
-                purpose, scan_config, created_at, status)
-               VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, 'active')""",
+                github_token, purpose, scan_config, created_at, status)
+               VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, 'active')""",
             (
                 connection_id,
                 user_email,
@@ -124,6 +135,7 @@ def create_repo_connection(
                 name,
                 org_name,
                 installation_id,
+                github_token,
                 purpose,
                 scan_config if isinstance(scan_config, str) else json.dumps(scan_config),
                 now,

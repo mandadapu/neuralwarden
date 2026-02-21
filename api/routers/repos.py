@@ -52,6 +52,7 @@ class CreateRepoConnectionRequest(BaseModel):
     provider: str = "github"
     purpose: str = "production"
     scan_config: str = "{}"
+    github_token: str = ""
     repos: List[dict] = Field(
         default_factory=list,
         description="List of repos with full_name, name, language, default_branch, private",
@@ -81,7 +82,8 @@ def _get_user_email(request: Request) -> str:
 
 
 def _connection_with_counts(conn: dict) -> dict:
-    """Attach issue_counts and asset_counts to a connection dict."""
+    """Attach issue_counts and asset_counts to a connection dict; strip token."""
+    conn.pop("github_token", None)
     conn["issue_counts"] = get_repo_issue_counts(conn["id"])
     conn["asset_counts"] = get_repo_asset_counts(conn["id"])
     return conn
@@ -107,6 +109,7 @@ async def create_connection(request: Request, body: CreateRepoConnectionRequest)
         provider=body.provider,
         name=body.name,
         org_name=body.org_name,
+        github_token=body.github_token,
         purpose=body.purpose,
         scan_config=body.scan_config,
     )
@@ -138,7 +141,12 @@ async def github_user(request: Request):
     """Proxy: get the authenticated GitHub user."""
     from api.github_scanner import get_authenticated_user
 
-    return get_authenticated_user()
+    token = request.headers.get("X-GitHub-Token", "")
+    try:
+        return get_authenticated_user(token=token)
+    except Exception as e:
+        status = 401 if "401" in str(e) else 502
+        raise HTTPException(status_code=status, detail=str(e))
 
 
 @router.get("/github/orgs")
@@ -146,7 +154,12 @@ async def github_orgs(request: Request):
     """Proxy: list GitHub organisations the user belongs to."""
     from api.github_scanner import list_user_orgs
 
-    return list_user_orgs()
+    token = request.headers.get("X-GitHub-Token", "")
+    try:
+        return list_user_orgs(token=token)
+    except Exception as e:
+        status = 401 if "401" in str(e) else 502
+        raise HTTPException(status_code=status, detail=str(e))
 
 
 @router.get("/github/orgs/{org}/repos")
@@ -154,7 +167,12 @@ async def github_org_repos(org: str, request: Request):
     """Proxy: list repos for a GitHub organisation."""
     from api.github_scanner import list_org_repos
 
-    return list_org_repos(org)
+    token = request.headers.get("X-GitHub-Token", "")
+    try:
+        return list_org_repos(org, token=token)
+    except Exception as e:
+        status = 401 if "401" in str(e) else 502
+        raise HTTPException(status_code=status, detail=str(e))
 
 
 @router.get("/all-issues")
@@ -253,7 +271,7 @@ async def trigger_scan(conn_id: str):
 
                 org_name = connection.get("org_name", "")
                 if org_name:
-                    fetched = list_org_repos(org_name)
+                    fetched = list_org_repos(org_name, token=connection.get("github_token", ""))
                     # Convert to asset dicts
                     repos = [
                         {
@@ -283,6 +301,7 @@ async def trigger_scan(conn_id: str):
                     repos=repos,
                     scan_config=scan_config,
                     progress_callback=progress_callback,
+                    token=connection.get("github_token", ""),
                 )
             except Exception as exc:
                 event_queue.put(("error", exc))
