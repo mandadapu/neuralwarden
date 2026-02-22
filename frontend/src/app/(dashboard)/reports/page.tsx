@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import PageShell from "@/components/PageShell";
 import type { ReportSummary } from "@/lib/types";
-import { listReports } from "@/lib/api";
+import { listReports, BASE } from "@/lib/api";
 
 export default function ReportsPage() {
   const [reports, setReports] = useState<ReportSummary[]>([]);
@@ -13,7 +13,7 @@ export default function ReportsPage() {
   useEffect(() => {
     listReports()
       .then(setReports)
-      .catch(() => {})
+      .catch((err) => console.error("Failed to load reports:", err))
       .finally(() => setLoading(false));
   }, []);
 
@@ -95,8 +95,7 @@ export default function ReportsPage() {
                       className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-[#262c34] text-[#8b949e] hover:text-[#e6edf3] transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const base = `${window.location.protocol}//${window.location.hostname}:8000/api`;
-                        window.open(`${base}/reports/${r.id}/pdf`, "_blank");
+                        window.open(`${BASE}/reports/${r.id}/pdf`, "_blank");
                       }}
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -26,7 +26,7 @@ import type {
   ScanLogListItem as RepoScanLogListItem,
 } from "./types";
 
-const BASE =
+export const BASE =
   process.env.NEXT_PUBLIC_API_URL ||
   (typeof window !== "undefined"
     ? `${window.location.protocol}//${window.location.hostname}:8000/api`
@@ -103,12 +103,14 @@ export type StreamEvent = {
 export async function analyzeStream(
   logs: string,
   onEvent: (event: StreamEvent) => void,
-  skipIngest = false
+  skipIngest = false,
+  signal?: AbortSignal
 ): Promise<void> {
   const res = await fetch(`${BASE}/analyze/stream`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify({ logs, skip_ingest: skipIngest }),
+    signal,
   });
   if (!res.ok) throw new Error(`Stream failed: ${res.statusText}`);
   if (!res.body) throw new Error("No response body");
@@ -117,28 +119,31 @@ export async function analyzeStream(
   const decoder = new TextDecoder();
   let buffer = "";
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+  try {
+    while (true) {
+      if (signal?.aborted) break;
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
 
-    // Parse SSE data lines
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith("data: ")) {
-        try {
-          const data = JSON.parse(trimmed.slice(6));
-          onEvent(data);
-          // Yield to event loop so React re-renders between batched SSE events
-          await new Promise((r) => setTimeout(r, 0));
-        } catch {
-          // skip unparseable lines
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("data: ")) {
+          try {
+            const data = JSON.parse(trimmed.slice(6));
+            onEvent(data);
+            await new Promise((r) => setTimeout(r, 0));
+          } catch {
+            // skip unparseable lines
+          }
         }
       }
     }
+  } finally {
+    reader.releaseLock();
   }
 }
 
@@ -152,7 +157,7 @@ export async function listReports(limit = 50): Promise<ReportSummary[]> {
 }
 
 export async function getReport(id: string): Promise<Record<string, unknown>> {
-  const res = await fetch(`${BASE}/reports/${id}`);
+  const res = await fetch(`${BASE}/reports/${id}`, { headers: authHeaders() });
   if (!res.ok) throw new Error(`Failed to load report: ${res.statusText}`);
   return res.json();
 }
@@ -321,11 +326,13 @@ export async function scanCloud(id: string): Promise<ScanResult> {
 
 export async function scanCloudStream(
   cloudId: string,
-  onEvent: (event: ScanStreamEvent) => void
+  onEvent: (event: ScanStreamEvent) => void,
+  signal?: AbortSignal
 ): Promise<void> {
   const res = await fetch(`${BASE}/clouds/${cloudId}/scan`, {
     method: "POST",
     headers: authHeaders(),
+    signal,
   });
   if (!res.ok) throw new Error(`Scan failed: ${res.statusText}`);
   if (!res.body) throw new Error("No response body");
@@ -338,31 +345,36 @@ export async function scanCloudStream(
   const MIN_EVENT_GAP = 400;
   let lastEventTime = 0;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+  try {
+    while (true) {
+      if (signal?.aborted) break;
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
 
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith("data: ")) {
-        try {
-          const data = JSON.parse(trimmed.slice(6));
-          // Ensure minimum gap between events so each stage is visible
-          const elapsed = Date.now() - lastEventTime;
-          if (elapsed < MIN_EVENT_GAP) {
-            await new Promise((r) => setTimeout(r, MIN_EVENT_GAP - elapsed));
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("data: ")) {
+          try {
+            const data = JSON.parse(trimmed.slice(6));
+            // Ensure minimum gap between events so each stage is visible
+            const elapsed = Date.now() - lastEventTime;
+            if (elapsed < MIN_EVENT_GAP) {
+              await new Promise((r) => setTimeout(r, MIN_EVENT_GAP - elapsed));
+            }
+            onEvent(data);
+            lastEventTime = Date.now();
+          } catch {
+            // skip unparseable lines
           }
-          onEvent(data);
-          lastEventTime = Date.now();
-        } catch {
-          // skip unparseable lines
         }
       }
     }
+  } finally {
+    reader.releaseLock();
   }
 }
 
@@ -727,11 +739,13 @@ export async function listGitHubRepos(org: string, githubToken?: string): Promis
 
 export async function scanRepoConnectionStream(
   connId: string,
-  onEvent: (event: RepoScanStreamEvent) => void
+  onEvent: (event: RepoScanStreamEvent) => void,
+  signal?: AbortSignal
 ): Promise<void> {
   const res = await fetch(`${BASE}/repos/${connId}/scan`, {
     method: "POST",
     headers: authHeaders(),
+    signal,
   });
   if (!res.ok) throw new Error(`Scan failed: ${res.statusText}`);
   if (!res.body) throw new Error("No response body");
@@ -742,30 +756,35 @@ export async function scanRepoConnectionStream(
   const MIN_EVENT_GAP = 400;
   let lastEventTime = 0;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+  try {
+    while (true) {
+      if (signal?.aborted) break;
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
 
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith("data: ")) {
-        try {
-          const data = JSON.parse(trimmed.slice(6));
-          const elapsed = Date.now() - lastEventTime;
-          if (elapsed < MIN_EVENT_GAP) {
-            await new Promise((r) => setTimeout(r, MIN_EVENT_GAP - elapsed));
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("data: ")) {
+          try {
+            const data = JSON.parse(trimmed.slice(6));
+            const elapsed = Date.now() - lastEventTime;
+            if (elapsed < MIN_EVENT_GAP) {
+              await new Promise((r) => setTimeout(r, MIN_EVENT_GAP - elapsed));
+            }
+            onEvent(data);
+            lastEventTime = Date.now();
+          } catch {
+            // skip unparseable lines
           }
-          onEvent(data);
-          lastEventTime = Date.now();
-        } catch {
-          // skip unparseable lines
         }
       }
     }
+  } finally {
+    reader.releaseLock();
   }
 }
 

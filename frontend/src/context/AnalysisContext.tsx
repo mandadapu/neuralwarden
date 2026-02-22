@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useLayoutEffect } from "react";
 import type { AnalysisResponse, ClassifiedThreat } from "@/lib/types";
 import type { StageProgress } from "@/components/PipelineProgress";
 import { useSession } from "next-auth/react";
@@ -61,14 +61,11 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
   const [ignoredThreats, setIgnoredThreats] = useState<ClassifiedThreat[]>([]);
   const [resolvedThreats, setResolvedThreats] = useState<ClassifiedThreat[]>([]);
 
-  // Set backend JWT token synchronously during render so it's available
-  // before any child useEffect callbacks fire.
-  const prevTokenRef = useRef("");
+  // Set backend JWT token before any child useEffect callbacks fire.
   const currentToken = (session?.backendToken as string) ?? "";
-  if (currentToken !== prevTokenRef.current) {
+  useLayoutEffect(() => {
     setApiToken(currentToken);
-    prevTokenRef.current = currentToken;
-  }
+  }, [currentToken]);
 
   // Flush stale localStorage on new deploys, then restore local state
   useEffect(() => {
@@ -89,7 +86,9 @@ export function AnalysisProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await getLatestReport();
       if (data) setResult(data);
-    } catch {}
+    } catch (err) {
+      console.error("Failed to load latest report:", err);
+    }
   }, []);
 
   // Load latest analysis from server once user session is available

@@ -1,9 +1,5 @@
 import type { IncidentReport as IReport } from "@/lib/types";
-
-const BASE =
-  typeof window !== "undefined"
-    ? `${window.location.protocol}//${window.location.hostname}:8000/api`
-    : "/api";
+import { BASE } from "@/lib/api";
 
 export default function IncidentReport({
   report,
