@@ -116,7 +116,7 @@ export default function CloudsPage() {
           setScanProgress(event);
         }
       });
-      await loadClouds();
+      await mutateClouds();
       window.dispatchEvent(new Event("scanCompleted"));
     } catch (err) {
       console.error("Scan failed:", err);

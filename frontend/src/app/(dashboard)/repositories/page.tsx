@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import PageShell from "@/components/PageShell";
-import { listRepoConnections, scanRepoConnectionStream, getRepoScanProgress, deleteRepoConnection, toggleRepoConnection, setApiToken } from "@/lib/api";
-import type { RepoConnection, RepoScanStreamEvent } from "@/lib/types";
+import { scanRepoConnectionStream, getRepoScanProgress, deleteRepoConnection, toggleRepoConnection, setApiToken } from "@/lib/api";
+import { useRepoConnections } from "@/lib/swr";
+import type { RepoScanStreamEvent } from "@/lib/types";
 
 function RepoIcon() {
   return (
@@ -60,9 +61,8 @@ function relativeTime(dateStr: string | null): string {
 export default function RepositoriesPage() {
   const router = useRouter();
   const { data: session } = useSession();
-  const [repos, setRepos] = useState<RepoConnection[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: repos = [], error: swrError, isLoading: loading, mutate: mutateRepos } = useRepoConnections();
+  const error = swrError ? (swrError instanceof Error ? swrError.message : "Failed to load repositories") : null;
   const [search, setSearch] = useState("");
   const [scanningId, setScanningId] = useState<string | null>(null);
   const [scanProgress, setScanProgress] = useState<RepoScanStreamEvent | null>(null);
@@ -76,7 +76,7 @@ export default function RepositoriesPage() {
     }
     try {
       await deleteRepoConnection(connId);
-      setRepos((prev) => prev.filter((r) => String(r.id) !== connId));
+      mutateRepos(repos.filter((r) => String(r.id) !== connId), false);
       setConfirmDeleteId(null);
     } catch (err) {
       console.error("Delete failed:", err);
@@ -87,7 +87,7 @@ export default function RepositoriesPage() {
     e.stopPropagation();
     try {
       const updated = await toggleRepoConnection(connId);
-      setRepos((prev) => prev.map((r) => (String(r.id) === connId ? updated : r)));
+      mutateRepos(repos.map((r) => (String(r.id) === connId ? updated : r)), false);
     } catch (err) {
       console.error("Toggle failed:", err);
     }
@@ -113,7 +113,7 @@ export default function RepositoriesPage() {
           setScanProgress(event);
         }
       });
-      await loadRepos();
+      await mutateRepos();
       window.dispatchEvent(new Event("repoScanCompleted"));
     } catch (err) {
       console.error("Scan failed:", err);
@@ -127,20 +127,7 @@ export default function RepositoriesPage() {
     const token = session?.backendToken as string;
     if (!token) return;
     setApiToken(token);
-    loadRepos();
   }, [session?.backendToken]);
-
-  async function loadRepos() {
-    try {
-      setLoading(true);
-      const data = await listRepoConnections();
-      setRepos(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load repositories");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const filtered = repos.filter(
     (r) =>
