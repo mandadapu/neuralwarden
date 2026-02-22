@@ -27,6 +27,11 @@ const AGENTS: Agent[] = [
   { name: "Classify", model: "Sonnet 4.5", role: "Risk scoring with MITRE ATT&CK mapping and correlation-aware severity escalation", status: "Ready", group: "Threat Pipeline" },
   { name: "HITL Gate", model: "\u2014", role: "Human-in-the-loop checkpoint for critical threats before report generation", status: "Ready", group: "Threat Pipeline" },
   { name: "Report", model: "Haiku 4.5", role: "Generates dual-audience incident reports with executive summary and action plans", status: "Ready", group: "Threat Pipeline" },
+  // Repository Scan Engine
+  { name: "Secret Detection", model: "\u2014", role: "Scans repository files against 30+ compiled regex patterns for leaked API keys, tokens, and credentials across 15 providers", status: "Ready", group: "Repository Scan Engine" },
+  { name: "SCA Scanner", model: "\u2014", role: "Parses lockfiles across 12 ecosystems and queries OSV.dev for known CVEs with CVSS scoring and fix recommendations", status: "Ready", group: "Repository Scan Engine" },
+  { name: "AI SAST", model: "Haiku 4.5", role: "AI-powered static analysis detecting SQL injection, XSS, command injection, and 10 more vulnerability classes with deterministic fallback", status: "Ready", group: "Repository Scan Engine" },
+  { name: "License Scanner", model: "\u2014", role: "Detects copyleft licenses (GPL, AGPL, SSPL) and missing license declarations in project dependencies", status: "Ready", group: "Repository Scan Engine" },
 ];
 
 const GROUP_META: Record<string, { description: string; color: string }> = {
@@ -37,6 +42,10 @@ const GROUP_META: Record<string, { description: string; color: string }> = {
   "Cloud Scan Super Agent": {
     description: "6-agent deterministic pipeline for GCP scanning and correlation",
     color: "#7c3aed",
+  },
+  "Repository Scan Engine": {
+    description: "4-agent code security pipeline — secrets, SCA, AI SAST, and license scanning",
+    color: "#0ea5e9",
   },
 };
 
