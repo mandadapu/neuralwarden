@@ -615,7 +615,7 @@ def run_repo_scan(
 
             if scan_config.get("sast", True):
                 from api.sast_scanner import scan_sast
-                found = scan_sast(temp_dir, repo_full_name)
+                found = scan_sast(temp_dir, repo_full_name, use_ai=scan_config.get("sast_ai", False))
                 all_issues.extend(found)
                 by_type["sast"] += len(found)
 

@@ -323,12 +323,16 @@ def _run_fallback_sast(repo_dir: str, repo_full_name: str) -> List[Dict[str, Any
 # ── Main entry point ─────────────────────────────────────────────
 
 
-def scan_sast(repo_dir: str, repo_full_name: str) -> List[Dict[str, Any]]:
+def scan_sast(repo_dir: str, repo_full_name: str, use_ai: bool = False) -> List[Dict[str, Any]]:
     """Run SAST analysis on a repo.
 
-    Uses AI (Claude Haiku) when ``ANTHROPIC_API_KEY`` is set, otherwise
-    falls back to deterministic regex patterns.
+    When *use_ai* is True and ``ANTHROPIC_API_KEY`` is set, uses Claude
+    Haiku for intelligent analysis.  Otherwise uses the free deterministic
+    regex scanner (default).
     """
+    if not use_ai:
+        return _run_fallback_sast(repo_dir, repo_full_name)
+
     api_key = os.getenv("ANTHROPIC_API_KEY", "")
     if not api_key:
         logger.info("SAST: No ANTHROPIC_API_KEY, using deterministic fallback for %s", repo_full_name)
