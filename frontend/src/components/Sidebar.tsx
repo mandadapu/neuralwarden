@@ -1,30 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { useAnalysisContext } from "@/context/AnalysisContext";
-import { listClouds, listRepoConnections, setApiToken } from "@/lib/api";
+import { useClouds, useRepoConnections, SWR_KEYS } from "@/lib/swr";
+import { mutate } from "swr";
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
   const { result, snoozedThreats, ignoredThreats, resolvedThreats } = useAnalysisContext();
   const pipelineThreatCount = result?.classified_threats?.length ?? 0;
   const snoozedCount = snoozedThreats.length;
   const ignoredCount = ignoredThreats.length;
   const resolvedCount = resolvedThreats.length;
-  const [cloudCount, setCloudCount] = useState(0);
-  const [cloudIssueCount, setCloudIssueCount] = useState(0);
-  const [repoCount, setRepoCount] = useState(0);
-  const [repoIssueCount, setRepoIssueCount] = useState(0);
+  const { data: clouds = [] } = useClouds();
+  const { data: repos = [] } = useRepoConnections();
 
-  const [refreshKey, setRefreshKey] = useState(0);
+  const cloudCount = clouds.length;
+  const cloudIssueCount = clouds.reduce((sum, c) => sum + (c.issue_counts?.total ?? 0), 0);
+  const repoCount = repos.length;
+  const repoIssueCount = repos.reduce((sum, c) => sum + (c.issue_counts?.total ?? 0), 0);
 
-  // Listen for scan completion events from any page
+  // Listen for scan completion events — revalidate SWR caches
   useEffect(() => {
-    const handler = () => setRefreshKey((k) => k + 1);
+    const handler = () => {
+      mutate(SWR_KEYS.clouds);
+      mutate(SWR_KEYS.repos);
+    };
     window.addEventListener("scanCompleted", handler);
     window.addEventListener("repoScanCompleted", handler);
     return () => {
@@ -32,28 +35,6 @@ export default function Sidebar() {
       window.removeEventListener("repoScanCompleted", handler);
     };
   }, []);
-
-  useEffect(() => {
-    const token = session?.backendToken as string;
-    if (!token) return;
-    setApiToken(token);
-    listClouds().then((data) => {
-      setCloudCount(data.length);
-      const totalIssues = data.reduce(
-        (sum, c) => sum + (c.issue_counts?.total ?? 0),
-        0
-      );
-      setCloudIssueCount(totalIssues);
-    }).catch(() => {});
-    listRepoConnections().then((data) => {
-      setRepoCount(data.length);
-      const totalIssues = data.reduce(
-        (sum, c) => sum + (c.issue_counts?.total ?? 0),
-        0
-      );
-      setRepoIssueCount(totalIssues);
-    }).catch(() => {});
-  }, [session?.user?.email, pathname, refreshKey]);
 
   const feedCount = pipelineThreatCount + cloudIssueCount + repoIssueCount;
 

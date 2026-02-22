@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import PageShell from "@/components/PageShell";
-import { scanRepoConnectionStream, getRepoScanProgress, deleteRepoConnection, toggleRepoConnection, setApiToken } from "@/lib/api";
+import { scanRepoConnectionStream, getRepoScanProgress, deleteRepoConnection, toggleRepoConnection } from "@/lib/api";
 import { useRepoConnections } from "@/lib/swr";
 import type { RepoScanStreamEvent } from "@/lib/types";
 
@@ -60,7 +59,6 @@ function relativeTime(dateStr: string | null): string {
 
 export default function RepositoriesPage() {
   const router = useRouter();
-  const { data: session } = useSession();
   const { data: repos = [], error: swrError, isLoading: loading, mutate: mutateRepos } = useRepoConnections();
   const error = swrError ? (swrError instanceof Error ? swrError.message : "Failed to load repositories") : null;
   const [search, setSearch] = useState("");
@@ -122,12 +120,6 @@ export default function RepositoriesPage() {
       setScanningId(null);
     }
   }
-
-  useEffect(() => {
-    const token = session?.backendToken as string;
-    if (!token) return;
-    setApiToken(token);
-  }, [session?.backendToken]);
 
   const filtered = repos.filter(
     (r) =>
