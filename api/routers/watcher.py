@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 from api.auth import get_current_user
 from pipeline.watcher import LogWatcher
@@ -43,8 +46,10 @@ def _on_file_detected(file_path: str) -> None:
         from api.services import run_analysis
 
         run_analysis(content)
+    except (OSError, IOError) as e:
+        logger.warning("Failed to read watched file %s: %s", file_path, e)
     except Exception:
-        pass
+        logger.exception("Unexpected error processing watched file %s", file_path)
 
 
 def _validate_watch_path(raw: str) -> Path:

@@ -46,7 +46,7 @@ async def gcp_status(_user: str = Depends(get_current_user)) -> GcpStatusRespons
     """Check if GCP Cloud Logging is available and credentials are configured."""
     try:
         from api.gcp_logging import _GCP_AVAILABLE
-    except Exception:
+    except ImportError:
         _GCP_AVAILABLE = False
 
     creds_set = bool(os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))

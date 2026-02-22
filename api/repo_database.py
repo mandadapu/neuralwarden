@@ -6,11 +6,14 @@ Supports SQLite (local dev) and PostgreSQL (Cloud Run) via api.db layer.
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 
 from api.db import get_conn, adapt_sql, placeholder, insert_or_ignore, is_postgres
 from api.encryption import encrypt, decrypt
+
+logger = logging.getLogger(__name__)
 
 # ── Severity ordering (lower = more severe) ─────────────────────────
 
@@ -143,6 +146,7 @@ def create_repo_connection(
             ),
         )
         conn.commit()
+        logger.info("audit: repo_connection created id=%s user=%s org=%s", connection_id, user_email, org_name)
         return connection_id
     finally:
         conn.close()
@@ -204,6 +208,7 @@ def update_repo_connection(connection_id: str, **fields) -> None:
             values,
         )
         conn.commit()
+        logger.info("audit: repo_connection updated id=%s fields=%s", connection_id, list(updates.keys()))
     finally:
         conn.close()
 
@@ -217,6 +222,7 @@ def delete_repo_connection(connection_id: str) -> None:
         conn.execute(adapt_sql("DELETE FROM repo_assets WHERE connection_id = ?"), (connection_id,))
         conn.execute(adapt_sql("DELETE FROM repo_connections WHERE id = ?"), (connection_id,))
         conn.commit()
+        logger.info("audit: repo_connection deleted id=%s", connection_id)
     finally:
         conn.close()
 
@@ -431,6 +437,7 @@ def update_repo_issue_status(issue_id: str, status: str) -> None:
             (status, issue_id),
         )
         conn.commit()
+        logger.info("audit: repo_issue status changed id=%s status=%s", issue_id, status)
     finally:
         conn.close()
 
@@ -444,6 +451,7 @@ def update_repo_issue_severity(issue_id: str, severity: str) -> None:
             (severity, issue_id),
         )
         conn.commit()
+        logger.info("audit: repo_issue severity changed id=%s severity=%s", issue_id, severity)
     finally:
         conn.close()
 

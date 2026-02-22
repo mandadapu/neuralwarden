@@ -20,6 +20,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from api.database import init_db
 from api.cloud_database import init_cloud_tables, seed_cloud_checks
+from api.encryption import validate_encryption_config
 from api.pentests_database import init_pentest_tables, seed_pentest_checks
 from api.repo_database import init_repo_tables
 from api.routers import analyze, clouds, export, gcp_logging, generator, hitl, pentests, repos, reports, samples, stream, threat_intel, watcher
@@ -31,6 +32,9 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["120/minute"])
 app = FastAPI(title="NeuralWarden API", version="2.0.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Validate encryption config before anything touches secrets
+validate_encryption_config()
 
 # Initialize database on startup (SQLite or PostgreSQL via DATABASE_URL)
 # Retry for Cloud SQL proxy socket availability on Cloud Run
