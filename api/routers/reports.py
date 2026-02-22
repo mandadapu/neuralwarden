@@ -32,4 +32,6 @@ async def get_report(analysis_id: str, user_email: str = Depends(get_current_use
     result = get_analysis(analysis_id)
     if not result:
         raise HTTPException(status_code=404, detail="Analysis not found")
+    if result.get("user_email") and result["user_email"] != user_email:
+        raise HTTPException(status_code=404, detail="Analysis not found")
     return result
