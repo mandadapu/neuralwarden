@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import PageShell from "@/components/PageShell";
-import { listClouds, scanCloudStream, getScanProgress, deleteCloud, toggleCloud, setApiToken } from "@/lib/api";
+import { scanCloudStream, getScanProgress, deleteCloud, toggleCloud, setApiToken } from "@/lib/api";
+import { useClouds } from "@/lib/swr";
 import type { CloudAccount, ScanStreamEvent } from "@/lib/types";
 import ScanProgressOverlay from "@/components/ScanProgressOverlay";
 
@@ -61,9 +62,8 @@ function relativeTime(dateStr: string | null): string {
 export default function CloudsPage() {
   const router = useRouter();
   const { data: session } = useSession();
-  const [clouds, setClouds] = useState<CloudAccount[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: clouds = [], error: swrError, isLoading: loading, mutate: mutateClouds } = useClouds();
+  const error = swrError ? (swrError instanceof Error ? swrError.message : "Failed to list clouds") : null;
   const [search, setSearch] = useState("");
   const [scanningId, setScanningId] = useState<string | null>(null);
   const [scanProgress, setScanProgress] = useState<ScanStreamEvent | null>(null);
@@ -78,7 +78,7 @@ export default function CloudsPage() {
     }
     try {
       await deleteCloud(cloudId);
-      setClouds((prev) => prev.filter((c) => String(c.id) !== cloudId));
+      mutateClouds(clouds.filter((c) => String(c.id) !== cloudId), false);
       setConfirmDeleteId(null);
     } catch (err) {
       console.error("Delete failed:", err);
@@ -89,7 +89,7 @@ export default function CloudsPage() {
     e.stopPropagation();
     try {
       const updated = await toggleCloud(cloudId);
-      setClouds((prev) => prev.map((c) => (String(c.id) === cloudId ? updated : c)));
+      mutateClouds(clouds.map((c) => (String(c.id) === cloudId ? updated : c)), false);
     } catch (err) {
       console.error("Toggle failed:", err);
     }
@@ -130,20 +130,7 @@ export default function CloudsPage() {
     const token = session?.backendToken as string;
     if (!token) return;
     setApiToken(token);
-    loadClouds();
   }, [session?.backendToken]);
-
-  async function loadClouds() {
-    try {
-      setLoading(true);
-      const data = await listClouds();
-      setClouds(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load clouds");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   const filtered = clouds.filter(
     (c) =>

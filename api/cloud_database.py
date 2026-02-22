@@ -10,6 +10,7 @@ import uuid
 from datetime import datetime, timezone
 
 from api.db import get_conn, adapt_sql, placeholder, insert_or_ignore, is_postgres
+from api.encryption import encrypt, decrypt
 
 # ── Severity ordering (lower = more severe) ─────────────────────────
 
@@ -155,7 +156,7 @@ def create_cloud_account(
                 name,
                 project_id,
                 purpose,
-                credentials_json,
+                encrypt(credentials_json),
                 services if isinstance(services, str) else json.dumps(services),
                 now,
             ),
@@ -166,6 +167,13 @@ def create_cloud_account(
         conn.close()
 
 
+def _decrypt_account(row: dict) -> dict:
+    """Decrypt encrypted fields on a cloud account dict."""
+    if row.get("credentials_json"):
+        row["credentials_json"] = decrypt(row["credentials_json"])
+    return row
+
+
 def list_cloud_accounts(user_email: str) -> list[dict]:
     """List all cloud accounts for a given user."""
     conn = get_conn()
@@ -174,7 +182,7 @@ def list_cloud_accounts(user_email: str) -> list[dict]:
             adapt_sql("SELECT * FROM cloud_accounts WHERE user_email = ? ORDER BY created_at DESC"),
             (user_email,),
         ).fetchall()
-        return [dict(row) for row in rows]
+        return [_decrypt_account(dict(row)) for row in rows]
     finally:
         conn.close()
 
@@ -186,7 +194,7 @@ def get_cloud_account(account_id: str) -> dict | None:
         row = conn.execute(
             adapt_sql("SELECT * FROM cloud_accounts WHERE id = ?"), (account_id,)
         ).fetchone()
-        return dict(row) if row else None
+        return _decrypt_account(dict(row)) if row else None
     finally:
         conn.close()
 
@@ -206,6 +214,8 @@ def update_cloud_account(account_id: str, **fields) -> None:
     updates = {k: v for k, v in fields.items() if k in _ALLOWED_ACCOUNT_FIELDS}
     if not updates:
         return
+    if "credentials_json" in updates and updates["credentials_json"]:
+        updates["credentials_json"] = encrypt(updates["credentials_json"])
     p = placeholder
     set_clause = ", ".join(f"{k} = {p}" for k in updates)
     values = list(updates.values()) + [account_id]
