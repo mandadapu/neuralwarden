@@ -13,6 +13,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -578,52 +579,105 @@ def run_repo_scan(
             "dependencies": False, "code_patterns": False,
         }
 
+    start_time = time.time()
+
     all_issues: List[Dict[str, Any]] = []
     repo_assets: List[Dict[str, Any]] = []
+    log_entries: List[Dict[str, Any]] = []
+    per_repo_summary: List[Dict[str, Any]] = []
     by_type: Dict[str, int] = {
         "secrets": 0, "sca": 0, "sast": 0, "license": 0,
         "dependencies": 0, "code_patterns": 0,
     }
+
+    def _emit_stage(repo_name: str, idx: int, stage: str):
+        if progress_callback:
+            progress_callback("progress", {
+                "current_repo": repo_name,
+                "repos_scanned": idx,
+                "total_repos": len(repos),
+                "scanner_stage": stage,
+            })
 
     for idx, repo in enumerate(repos):
         repo_full_name = repo.get("full_name") or repo.get("repo_full_name") or f"{org_name}/{repo.get('name') or repo.get('repo_name', 'unknown')}"
         repo_name = repo.get("name") or repo.get("repo_name", "unknown")
         default_branch = repo.get("default_branch", "main")
 
-        if progress_callback:
-            progress_callback(
-                "progress",
-                {"current_repo": repo_full_name, "repos_scanned": idx, "total_repos": len(repos)},
-            )
-
         logger.info("Scanning repo %s (%d/%d)", repo_full_name, idx + 1, len(repos))
+
+        # Per-repo issue tracking
+        repo_secrets = 0
+        repo_sca = 0
+        repo_sast = 0
+        repo_license = 0
+        repo_status = "success"
+        repo_error = ""
 
         temp_dir: Optional[str] = None
         try:
+            _emit_stage(repo_full_name, idx, "cloning")
             temp_dir = clone_repo(repo_full_name, branch=default_branch, token=token)
+            log_entries.append({
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "level": "info", "repo": repo_full_name,
+                "scanner": "clone", "message": f"Cloned {repo_full_name}",
+            })
 
             if scan_config.get("secrets", True):
+                _emit_stage(repo_full_name, idx, "secrets")
                 found = scan_secrets(temp_dir, repo_full_name)
                 all_issues.extend(found)
                 by_type["secrets"] += len(found)
+                repo_secrets = len(found)
+                log_entries.append({
+                    "ts": datetime.now(timezone.utc).isoformat(),
+                    "level": "info", "repo": repo_full_name,
+                    "scanner": "secrets", "issues_found": len(found),
+                    "message": f"Secrets scanner: {len(found)} issues found",
+                })
 
             if scan_config.get("sca", True):
+                _emit_stage(repo_full_name, idx, "sca")
                 from api.sca_scanner import scan_sca
                 found = scan_sca(temp_dir, repo_full_name)
                 all_issues.extend(found)
                 by_type["sca"] += len(found)
+                repo_sca = len(found)
+                log_entries.append({
+                    "ts": datetime.now(timezone.utc).isoformat(),
+                    "level": "info", "repo": repo_full_name,
+                    "scanner": "sca", "issues_found": len(found),
+                    "message": f"SCA scanner: {len(found)} issues found",
+                })
 
             if scan_config.get("sast", True):
+                _emit_stage(repo_full_name, idx, "sast")
                 from api.sast_scanner import scan_sast
                 found = scan_sast(temp_dir, repo_full_name, use_ai=scan_config.get("sast_ai", False))
                 all_issues.extend(found)
                 by_type["sast"] += len(found)
+                repo_sast = len(found)
+                log_entries.append({
+                    "ts": datetime.now(timezone.utc).isoformat(),
+                    "level": "info", "repo": repo_full_name,
+                    "scanner": "sast", "issues_found": len(found),
+                    "message": f"SAST scanner: {len(found)} issues found",
+                })
 
             if scan_config.get("license", True):
+                _emit_stage(repo_full_name, idx, "license")
                 from api.sca_scanner import scan_license
                 found = scan_license(temp_dir, repo_full_name)
                 all_issues.extend(found)
                 by_type["license"] += len(found)
+                repo_license = len(found)
+                log_entries.append({
+                    "ts": datetime.now(timezone.utc).isoformat(),
+                    "level": "info", "repo": repo_full_name,
+                    "scanner": "license", "issues_found": len(found),
+                    "message": f"License scanner: {len(found)} issues found",
+                })
 
             # Legacy scanners (disabled by default, kept for backwards compat)
             if scan_config.get("dependencies"):
@@ -638,6 +692,13 @@ def run_repo_scan(
 
         except Exception as exc:
             logger.error("Failed to scan %s [%s]: %s", repo_full_name, type(exc).__name__, exc)
+            repo_status = "error"
+            repo_error = f"{type(exc).__name__}: {exc}"
+            log_entries.append({
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "level": "error", "repo": repo_full_name,
+                "scanner": "clone", "message": f"Failed to scan: {exc}",
+            })
             # Record the failure but continue with remaining repos
             all_issues.append(
                 {
@@ -653,6 +714,17 @@ def run_repo_scan(
         finally:
             if temp_dir:
                 cleanup_clone(temp_dir)
+
+        per_repo_summary.append({
+            "repo": repo_full_name,
+            "issues": repo_secrets + repo_sca + repo_sast + repo_license,
+            "secrets": repo_secrets,
+            "sca": repo_sca,
+            "sast": repo_sast,
+            "license": repo_license,
+            "status": repo_status,
+            "error": repo_error,
+        })
 
         # Build asset record for this repo
         repo_assets.append(
@@ -679,12 +751,15 @@ def run_repo_scan(
         "repos_scanned": len(repos),
         "total_issues": len(all_issues),
         "by_type": by_type,
+        "duration_seconds": int(time.time() - start_time),
+        "per_repo": per_repo_summary,
     }
 
     result = {
         "issues": all_issues,
         "assets": repo_assets,
         "summary": summary,
+        "log_entries": log_entries,
     }
 
     if progress_callback:

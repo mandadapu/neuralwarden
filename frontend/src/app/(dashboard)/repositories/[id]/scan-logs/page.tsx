@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Fragment, useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { listRepoScanLogs } from "@/lib/api";
+import { listRepoScanLogs, getRepoScanLog } from "@/lib/api";
 import type { ScanLogListItem } from "@/lib/types";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -36,13 +36,34 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
+interface PerRepoDetail {
+  repo: string;
+  issues: number;
+  secrets: number;
+  sca: number;
+  sast: number;
+  license: number;
+  status: string;
+  error?: string;
+}
+
 interface RepoScanSummary {
+  repos_scanned?: number;
   total_repos_scanned?: number;
+  issues_found?: number;
   total_issue_count?: number;
   duration_seconds?: number;
-  scan_type?: string;
-  repos_succeeded?: string[];
-  repos_failed?: string[];
+  by_type?: Record<string, number>;
+  per_repo?: PerRepoDetail[];
+}
+
+interface LogEntry {
+  ts: string;
+  level: string;
+  repo?: string;
+  scanner?: string;
+  issues_found?: number;
+  message: string;
 }
 
 function parseSummary(json: string): RepoScanSummary | null {
@@ -61,12 +82,152 @@ function formatDuration(seconds: number | undefined): string {
   return `${mins}m ${secs}s`;
 }
 
+const LEVEL_STYLES: Record<string, string> = {
+  info: "text-blue-400",
+  error: "text-red-400",
+  warning: "text-amber-400",
+};
+
+function formatTime(ts: string): string {
+  try {
+    const d = new Date(ts);
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  } catch {
+    return ts;
+  }
+}
+
+/* ── Expanded detail panel ─────────────────────────────── */
+
+function ScanLogDetail({ connectionId, logId }: { connectionId: string; logId: string }) {
+  const [detail, setDetail] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getRepoScanLog(connectionId, logId)
+      .then(setDetail)
+      .finally(() => setLoading(false));
+  }, [connectionId, logId]);
+
+  if (loading) {
+    return (
+      <div className="px-5 py-4 flex items-center gap-2 text-[#8b949e] text-sm">
+        <div className="w-4 h-4 border-2 border-[#8b949e]/30 border-t-[#8b949e] rounded-full animate-spin" />
+        Loading details...
+      </div>
+    );
+  }
+
+  if (!detail) {
+    return <div className="px-5 py-4 text-[#8b949e] text-sm">Failed to load scan log detail.</div>;
+  }
+
+  const summary = parseSummary((detail.summary_json as string) || "{}");
+  const logEntries: LogEntry[] = (() => {
+    try {
+      return JSON.parse((detail.log_entries_json as string) || "[]");
+    } catch {
+      return [];
+    }
+  })();
+
+  const byType = summary?.by_type ?? {};
+  const perRepo = summary?.per_repo ?? [];
+
+  return (
+    <div className="bg-[#161b22] border-t border-[#262c34]">
+      {/* Scanner summary bar */}
+      {Object.keys(byType).length > 0 && (
+        <div className="px-5 py-3 border-b border-[#262c34] flex flex-wrap gap-4 text-xs">
+          <span className="text-[#8b949e] font-semibold uppercase tracking-wider">Scanner Breakdown:</span>
+          {byType.secrets !== undefined && (
+            <span className="text-[#c9d1d9]">
+              <span className="text-rose-400 font-semibold">Secrets:</span> {byType.secrets}
+            </span>
+          )}
+          {byType.sca !== undefined && (
+            <span className="text-[#c9d1d9]">
+              <span className="text-teal-400 font-semibold">SCA:</span> {byType.sca}
+            </span>
+          )}
+          {byType.sast !== undefined && (
+            <span className="text-[#c9d1d9]">
+              <span className="text-blue-400 font-semibold">SAST:</span> {byType.sast}
+            </span>
+          )}
+          {byType.license !== undefined && (
+            <span className="text-[#c9d1d9]">
+              <span className="text-purple-400 font-semibold">License:</span> {byType.license}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Per-repo breakdown */}
+      {perRepo.length > 0 && (
+        <div className="px-5 py-3 border-b border-[#262c34]">
+          <div className="text-xs text-[#8b949e] font-semibold uppercase tracking-wider mb-2">Per Repository</div>
+          <div className="space-y-1">
+            {perRepo.map((r) => (
+              <div
+                key={r.repo}
+                className="flex items-center gap-3 text-xs py-1.5 px-3 rounded-lg hover:bg-[#21262d]/50"
+              >
+                <span className="flex-1 text-[#c9d1d9] font-medium truncate">{r.repo}</span>
+                {r.status === "error" ? (
+                  <span className="text-red-400">{r.error || "error"}</span>
+                ) : (
+                  <>
+                    <span className="text-rose-400" title="Secrets">S:{r.secrets ?? 0}</span>
+                    <span className="text-teal-400" title="SCA">SCA:{r.sca ?? 0}</span>
+                    <span className="text-blue-400" title="SAST">SAST:{r.sast ?? 0}</span>
+                    <span className="text-purple-400" title="License">L:{r.license ?? 0}</span>
+                    <span className={`font-semibold ${r.issues > 0 ? "text-amber-400" : "text-[#8b949e]"}`}>
+                      {r.issues} total
+                    </span>
+                  </>
+                )}
+                <StatusBadge status={r.status} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Log entries */}
+      {logEntries.length > 0 && (
+        <div className="px-5 py-3">
+          <div className="text-xs text-[#8b949e] font-semibold uppercase tracking-wider mb-2">Log Entries</div>
+          <div className="bg-[#0d1117] rounded-lg border border-[#262c34] max-h-64 overflow-y-auto font-mono text-xs">
+            {logEntries.map((entry, i) => (
+              <div key={i} className="flex gap-3 px-3 py-1.5 border-b border-[#262c34]/50 last:border-b-0">
+                <span className="text-[#484f58] shrink-0 w-16">{formatTime(entry.ts)}</span>
+                <span className={`shrink-0 w-12 uppercase font-semibold ${LEVEL_STYLES[entry.level] ?? "text-[#8b949e]"}`}>
+                  {entry.level}
+                </span>
+                <span className="text-[#c9d1d9]">{entry.message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {logEntries.length === 0 && perRepo.length === 0 && (
+        <div className="px-5 py-4 text-[#8b949e] text-sm">No detailed log entries available for this scan.</div>
+      )}
+    </div>
+  );
+}
+
+/* ── Main page ────────────────────────────────────────── */
+
 export default function RepoScanLogsPage() {
   const params = useParams();
   const connectionId = params.id as string;
 
   const [logs, setLogs] = useState<ScanLogListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     listRepoScanLogs(connectionId)
@@ -105,6 +266,7 @@ export default function RepoScanLogsPage() {
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-[#21262d] border-b border-[#30363d] text-left text-xs font-semibold text-[#8b949e] uppercase tracking-wider">
+            <th className="px-5 py-3 w-8"></th>
             <th className="px-5 py-3">Status</th>
             <th className="px-5 py-3">Date</th>
             <th className="px-5 py-3">Duration</th>
@@ -115,38 +277,63 @@ export default function RepoScanLogsPage() {
         <tbody className="divide-y divide-[#262c34]">
           {logs.map((log) => {
             const summary = parseSummary(log.summary_json);
+            const isExpanded = expandedId === log.id;
+            const reposScanned = summary?.repos_scanned ?? summary?.total_repos_scanned ?? "--";
+            const issuesFound = summary?.issues_found ?? summary?.total_issue_count ?? "--";
             return (
-              <tr
-                key={log.id}
-                className="hover:bg-[#21262d]/50 transition-colors"
-              >
-                <td className="px-5 py-3.5">
-                  <StatusBadge status={log.status} />
-                </td>
-                <td className="px-5 py-3.5 text-[#c9d1d9]">
-                  <div>
-                    <span>{timeAgo(log.started_at)}</span>
-                    <div className="text-xs text-[#8b949e] mt-0.5">
-                      {new Date(log.started_at).toLocaleString()}
+              <Fragment key={log.id}>
+                <tr
+                  className="hover:bg-[#21262d]/50 transition-colors cursor-pointer"
+                  onClick={() => setExpandedId(isExpanded ? null : log.id)}
+                >
+                  <td className="px-5 py-3.5 w-8">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#8b949e"
+                      strokeWidth="2"
+                      className={`transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                    >
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <StatusBadge status={log.status} />
+                  </td>
+                  <td className="px-5 py-3.5 text-[#c9d1d9]">
+                    <div>
+                      <span>{timeAgo(log.started_at)}</span>
+                      <div className="text-xs text-[#8b949e] mt-0.5">
+                        {new Date(log.started_at).toLocaleString()}
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td className="px-5 py-3.5 text-[#c9d1d9]">
-                  {formatDuration(summary?.duration_seconds)}
-                </td>
-                <td className="px-5 py-3.5 text-[#c9d1d9]">
-                  {summary?.total_repos_scanned ?? "--"}
-                </td>
-                <td className="px-5 py-3.5">
-                  <span className={`text-sm font-medium ${
-                    (summary?.total_issue_count ?? 0) > 0
-                      ? "text-amber-400"
-                      : "text-[#c9d1d9]"
-                  }`}>
-                    {summary?.total_issue_count ?? "--"}
-                  </span>
-                </td>
-              </tr>
+                  </td>
+                  <td className="px-5 py-3.5 text-[#c9d1d9]">
+                    {formatDuration(summary?.duration_seconds)}
+                  </td>
+                  <td className="px-5 py-3.5 text-[#c9d1d9]">
+                    {reposScanned}
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <span className={`text-sm font-medium ${
+                      (typeof issuesFound === "number" && issuesFound > 0)
+                        ? "text-amber-400"
+                        : "text-[#c9d1d9]"
+                    }`}>
+                      {issuesFound}
+                    </span>
+                  </td>
+                </tr>
+                {isExpanded && (
+                  <tr>
+                    <td colSpan={6} className="p-0">
+                      <ScanLogDetail connectionId={connectionId} logId={log.id} />
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             );
           })}
         </tbody>
