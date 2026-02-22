@@ -16,6 +16,16 @@ if not AUTH_SECRET:
     )
 
 
+def validate_auth_config() -> None:
+    """Fail fast in production when AUTH_SECRET is missing."""
+    env = os.getenv("ENVIRONMENT", "development")
+    if env == "production" and not AUTH_SECRET:
+        raise RuntimeError(
+            "AUTH_SECRET is required in production. "
+            "Set AUTH_SECRET to a 32+ byte random secret."
+        )
+
+
 def get_current_user(request: Request) -> str:
     """Extract and verify user email from JWT Bearer token.
 

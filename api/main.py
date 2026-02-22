@@ -33,8 +33,11 @@ app = FastAPI(title="NeuralWarden API", version="2.0.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Validate encryption config before anything touches secrets
+# Validate encryption and auth config before anything touches secrets
 validate_encryption_config()
+
+from api.auth import validate_auth_config
+validate_auth_config()
 
 # Initialize database on startup (SQLite or PostgreSQL via DATABASE_URL)
 # Retry for Cloud SQL proxy socket availability on Cloud Run
