@@ -399,6 +399,8 @@ export interface RepoScanStreamEvent {
   total_repos?: number;
   repos_scanned?: number;
   current_repo?: string;
+  scanner_stage?: string;
+  repo_count?: number;
   issue_count?: number;
   issue_counts?: IssueCounts;
   message?: string;

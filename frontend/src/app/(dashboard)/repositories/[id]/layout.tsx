@@ -4,6 +4,7 @@ import { useState, useEffect, createContext, useContext, useCallback } from "rea
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import RepoConfigModal from "@/components/RepoConfigModal";
+import RepoScanProgressOverlay from "@/components/RepoScanProgressOverlay";
 import { getRepoConnection, scanRepoConnectionStream, getRepoScanProgress } from "@/lib/api";
 import type { RepoConnection, RepoScanStreamEvent } from "@/lib/types";
 
@@ -130,23 +131,6 @@ export default function RepoDetailLayout({ children }: { children: React.ReactNo
   const totalIssues = connection?.issue_counts?.total ?? 0;
   const isDisabled = connection?.status === "disabled";
 
-  function progressMessage(): string {
-    if (!scanProgress) return "Starting scan...";
-    const evt = scanProgress.event;
-    if (evt === "starting") return "Starting scan...";
-    if (evt === "progress") {
-      return `Scanning ${scanProgress.current_repo ?? "..."} (${scanProgress.repos_scanned ?? 0}/${scanProgress.total_repos ?? 0})...`;
-    }
-    if (evt === "complete") {
-      return `Scan complete: ${scanProgress.issue_count ?? 0} issues found`;
-    }
-    if (evt === "error") return `Error: ${scanProgress.message ?? "Unknown error"}`;
-    return `${evt}...`;
-  }
-
-  const isComplete = scanProgress?.event === "complete";
-  const isError = scanProgress?.event === "error";
-
   return (
     <RepoContext.Provider value={{ connection, loading, refresh: loadConnection, scanVersion, isDisabled: isDisabled ?? false }}>
       <div className="px-7 py-6">
@@ -226,43 +210,44 @@ export default function RepoDetailLayout({ children }: { children: React.ReactNo
               </div>
             )}
 
-            {/* Scan progress panel */}
-            {(scanning || scanProgress) && (
-              <div className={`mb-4 p-4 rounded-xl border text-sm flex items-center justify-between ${
-                isError
-                  ? "bg-red-50 border-red-200 text-red-700"
-                  : isComplete
-                  ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                  : "bg-[#00e68a]/10 border-[#00e68a]/30 text-[#00e68a]"
-              }`}>
+            {/* Success banner — shown after overlay closes */}
+            {!scanning && scanProgress?.event === "complete" && !showOverlay && (
+              <div className="mb-4 p-4 rounded-xl border border-[#00e68a]/30 bg-[#00e68a]/10 text-[#00e68a] text-sm flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  {scanning && !isComplete && !isError && (
-                    <div className="w-4 h-4 border-2 border-[#00e68a]/30 border-t-[#00e68a] rounded-full animate-spin" />
-                  )}
-                  {isComplete && (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-emerald-600">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                  {isError && (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-red-600">
-                      <circle cx="12" cy="12" r="10" /><path d="M15 9l-6 6M9 9l6 6" />
-                    </svg>
-                  )}
-                  <span>{progressMessage()}</span>
-                  {scanProgress && !isComplete && !isError && scanProgress.total_repos !== undefined && (
-                    <span className="ml-2 text-xs opacity-70">
-                      ({scanProgress.repos_scanned ?? 0}/{scanProgress.total_repos} repos)
-                    </span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00e68a" strokeWidth="2.5" className="shrink-0">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>
+                    Scan complete: {scanProgress.repo_count ?? scanProgress.total_repos ?? 0} repos scanned, {scanProgress.issue_count ?? 0} issues found
+                  </span>
+                  {lastScanLogId && (
+                    <Link href={`/repositories/${id}/scan-logs`} className="underline ml-2 hover:text-white transition-colors">
+                      View scan log
+                    </Link>
                   )}
                 </div>
-                {(isComplete || isError) && (
-                  <button onClick={() => setScanProgress(null)} className="opacity-60 hover:opacity-100">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M18 6L6 18M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
+                <button onClick={() => setScanProgress(null)} className="opacity-60 hover:opacity-100 cursor-pointer">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* Error banner — shown after overlay closes */}
+            {!scanning && scanProgress?.event === "error" && !showOverlay && (
+              <div className="mb-4 p-4 rounded-xl border border-red-500/30 bg-red-950/20 text-red-400 text-sm flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" className="shrink-0">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                  <span>Scan failed: {scanProgress.message ?? "Unknown error"}</span>
+                </div>
+                <button onClick={() => setScanProgress(null)} className="opacity-60 hover:opacity-100 cursor-pointer">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
             )}
 
@@ -297,6 +282,14 @@ export default function RepoDetailLayout({ children }: { children: React.ReactNo
           </>
         )}
       </div>
+
+      {/* Repo scan overlay */}
+      <RepoScanProgressOverlay
+        open={showOverlay}
+        onClose={() => setShowOverlay(false)}
+        progress={scanProgress}
+        scanning={scanning}
+      />
 
       {/* Config modal */}
       {connection && (
