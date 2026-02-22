@@ -14,8 +14,11 @@ import {
   listRepoConnections,
   getRepoConnection,
   listRepoIssues,
+  listPentests,
+  getPentest,
+  listFindings,
 } from "./api";
-import type { CloudAccount, CloudIssue, CloudAsset, RepoConnection, RepoIssue } from "./types";
+import type { CloudAccount, CloudIssue, CloudAsset, RepoConnection, RepoIssue, Pentest, PentestFinding } from "./types";
 
 /** Default SWR options: revalidate on focus, dedupe within 5s */
 const defaults: SWRConfiguration = {
@@ -27,11 +30,14 @@ const defaults: SWRConfiguration = {
 export const SWR_KEYS = {
   clouds: "/api/clouds",
   repos: "/api/repos",
+  pentests: "/api/pentests",
   cloud: (id: string) => `/api/clouds/${id}`,
   cloudIssues: (id: string) => `/api/clouds/${id}/issues`,
   cloudAssets: (id: string) => `/api/clouds/${id}/assets`,
   repo: (id: string) => `/api/repos/${id}`,
   repoIssues: (id: string) => `/api/repos/${id}/issues`,
+  pentest: (id: string) => `/api/pentests/${id}`,
+  pentestFindings: (id: string) => `/api/pentests/${id}/findings`,
 };
 
 /* ── Cloud hooks ──────────────────────────────────────── */
@@ -82,6 +88,28 @@ export function useRepoIssues(connectionId: string | undefined) {
   return useSWR<RepoIssue[]>(
     connectionId ? SWR_KEYS.repoIssues(connectionId) : null,
     () => listRepoIssues(connectionId!),
+    defaults,
+  );
+}
+
+/* ── Pentest hooks ─────────────────────────────────────── */
+
+export function usePentests() {
+  return useSWR<Pentest[]>(SWR_KEYS.pentests, () => listPentests(), defaults);
+}
+
+export function usePentest(id: string | undefined) {
+  return useSWR<Pentest>(
+    id ? SWR_KEYS.pentest(id) : null,
+    () => getPentest(id!),
+    defaults,
+  );
+}
+
+export function usePentestFindings(pentestId: string | undefined) {
+  return useSWR<PentestFinding[]>(
+    pentestId ? SWR_KEYS.pentestFindings(pentestId) : null,
+    () => listFindings(pentestId!),
     defaults,
   );
 }

@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import PageShell from "@/components/PageShell";
-import { scanCloudStream, getScanProgress, deleteCloud, toggleCloud, setApiToken } from "@/lib/api";
+import { scanCloudStream, getScanProgress, deleteCloud, toggleCloud } from "@/lib/api";
 import { useClouds } from "@/lib/swr";
 import type { CloudAccount, ScanStreamEvent } from "@/lib/types";
 import ScanProgressOverlay from "@/components/ScanProgressOverlay";
@@ -61,7 +60,6 @@ function relativeTime(dateStr: string | null): string {
 
 export default function CloudsPage() {
   const router = useRouter();
-  const { data: session } = useSession();
   const { data: clouds = [], error: swrError, isLoading: loading, mutate: mutateClouds } = useClouds();
   const error = swrError ? (swrError instanceof Error ? swrError.message : "Failed to list clouds") : null;
   const [search, setSearch] = useState("");
@@ -125,12 +123,6 @@ export default function CloudsPage() {
       setScanningId(null);
     }
   }
-
-  useEffect(() => {
-    const token = session?.backendToken as string;
-    if (!token) return;
-    setApiToken(token);
-  }, [session?.backendToken]);
 
   const filtered = clouds.filter(
     (c) =>

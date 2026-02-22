@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useAnalysisContext } from "@/context/AnalysisContext";
-import { listAllCloudIssues, setApiToken, updateIssueStatus, updateIssueSeverity } from "@/lib/api";
+import { listAllCloudIssues, updateIssueStatus, updateIssueSeverity } from "@/lib/api";
 import type { ClassifiedThreat, CloudIssue, Summary } from "@/lib/types";
 import SummaryCards from "@/components/SummaryCards";
 import PipelineProgress from "@/components/PipelineProgress";
@@ -55,7 +55,6 @@ export default function DashboardPage() {
     const token = session?.backendToken as string;
     if (!token) return;
     setRefreshing(true);
-    setApiToken(token);
     await loadLatestReport();
     try {
       let issues = await listAllCloudIssues();
