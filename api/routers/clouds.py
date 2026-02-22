@@ -53,28 +53,32 @@ _scan_progress: dict[str, dict] = {}
 # --------------- schemas ---------------
 
 
+_VALID_STATUSES = {"todo", "in_progress", "ignored", "resolved"}
+_VALID_SEVERITIES = {"critical", "high", "medium", "low"}
+
+
 class CreateCloudRequest(BaseModel):
-    name: str
-    project_id: str
+    name: str = Field(min_length=1, max_length=255)
+    project_id: str = Field(min_length=1, max_length=255)
     provider: str = "gcp"
-    purpose: str = "production"
-    credentials_json: str = ""
+    purpose: str = Field(default="production", max_length=100)
+    credentials_json: str = Field(default="", max_length=50_000)
     services: list[str] = Field(default_factory=lambda: ["cloud_logging"])
 
 
 class UpdateCloudRequest(BaseModel):
-    name: str | None = None
-    purpose: str | None = None
-    credentials_json: str | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    purpose: str | None = Field(default=None, max_length=100)
+    credentials_json: str | None = Field(default=None, max_length=50_000)
     services: list[str] | None = None
 
 
 class UpdateIssueStatusRequest(BaseModel):
-    status: str  # todo, in_progress, ignored, resolved
+    status: str = Field(min_length=1, max_length=30)
 
 
 class UpdateIssueSeverityRequest(BaseModel):
-    severity: str  # critical, high, medium, low
+    severity: str = Field(min_length=1, max_length=30)
 
 
 # --------------- helpers ---------------

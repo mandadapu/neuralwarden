@@ -114,36 +114,70 @@ def _list_user_repos_fallback(user: str, token: str = "") -> List[Dict[str, Any]
 # ── Clone / cleanup ───────────────────────────────────────────────
 
 
+def _git_clone_env(token: str) -> tuple[dict, str | None]:
+    """Build a subprocess env that authenticates git via GIT_ASKPASS.
+
+    This avoids embedding the token in the clone URL where it would
+    appear in .git/config, process listings, and error messages.
+    Returns (env, askpass_script_path).  Caller must delete askpass_script_path.
+    """
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    if not token:
+        return env, None
+
+    env["_NW_GIT_TOKEN"] = token
+    fd, askpass_path = tempfile.mkstemp(suffix=".sh", prefix="nw_askpass_")
+    with os.fdopen(fd, "w") as f:
+        f.write(
+            '#!/bin/sh\n'
+            'case "$1" in\n'
+            '*sername*) echo "x-access-token" ;;\n'
+            '*) echo "$_NW_GIT_TOKEN" ;;\n'
+            'esac\n'
+        )
+    os.chmod(askpass_path, 0o700)
+    env["GIT_ASKPASS"] = askpass_path
+    return env, askpass_path
+
+
 def clone_repo(repo_full_name: str, branch: str = "main", token: str = "") -> str:
     """Shallow-clone a repo into a temporary directory and return its path.
 
-    Uses the provided *token* (or ``GITHUB_TOKEN`` env var) for authentication.
+    Uses the provided *token* (or ``GITHUB_TOKEN`` env var) for authentication
+    via GIT_ASKPASS (token never appears in the clone URL or process args).
     If the requested *branch* does not exist, retries without ``--branch``
     to get the default branch.
     """
     t = token or GITHUB_TOKEN
-    temp_dir = tempfile.mkdtemp(prefix="nw_scan_")
-    clone_url = f"https://{t}@github.com/{repo_full_name}.git"
+    clone_url = f"https://github.com/{repo_full_name}.git"
+    env, askpass_path = _git_clone_env(t)
 
     try:
-        subprocess.run(
-            ["git", "clone", "--depth", "1", "--branch", branch, clone_url, temp_dir],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except subprocess.CalledProcessError:
-        # Branch may not exist -- retry without --branch to get the default
-        shutil.rmtree(temp_dir, ignore_errors=True)
         temp_dir = tempfile.mkdtemp(prefix="nw_scan_")
-        subprocess.run(
-            ["git", "clone", "--depth", "1", clone_url, temp_dir],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-
-    return temp_dir
+        try:
+            subprocess.run(
+                ["git", "clone", "--depth", "1", "--branch", branch, clone_url, temp_dir],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+        except subprocess.CalledProcessError:
+            # Branch may not exist -- retry without --branch to get the default
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            temp_dir = tempfile.mkdtemp(prefix="nw_scan_")
+            subprocess.run(
+                ["git", "clone", "--depth", "1", clone_url, temp_dir],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+        return temp_dir
+    finally:
+        if askpass_path:
+            os.unlink(askpass_path)
 
 
 def cleanup_clone(temp_dir: str) -> None:

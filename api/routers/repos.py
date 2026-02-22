@@ -52,12 +52,12 @@ _scan_progress: dict[str, dict] = {}
 
 
 class CreateRepoConnectionRequest(BaseModel):
-    name: str
-    org_name: str
+    name: str = Field(min_length=1, max_length=255)
+    org_name: str = Field(min_length=1, max_length=255)
     provider: str = "github"
-    purpose: str = "production"
-    scan_config: str = "{}"
-    github_token: str = ""
+    purpose: str = Field(default="production", max_length=100)
+    scan_config: str = Field(default="{}", max_length=10_000)
+    github_token: str = Field(default="", max_length=500)
     repos: List[dict] = Field(
         default_factory=list,
         description="List of repos with full_name, name, language, default_branch, private",
@@ -65,17 +65,17 @@ class CreateRepoConnectionRequest(BaseModel):
 
 
 class UpdateRepoConnectionRequest(BaseModel):
-    name: str | None = None
-    purpose: str | None = None
-    scan_config: str | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    purpose: str | None = Field(default=None, max_length=100)
+    scan_config: str | None = Field(default=None, max_length=10_000)
 
 
 class UpdateIssueStatusRequest(BaseModel):
-    status: str  # todo, in_progress, ignored, resolved
+    status: str = Field(min_length=1, max_length=30)
 
 
 class UpdateIssueSeverityRequest(BaseModel):
-    severity: str  # critical, high, medium, low
+    severity: str = Field(min_length=1, max_length=30)
 
 
 # --------------- helpers ---------------
@@ -134,6 +134,19 @@ async def create_connection(body: CreateRepoConnectionRequest, user_email: str =
 # to avoid FastAPI matching them as a conn_id parameter.
 
 
+def _github_error(e: Exception) -> HTTPException:
+    """Map a GitHub API exception to a safe HTTP error without leaking internals."""
+    msg = str(e)
+    if "401" in msg:
+        return HTTPException(status_code=401, detail="GitHub authentication failed")
+    if "403" in msg:
+        return HTTPException(status_code=403, detail="GitHub access denied")
+    if "404" in msg:
+        return HTTPException(status_code=404, detail="GitHub resource not found")
+    logger.exception("GitHub API proxy error")
+    return HTTPException(status_code=502, detail="GitHub API error")
+
+
 @router.get("/github/user")
 async def github_user(request: Request, _user: str = Depends(get_current_user)):
     """Proxy: get the authenticated GitHub user."""
@@ -143,8 +156,7 @@ async def github_user(request: Request, _user: str = Depends(get_current_user)):
     try:
         return get_authenticated_user(token=token)
     except Exception as e:
-        status = 401 if "401" in str(e) else 502
-        raise HTTPException(status_code=status, detail=str(e))
+        raise _github_error(e)
 
 
 @router.get("/github/orgs")
@@ -156,8 +168,7 @@ async def github_orgs(request: Request, _user: str = Depends(get_current_user)):
     try:
         return list_user_orgs(token=token)
     except Exception as e:
-        status = 401 if "401" in str(e) else 502
-        raise HTTPException(status_code=status, detail=str(e))
+        raise _github_error(e)
 
 
 @router.get("/github/orgs/{org}/repos")
@@ -169,8 +180,7 @@ async def github_org_repos(org: str, request: Request, _user: str = Depends(get_
     try:
         return list_org_repos(org, token=token)
     except Exception as e:
-        status = 401 if "401" in str(e) else 502
-        raise HTTPException(status_code=status, detail=str(e))
+        raise _github_error(e)
 
 
 @router.get("/all-issues")
@@ -263,6 +273,7 @@ async def trigger_scan(request: Request, conn_id: str, user_email: str = Depends
         org_name = connection.get("org_name", "")
         if org_name:
             fetched = list_org_repos(org_name, token=connection.get("github_token", ""))
+            print(f"[SCAN] Fetched {len(fetched)} repos for {org_name}: {[r.get('full_name') for r in fetched[:5]]}", flush=True)
             repos = [
                 {
                     "repo_full_name": r.get("full_name", ""),
@@ -276,6 +287,8 @@ async def trigger_scan(request: Request, conn_id: str, user_email: str = Depends
     except Exception:
         logger.warning("Failed to fetch repos from GitHub for org %s, falling back to stored assets", connection.get("org_name"))
         repos = list_repo_assets(conn_id)
+
+    print(f"[SCAN] Will process {len(repos)} repos: {[r.get('repo_full_name') for r in repos[:5]]}", flush=True)
 
     async def scan_generator():
         from api.github_scanner import run_repo_scan
