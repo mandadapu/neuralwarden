@@ -27,6 +27,7 @@ const TEAL = "#0d9488";
 const AMBER = "#d97706";
 const ROSE = "#e11d48";
 const SLATE = "#64748b";
+const SKY = "#0ea5e9";
 
 const THREAT_NODES: FlowNode[] = [
   { id: "t-raw",       label: "Raw Logs",       x: 60,  y: 40,  color: SLATE,  type: "start" },
@@ -67,6 +68,23 @@ const CLOUD_EDGES: FlowEdge[] = [
   { from: "c-logs",      to: "c-correlate" },
   { from: "c-correlate", to: "c-remediate" },
   { from: "c-remediate", to: "c-threat",    dashed: true },
+];
+
+const REPO_NODES: FlowNode[] = [
+  { id: "r-repo",    label: "GitHub Repo",       x: 60,  y: 40,  color: SLATE,  type: "start" },
+  { id: "r-secrets", label: "Secret Detection",   x: 220, y: 40,  color: SKY },
+  { id: "r-sca",     label: "SCA Scanner",        x: 400, y: 40,  color: SKY,    model: "OSV.dev" },
+  { id: "r-sast",    label: "AI SAST",            x: 580, y: 40,  color: SKY,    model: "Haiku" },
+  { id: "r-license", label: "License Scanner",    x: 760, y: 40,  color: SKY },
+  { id: "r-issues",  label: "Issues",             x: 920, y: 40,  color: SLATE,  type: "end" },
+];
+
+const REPO_EDGES: FlowEdge[] = [
+  { from: "r-repo",    to: "r-secrets" },
+  { from: "r-secrets", to: "r-sca" },
+  { from: "r-sca",     to: "r-sast" },
+  { from: "r-sast",    to: "r-license" },
+  { from: "r-license", to: "r-issues" },
 ];
 
 /* ── SVG helpers ──────────────────────────────────────────── */
@@ -260,7 +278,7 @@ export default function PipelineFlowDiagram() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-[#8b949e] hidden md:block">How agents connect across both pipelines</span>
+          <span className="text-xs text-[#8b949e] hidden md:block">How agents connect across all pipelines</span>
           <svg
             width="18"
             height="18"
@@ -285,6 +303,7 @@ export default function PipelineFlowDiagram() {
           {[
             { color: BLUE, label: "Threat Pipeline" },
             { color: PURPLE, label: "Cloud Scan" },
+            { color: SKY, label: "Repo Scan" },
             { color: TEAL, label: "Parallel Scanners" },
             { color: ROSE, label: "Correlation" },
             { color: AMBER, label: "Decision Gate" },
@@ -329,6 +348,23 @@ export default function PipelineFlowDiagram() {
           </div>
           <div className="bg-[#1c2128] rounded-xl border border-[#262c34] px-4 py-4 overflow-x-auto">
             <PipelineSVG nodes={THREAT_NODES} edges={THREAT_EDGES} width={980} height={75} />
+          </div>
+        </div>
+
+        {/* Separator */}
+        <div className="flex justify-center my-3">
+          <span className="text-[9px] text-[#8b949e] bg-[#21262d] px-3 py-0.5 rounded-full border border-[#30363d]">
+            independent pipeline
+          </span>
+        </div>
+
+        {/* Repository Scan Engine */}
+        <div className="px-5">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-[#8b949e] mb-1.5 px-1">
+            3. Repository Scan Engine
+          </div>
+          <div className="bg-[#1c2128] rounded-xl border border-[#262c34] px-4 py-4 overflow-x-auto">
+            <PipelineSVG nodes={REPO_NODES} edges={REPO_EDGES} width={1000} height={75} />
           </div>
         </div>
       </div>

@@ -101,14 +101,28 @@ export default function ConnectCloudPage() {
     }
   }
 
+  function applyCredentialsJson(text: string) {
+    setJsonError(null);
+    try {
+      const parsed = JSON.parse(text);
+      const projectId = parsed.project_id ?? parsed.web?.project_id ?? parsed.installed?.project_id ?? "";
+      setData((d) => ({
+        ...d,
+        credentialsJson: text,
+        projectId: projectId || d.projectId,
+      }));
+    } catch {
+      setData((d) => ({ ...d, credentialsJson: text }));
+    }
+  }
+
   const handleFileDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (ev) => {
-        const text = ev.target?.result as string;
-        setData((d) => ({ ...d, credentialsJson: text }));
+        applyCredentialsJson(ev.target?.result as string);
       };
       reader.readAsText(file);
     }
@@ -119,8 +133,7 @@ export default function ConnectCloudPage() {
     if (file) {
       const reader = new FileReader();
       reader.onload = (ev) => {
-        const text = ev.target?.result as string;
-        setData((d) => ({ ...d, credentialsJson: text }));
+        applyCredentialsJson(ev.target?.result as string);
       };
       reader.readAsText(file);
     }
@@ -293,7 +306,7 @@ export default function ConnectCloudPage() {
                   <input
                     type="text"
                     value={data.projectId}
-                    onChange={(e) => setData((d) => ({ ...d, projectId: e.target.value }))}
+                    onChange={(e) => { setData((d) => ({ ...d, projectId: e.target.value })); setJsonError(null); }}
                     placeholder="my-project-123"
                     className="w-full px-4 py-2.5 border border-[#30363d] rounded-lg text-sm bg-[#21262d] text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   />
@@ -322,10 +335,7 @@ export default function ConnectCloudPage() {
                   </div>
                   <textarea
                     value={data.credentialsJson}
-                    onChange={(e) => {
-                      setData((d) => ({ ...d, credentialsJson: e.target.value }));
-                      setJsonError(null);
-                    }}
+                    onChange={(e) => applyCredentialsJson(e.target.value)}
                     placeholder='{"type": "service_account", "project_id": "...", ...}'
                     rows={6}
                     className="w-full px-4 py-2.5 border border-[#30363d] rounded-lg text-sm font-mono bg-[#21262d] text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"

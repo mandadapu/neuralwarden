@@ -85,7 +85,7 @@ export default function Sidebar() {
       <nav className="px-2 space-y-0.5">
         <NavItem href="/clouds" icon={<CloudIcon />} label="Cloud Connections" active={pathname.startsWith("/clouds")} badge={cloudIssueCount > 0 ? String(cloudIssueCount) : undefined} count={cloudCount > 0 ? String(cloudCount) : undefined} />
         <NavItem href="/repositories" icon={<GitHubIcon />} label="Repositories" active={pathname.startsWith("/repositories")} badge={repoIssueCount > 0 ? String(repoIssueCount) : undefined} count={repoCount > 0 ? String(repoCount) : undefined} />
-        <NavItem href="/agents" icon={<ServerIcon />} label="Agents" count="12" active={pathname === "/agents"} />
+        <NavItem href="/agents" icon={<ServerIcon />} label="Agents" count="16" active={pathname === "/agents"} />
         <NavItem href="/mitre" icon={<SunIcon />} label="MITRE ATT&CK" count="1" active={pathname === "/mitre"} />
         <NavItem href="/threat-intel" icon={<ShieldIcon />} label="Threat Intel" count="1" active={pathname === "/threat-intel"} />
       </nav>
