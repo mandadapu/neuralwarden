@@ -10,8 +10,10 @@ import threading
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from api.auth import get_current_user
 from api.cloud_database import (
@@ -41,6 +43,7 @@ from api.cloud_database import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/clouds", tags=["clouds"])
+limiter = Limiter(key_func=get_remote_address)
 
 # In-memory scan progress for polling (keyed by cloud_account_id).
 # Each entry is a dict with event data matching ScanStreamEvent.
@@ -126,7 +129,8 @@ async def all_issues(
 
 
 @router.get("/{cloud_id}/probe")
-async def probe_cloud_access(cloud_id: str, user_email: str = Depends(get_current_user)):
+@limiter.limit("10/minute")
+async def probe_cloud_access(request: Request, cloud_id: str, user_email: str = Depends(get_current_user)):
     """Live-test which GCP services the stored credentials can access.
 
     Returns per-service accessibility so the UI can show what the
@@ -219,7 +223,8 @@ async def toggle_cloud(cloud_id: str, user_email: str = Depends(get_current_user
 
 
 @router.post("/{cloud_id}/scan")
-async def trigger_scan(cloud_id: str, user_email: str = Depends(get_current_user)):
+@limiter.limit("5/minute")
+async def trigger_scan(request: Request, cloud_id: str, user_email: str = Depends(get_current_user)):
     """Trigger a scan via the super agent with SSE streaming."""
     from sse_starlette.sse import EventSourceResponse
 

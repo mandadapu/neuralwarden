@@ -10,6 +10,7 @@ import uuid
 from datetime import datetime, timezone
 
 from api.db import get_conn, adapt_sql, placeholder, insert_or_ignore, is_postgres
+from api.encryption import encrypt, decrypt
 
 # ── Severity ordering (lower = more severe) ─────────────────────────
 
@@ -135,7 +136,7 @@ def create_repo_connection(
                 name,
                 org_name,
                 installation_id,
-                github_token,
+                encrypt(github_token),
                 purpose,
                 scan_config if isinstance(scan_config, str) else json.dumps(scan_config),
                 now,
@@ -147,6 +148,13 @@ def create_repo_connection(
         conn.close()
 
 
+def _decrypt_connection(row: dict) -> dict:
+    """Decrypt encrypted fields on a repo connection dict."""
+    if row.get("github_token"):
+        row["github_token"] = decrypt(row["github_token"])
+    return row
+
+
 def list_repo_connections(user_email: str) -> list[dict]:
     """List all repo connections for a given user."""
     conn = get_conn()
@@ -155,7 +163,7 @@ def list_repo_connections(user_email: str) -> list[dict]:
             adapt_sql("SELECT * FROM repo_connections WHERE user_email = ? ORDER BY created_at DESC"),
             (user_email,),
         ).fetchall()
-        return [dict(row) for row in rows]
+        return [_decrypt_connection(dict(row)) for row in rows]
     finally:
         conn.close()
 
@@ -167,7 +175,7 @@ def get_repo_connection(connection_id: str) -> dict | None:
         row = conn.execute(
             adapt_sql("SELECT * FROM repo_connections WHERE id = ?"), (connection_id,)
         ).fetchone()
-        return dict(row) if row else None
+        return _decrypt_connection(dict(row)) if row else None
     finally:
         conn.close()
 

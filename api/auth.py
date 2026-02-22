@@ -1,11 +1,19 @@
 """JWT authentication dependency for FastAPI endpoints."""
 
+import logging
 import os
 
 import jwt
 from fastapi import HTTPException, Request
 
+logger = logging.getLogger(__name__)
+
 AUTH_SECRET = os.getenv("AUTH_SECRET", "")
+if not AUTH_SECRET:
+    logger.warning(
+        "AUTH_SECRET is not set — all authenticated endpoints will reject requests. "
+        "Set AUTH_SECRET in your environment or .env file."
+    )
 
 
 def get_current_user(request: Request) -> str:

@@ -12,6 +12,8 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from api.auth import get_current_user
 from api.repo_database import (
@@ -39,6 +41,7 @@ from api.repo_database import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/repos", tags=["repos"])
+limiter = Limiter(key_func=get_remote_address)
 
 # In-memory scan progress for polling (keyed by connection_id).
 # Each entry is a dict with event data matching ScanStreamEvent.
@@ -235,7 +238,8 @@ async def toggle_connection(conn_id: str, user_email: str = Depends(get_current_
 
 
 @router.post("/{conn_id}/scan")
-async def trigger_scan(conn_id: str, user_email: str = Depends(get_current_user)):
+@limiter.limit("5/minute")
+async def trigger_scan(request: Request, conn_id: str, user_email: str = Depends(get_current_user)):
     """Trigger a repo scan with SSE streaming."""
     from sse_starlette.sse import EventSourceResponse
 
