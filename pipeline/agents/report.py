@@ -100,7 +100,10 @@ def run_report(state: PipelineState) -> dict:
                     "These findings have matching live log evidence of active exploitation.\n"
                     "Lead your executive summary with these active incidents.\n"
                     "For each, include the specific remediation gcloud command.\n\n"
-                    + json.dumps(correlated_evidence, indent=2)
+                    + wrap_user_data(
+                        json.dumps(correlated_evidence, indent=2),
+                        "correlation_evidence",
+                    )
                 )
 
             response = llm.invoke([
