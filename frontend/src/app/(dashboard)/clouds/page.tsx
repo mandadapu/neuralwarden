@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import PageShell from "@/components/PageShell";
-import { listClouds, scanCloudStream, getScanProgress, deleteCloud, toggleCloud, setApiUserEmail } from "@/lib/api";
+import { listClouds, scanCloudStream, getScanProgress, deleteCloud, toggleCloud, setApiToken } from "@/lib/api";
 import type { CloudAccount, ScanStreamEvent } from "@/lib/types";
 import ScanProgressOverlay from "@/components/ScanProgressOverlay";
 
@@ -127,10 +127,11 @@ export default function CloudsPage() {
   }
 
   useEffect(() => {
-    if (!session?.user?.email) return;
-    setApiUserEmail(session.user.email);
+    const token = session?.backendToken as string;
+    if (!token) return;
+    setApiToken(token);
     loadClouds();
-  }, [session?.user?.email]);
+  }, [session?.backendToken]);
 
   async function loadClouds() {
     try {

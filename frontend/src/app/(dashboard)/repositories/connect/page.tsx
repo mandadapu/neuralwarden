@@ -9,7 +9,7 @@ import {
   listGitHubOrgs,
   listGitHubRepos,
   scanRepoConnectionStream,
-  setApiUserEmail,
+  setApiToken,
 } from "@/lib/api";
 import type { RepoConnection, GitHubOrg, GitHubRepo } from "@/lib/types";
 import { useSession } from "next-auth/react";
@@ -68,12 +68,12 @@ export default function ConnectRepoPage() {
   const [reposLoading, setReposLoading] = useState(false);
   const [reposError, setReposError] = useState<string | null>(null);
 
-  // Set API user email from session
+  // Set API backend token from session
   useEffect(() => {
-    if (session?.user?.email) {
-      setApiUserEmail(session.user.email);
+    if (session?.backendToken) {
+      setApiToken(session.backendToken);
     }
-  }, [session]);
+  }, [session?.backendToken]);
 
   // Track whether we've fetched orgs for the current token
   const [orgsFetchedForToken, setOrgsFetchedForToken] = useState("");

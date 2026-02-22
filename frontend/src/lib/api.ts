@@ -32,14 +32,16 @@ const BASE =
     ? `${window.location.protocol}//${window.location.hostname}:8000/api`
     : "/api");
 
-// User email is set by AnalysisContext after session loads
-let _userEmail = "";
-export function setApiUserEmail(email: string) {
-  _userEmail = email;
+// Backend JWT token is set by AnalysisContext after session loads
+let _backendToken = "";
+export function setApiToken(token: string) {
+  _backendToken = token;
 }
+/** @deprecated Use setApiToken instead */
+export function setApiUserEmail(_email: string) {}
 function authHeaders(): Record<string, string> {
   const h: Record<string, string> = { "Content-Type": "application/json" };
-  if (_userEmail) h["X-User-Email"] = _userEmail;
+  if (_backendToken) h["Authorization"] = `Bearer ${_backendToken}`;
   return h;
 }
 

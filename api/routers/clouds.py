@@ -10,9 +10,10 @@ import threading
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from api.auth import get_current_user
 from api.cloud_database import (
     create_cloud_account,
     list_cloud_accounts,
@@ -23,6 +24,7 @@ from api.cloud_database import (
     save_cloud_issues,
     list_cloud_issues,
     list_all_user_issues,
+    get_cloud_issue,
     update_cloud_issue_status,
     update_cloud_issue_severity,
     get_issue_counts,
@@ -75,11 +77,6 @@ class UpdateIssueSeverityRequest(BaseModel):
 # --------------- helpers ---------------
 
 
-def _get_user_email(request: Request) -> str:
-    """Read the user email from the X-User-Email header."""
-    return request.headers.get("X-User-Email", "")
-
-
 def _account_with_counts(account: dict) -> dict:
     """Attach issue_counts, asset_counts and strip credentials from an account dict."""
     account["issue_counts"] = get_issue_counts(account["id"])
@@ -92,17 +89,15 @@ def _account_with_counts(account: dict) -> dict:
 
 
 @router.get("")
-async def list_clouds(request: Request):
+async def list_clouds(user_email: str = Depends(get_current_user)):
     """List cloud accounts for the authenticated user."""
-    user_email = _get_user_email(request)
     accounts = list_cloud_accounts(user_email)
     return [_account_with_counts(a) for a in accounts]
 
 
 @router.post("", status_code=201)
-async def create_cloud(request: Request, body: CreateCloudRequest):
+async def create_cloud(body: CreateCloudRequest, user_email: str = Depends(get_current_user)):
     """Create a new cloud account."""
-    user_email = _get_user_email(request)
     account_id = create_cloud_account(
         user_email=user_email,
         provider=body.provider,
@@ -122,17 +117,16 @@ async def create_cloud(request: Request, body: CreateCloudRequest):
 
 @router.get("/all-issues")
 async def all_issues(
-    request: Request,
     status: Optional[str] = Query(None),
     severity: Optional[str] = Query(None),
+    user_email: str = Depends(get_current_user),
 ):
     """List all cloud issues across all clouds for the authenticated user."""
-    user_email = _get_user_email(request)
     return list_all_user_issues(user_email, status=status or "", severity=severity or "")
 
 
 @router.get("/{cloud_id}/probe")
-async def probe_cloud_access(cloud_id: str):
+async def probe_cloud_access(cloud_id: str, user_email: str = Depends(get_current_user)):
     """Live-test which GCP services the stored credentials can access.
 
     Returns per-service accessibility so the UI can show what the
@@ -143,7 +137,7 @@ async def probe_cloud_access(cloud_id: str):
     from api.gcp_scanner import probe_credential_access
 
     account = get_cloud_account(cloud_id)
-    if not account:
+    if not account or account["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Cloud account not found")
 
     creds = account.get("credentials_json", "")
@@ -169,19 +163,19 @@ async def list_checks(category: Optional[str] = Query(None)):
 
 
 @router.get("/{cloud_id}")
-async def get_cloud(cloud_id: str):
+async def get_cloud(cloud_id: str, user_email: str = Depends(get_current_user)):
     """Get a single cloud account with issue counts."""
     account = get_cloud_account(cloud_id)
-    if not account:
+    if not account or account["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Cloud account not found")
     return _account_with_counts(account)
 
 
 @router.put("/{cloud_id}")
-async def update_cloud(cloud_id: str, body: UpdateCloudRequest):
+async def update_cloud(cloud_id: str, body: UpdateCloudRequest, user_email: str = Depends(get_current_user)):
     """Update a cloud account's mutable fields."""
     account = get_cloud_account(cloud_id)
-    if not account:
+    if not account or account["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Cloud account not found")
 
     updates = {}
@@ -201,20 +195,20 @@ async def update_cloud(cloud_id: str, body: UpdateCloudRequest):
 
 
 @router.delete("/{cloud_id}")
-async def delete_cloud(cloud_id: str):
+async def delete_cloud(cloud_id: str, user_email: str = Depends(get_current_user)):
     """Delete a cloud account and all its assets/issues."""
     account = get_cloud_account(cloud_id)
-    if not account:
+    if not account or account["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Cloud account not found")
     delete_cloud_account(cloud_id)
     return {"detail": "deleted"}
 
 
 @router.post("/{cloud_id}/toggle")
-async def toggle_cloud(cloud_id: str):
+async def toggle_cloud(cloud_id: str, user_email: str = Depends(get_current_user)):
     """Toggle a cloud account between active and disabled."""
     account = get_cloud_account(cloud_id)
-    if not account:
+    if not account or account["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Cloud account not found")
     new_status = "disabled" if account.get("status") != "disabled" else "active"
     update_cloud_account(cloud_id, status=new_status)
@@ -225,12 +219,12 @@ async def toggle_cloud(cloud_id: str):
 
 
 @router.post("/{cloud_id}/scan")
-async def trigger_scan(cloud_id: str):
+async def trigger_scan(cloud_id: str, user_email: str = Depends(get_current_user)):
     """Trigger a scan via the super agent with SSE streaming."""
     from sse_starlette.sse import EventSourceResponse
 
     account = get_cloud_account(cloud_id)
-    if not account:
+    if not account or account["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Cloud account not found")
     if account.get("status") == "disabled":
         raise HTTPException(status_code=400, detail="Cloud account is disabled. Re-enable it to scan.")
@@ -495,7 +489,7 @@ async def trigger_scan(cloud_id: str):
 
 
 @router.get("/{cloud_id}/scan-progress")
-async def get_scan_progress(cloud_id: str):
+async def get_scan_progress(cloud_id: str, user_email: str = Depends(get_current_user)):
     """Return the current scan progress for polling-based overlay updates."""
     return _scan_progress.get(cloud_id, {"event": "idle"})
 
@@ -505,18 +499,21 @@ async def get_scan_progress(cloud_id: str):
 
 @router.get("/{cloud_id}/scan-logs")
 async def list_scan_logs_endpoint(
-    cloud_id: str, limit: int = Query(20, ge=1, le=100)
+    cloud_id: str, limit: int = Query(20, ge=1, le=100), user_email: str = Depends(get_current_user),
 ):
     """List recent scan logs for a cloud account."""
     account = get_cloud_account(cloud_id)
-    if not account:
+    if not account or account["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Cloud account not found")
     return list_scan_logs(cloud_id, limit=limit)
 
 
 @router.get("/{cloud_id}/scan-logs/{log_id}")
-async def get_scan_log_endpoint(cloud_id: str, log_id: str):
+async def get_scan_log_endpoint(cloud_id: str, log_id: str, user_email: str = Depends(get_current_user)):
     """Get full scan log detail."""
+    account = get_cloud_account(cloud_id)
+    if not account or account["user_email"] != user_email:
+        raise HTTPException(status_code=404, detail="Cloud account not found")
     log = get_scan_log(log_id)
     if not log or log["cloud_account_id"] != cloud_id:
         raise HTTPException(status_code=404, detail="Scan log not found")
@@ -531,10 +528,11 @@ async def list_issues(
     cloud_id: str,
     status: Optional[str] = Query(None),
     severity: Optional[str] = Query(None),
+    user_email: str = Depends(get_current_user),
 ):
     """List issues for a cloud account, with optional filters."""
     account = get_cloud_account(cloud_id)
-    if not account:
+    if not account or account["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Cloud account not found")
     return list_cloud_issues(
         cloud_id,
@@ -544,15 +542,27 @@ async def list_issues(
 
 
 @router.patch("/issues/{issue_id}")
-async def update_issue(issue_id: str, body: UpdateIssueStatusRequest):
+async def update_issue(issue_id: str, body: UpdateIssueStatusRequest, user_email: str = Depends(get_current_user)):
     """Update the status of a single issue."""
+    issue = get_cloud_issue(issue_id)
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    account = get_cloud_account(issue["cloud_account_id"])
+    if not account or account["user_email"] != user_email:
+        raise HTTPException(status_code=404, detail="Issue not found")
     update_cloud_issue_status(issue_id, body.status)
     return {"id": issue_id, "status": body.status}
 
 
 @router.patch("/issues/{issue_id}/severity")
-async def update_issue_severity(issue_id: str, body: UpdateIssueSeverityRequest):
+async def update_issue_severity(issue_id: str, body: UpdateIssueSeverityRequest, user_email: str = Depends(get_current_user)):
     """Update the severity of a single issue."""
+    issue = get_cloud_issue(issue_id)
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    account = get_cloud_account(issue["cloud_account_id"])
+    if not account or account["user_email"] != user_email:
+        raise HTTPException(status_code=404, detail="Issue not found")
     update_cloud_issue_severity(issue_id, body.severity)
     return {"id": issue_id, "severity": body.severity}
 
@@ -564,9 +574,10 @@ async def update_issue_severity(issue_id: str, body: UpdateIssueSeverityRequest)
 async def list_assets(
     cloud_id: str,
     asset_type: Optional[str] = Query(None),
+    user_email: str = Depends(get_current_user),
 ):
     """List assets for a cloud account, with optional type filter."""
     account = get_cloud_account(cloud_id)
-    if not account:
+    if not account or account["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Cloud account not found")
     return list_cloud_assets(cloud_id, asset_type=asset_type or "")

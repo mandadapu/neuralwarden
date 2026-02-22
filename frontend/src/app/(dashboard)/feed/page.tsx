@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useAnalysisContext } from "@/context/AnalysisContext";
-import { listAllCloudIssues, setApiUserEmail, updateIssueStatus, updateIssueSeverity } from "@/lib/api";
+import { listAllCloudIssues, setApiToken, updateIssueStatus, updateIssueSeverity } from "@/lib/api";
 import type { ClassifiedThreat, CloudIssue, Summary } from "@/lib/types";
 import SummaryCards from "@/components/SummaryCards";
 import PipelineProgress from "@/components/PipelineProgress";
@@ -52,9 +52,10 @@ export default function DashboardPage() {
   } = useAnalysisContext();
 
   const refreshFeed = useCallback(async () => {
-    if (!session?.user?.email) return;
+    const token = session?.backendToken as string;
+    if (!token) return;
     setRefreshing(true);
-    setApiUserEmail(session.user.email);
+    setApiToken(token);
     await loadLatestReport();
     try {
       let issues = await listAllCloudIssues();
@@ -63,7 +64,7 @@ export default function DashboardPage() {
     } catch {}
     setLastRefreshed(new Date());
     setRefreshing(false);
-  }, [session?.user?.email, loadLatestReport]);
+  }, [session?.backendToken, loadLatestReport]);
 
   // Fetch on mount
   useEffect(() => {

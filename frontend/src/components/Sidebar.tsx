@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useAnalysisContext } from "@/context/AnalysisContext";
-import { listClouds, listRepoConnections, setApiUserEmail } from "@/lib/api";
+import { listClouds, listRepoConnections, setApiToken } from "@/lib/api";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -34,8 +34,9 @@ export default function Sidebar() {
   }, []);
 
   useEffect(() => {
-    if (!session?.user?.email) return;
-    setApiUserEmail(session.user.email);
+    const token = session?.backendToken as string;
+    if (!token) return;
+    setApiToken(token);
     listClouds().then((data) => {
       setCloudCount(data.length);
       const totalIssues = data.reduce(

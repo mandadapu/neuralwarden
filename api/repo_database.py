@@ -401,6 +401,19 @@ def list_all_user_repo_issues(
         conn.close()
 
 
+def get_repo_issue(issue_id: str) -> dict | None:
+    """Return a single repo issue by ID, or None."""
+    conn = get_conn()
+    try:
+        row = conn.execute(
+            adapt_sql("SELECT * FROM repo_issues WHERE id = ?"),
+            (issue_id,),
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
 def update_repo_issue_status(issue_id: str, status: str) -> None:
     """Update the status of a single issue."""
     conn = get_conn()

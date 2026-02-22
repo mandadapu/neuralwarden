@@ -10,9 +10,10 @@ import threading
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
+from api.auth import get_current_user
 from api.repo_database import (
     create_repo_connection,
     list_repo_connections,
@@ -23,6 +24,7 @@ from api.repo_database import (
     save_repo_issues,
     list_repo_issues,
     list_all_user_repo_issues,
+    get_repo_issue,
     update_repo_issue_status,
     update_repo_issue_severity,
     get_repo_issue_counts,
@@ -76,11 +78,6 @@ class UpdateIssueSeverityRequest(BaseModel):
 # --------------- helpers ---------------
 
 
-def _get_user_email(request: Request) -> str:
-    """Read the user email from the X-User-Email header."""
-    return request.headers.get("X-User-Email", "")
-
-
 def _connection_with_counts(conn: dict) -> dict:
     """Attach issue_counts and asset_counts to a connection dict; strip token."""
     conn.pop("github_token", None)
@@ -93,17 +90,15 @@ def _connection_with_counts(conn: dict) -> dict:
 
 
 @router.get("")
-async def list_connections(request: Request):
+async def list_connections(user_email: str = Depends(get_current_user)):
     """List repo connections for the authenticated user."""
-    user_email = _get_user_email(request)
     connections = list_repo_connections(user_email)
     return [_connection_with_counts(c) for c in connections]
 
 
 @router.post("", status_code=201)
-async def create_connection(request: Request, body: CreateRepoConnectionRequest):
+async def create_connection(body: CreateRepoConnectionRequest, user_email: str = Depends(get_current_user)):
     """Create a new repo connection."""
-    user_email = _get_user_email(request)
     connection_id = create_repo_connection(
         user_email=user_email,
         provider=body.provider,
@@ -137,7 +132,7 @@ async def create_connection(request: Request, body: CreateRepoConnectionRequest)
 
 
 @router.get("/github/user")
-async def github_user(request: Request):
+async def github_user(request: Request, _user: str = Depends(get_current_user)):
     """Proxy: get the authenticated GitHub user."""
     from api.github_scanner import get_authenticated_user
 
@@ -150,7 +145,7 @@ async def github_user(request: Request):
 
 
 @router.get("/github/orgs")
-async def github_orgs(request: Request):
+async def github_orgs(request: Request, _user: str = Depends(get_current_user)):
     """Proxy: list GitHub organisations the user belongs to."""
     from api.github_scanner import list_user_orgs
 
@@ -163,7 +158,7 @@ async def github_orgs(request: Request):
 
 
 @router.get("/github/orgs/{org}/repos")
-async def github_org_repos(org: str, request: Request):
+async def github_org_repos(org: str, request: Request, _user: str = Depends(get_current_user)):
     """Proxy: list repos for a GitHub organisation."""
     from api.github_scanner import list_org_repos
 
@@ -177,29 +172,28 @@ async def github_org_repos(org: str, request: Request):
 
 @router.get("/all-issues")
 async def all_issues(
-    request: Request,
+    user_email: str = Depends(get_current_user),
     status: Optional[str] = Query(None),
     severity: Optional[str] = Query(None),
 ):
     """List all repo issues across all connections for the authenticated user."""
-    user_email = _get_user_email(request)
     return list_all_user_repo_issues(user_email, status=status or "", severity=severity or "")
 
 
 @router.get("/{conn_id}")
-async def get_connection(conn_id: str):
+async def get_connection(conn_id: str, user_email: str = Depends(get_current_user)):
     """Get a single repo connection with counts."""
     connection = get_repo_connection(conn_id)
-    if not connection:
+    if not connection or connection["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Repo connection not found")
     return _connection_with_counts(connection)
 
 
 @router.put("/{conn_id}")
-async def update_connection(conn_id: str, body: UpdateRepoConnectionRequest):
+async def update_connection(conn_id: str, body: UpdateRepoConnectionRequest, user_email: str = Depends(get_current_user)):
     """Update a repo connection's mutable fields."""
     connection = get_repo_connection(conn_id)
-    if not connection:
+    if not connection or connection["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Repo connection not found")
 
     updates = {}
@@ -217,20 +211,20 @@ async def update_connection(conn_id: str, body: UpdateRepoConnectionRequest):
 
 
 @router.delete("/{conn_id}")
-async def delete_connection(conn_id: str):
+async def delete_connection(conn_id: str, user_email: str = Depends(get_current_user)):
     """Delete a repo connection and all its assets/issues."""
     connection = get_repo_connection(conn_id)
-    if not connection:
+    if not connection or connection["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Repo connection not found")
     delete_repo_connection(conn_id)
     return {"detail": "deleted"}
 
 
 @router.post("/{conn_id}/toggle")
-async def toggle_connection(conn_id: str):
+async def toggle_connection(conn_id: str, user_email: str = Depends(get_current_user)):
     """Toggle a repo connection between active and disabled."""
     connection = get_repo_connection(conn_id)
-    if not connection:
+    if not connection or connection["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Repo connection not found")
     new_status = "disabled" if connection.get("status") != "disabled" else "active"
     update_repo_connection(conn_id, status=new_status)
@@ -241,12 +235,12 @@ async def toggle_connection(conn_id: str):
 
 
 @router.post("/{conn_id}/scan")
-async def trigger_scan(conn_id: str):
+async def trigger_scan(conn_id: str, user_email: str = Depends(get_current_user)):
     """Trigger a repo scan with SSE streaming."""
     from sse_starlette.sse import EventSourceResponse
 
     connection = get_repo_connection(conn_id)
-    if not connection:
+    if not connection or connection["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Repo connection not found")
     if connection.get("status") == "disabled":
         raise HTTPException(status_code=400, detail="Repo connection is disabled. Re-enable it to scan.")
@@ -442,8 +436,11 @@ async def trigger_scan(conn_id: str):
 
 
 @router.get("/{conn_id}/scan-progress")
-async def get_scan_progress(conn_id: str):
+async def get_scan_progress(conn_id: str, user_email: str = Depends(get_current_user)):
     """Return the current scan progress for polling-based overlay updates."""
+    connection = get_repo_connection(conn_id)
+    if not connection or connection["user_email"] != user_email:
+        raise HTTPException(status_code=404, detail="Repo connection not found")
     return _scan_progress.get(conn_id, {"event": "idle"})
 
 
@@ -452,18 +449,21 @@ async def get_scan_progress(conn_id: str):
 
 @router.get("/{conn_id}/scan-logs")
 async def list_scan_logs_endpoint(
-    conn_id: str, limit: int = Query(20, ge=1, le=100)
+    conn_id: str, user_email: str = Depends(get_current_user), limit: int = Query(20, ge=1, le=100)
 ):
     """List recent scan logs for a repo connection."""
     connection = get_repo_connection(conn_id)
-    if not connection:
+    if not connection or connection["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Repo connection not found")
     return list_repo_scan_logs(conn_id, limit=limit)
 
 
 @router.get("/{conn_id}/scan-logs/{log_id}")
-async def get_scan_log_endpoint(conn_id: str, log_id: str):
+async def get_scan_log_endpoint(conn_id: str, log_id: str, user_email: str = Depends(get_current_user)):
     """Get full scan log detail."""
+    connection = get_repo_connection(conn_id)
+    if not connection or connection["user_email"] != user_email:
+        raise HTTPException(status_code=404, detail="Repo connection not found")
     log = get_repo_scan_log(log_id)
     if not log or log["connection_id"] != conn_id:
         raise HTTPException(status_code=404, detail="Scan log not found")
@@ -476,12 +476,13 @@ async def get_scan_log_endpoint(conn_id: str, log_id: str):
 @router.get("/{conn_id}/issues")
 async def list_issues(
     conn_id: str,
+    user_email: str = Depends(get_current_user),
     status: Optional[str] = Query(None),
     severity: Optional[str] = Query(None),
 ):
     """List issues for a repo connection, with optional filters."""
     connection = get_repo_connection(conn_id)
-    if not connection:
+    if not connection or connection["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Repo connection not found")
     return list_repo_issues(
         conn_id,
@@ -491,15 +492,27 @@ async def list_issues(
 
 
 @router.patch("/issues/{issue_id}")
-async def update_issue(issue_id: str, body: UpdateIssueStatusRequest):
+async def update_issue(issue_id: str, body: UpdateIssueStatusRequest, user_email: str = Depends(get_current_user)):
     """Update the status of a single issue."""
+    issue = get_repo_issue(issue_id)
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    conn = get_repo_connection(issue["connection_id"])
+    if not conn or conn["user_email"] != user_email:
+        raise HTTPException(status_code=404, detail="Issue not found")
     update_repo_issue_status(issue_id, body.status)
     return {"id": issue_id, "status": body.status}
 
 
 @router.patch("/issues/{issue_id}/severity")
-async def update_issue_severity(issue_id: str, body: UpdateIssueSeverityRequest):
+async def update_issue_severity(issue_id: str, body: UpdateIssueSeverityRequest, user_email: str = Depends(get_current_user)):
     """Update the severity of a single issue."""
+    issue = get_repo_issue(issue_id)
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    conn = get_repo_connection(issue["connection_id"])
+    if not conn or conn["user_email"] != user_email:
+        raise HTTPException(status_code=404, detail="Issue not found")
     update_repo_issue_severity(issue_id, body.severity)
     return {"id": issue_id, "severity": body.severity}
 
@@ -508,9 +521,9 @@ async def update_issue_severity(issue_id: str, body: UpdateIssueSeverityRequest)
 
 
 @router.get("/{conn_id}/repos")
-async def list_repos(conn_id: str):
+async def list_repos(conn_id: str, user_email: str = Depends(get_current_user)):
     """List discovered repo assets for a connection."""
     connection = get_repo_connection(conn_id)
-    if not connection:
+    if not connection or connection["user_email"] != user_email:
         raise HTTPException(status_code=404, detail="Repo connection not found")
     return list_repo_assets(conn_id)

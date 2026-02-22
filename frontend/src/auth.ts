@@ -1,6 +1,9 @@
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
+import { SignJWT } from "jose";
+
+const backendSecret = new TextEncoder().encode(process.env.AUTH_SECRET);
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
@@ -18,11 +21,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     strategy: "jwt",
   },
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.image = user.image;
       }
+      // Sign a backend token (HS256 JWS) on every callback
+      token.backendToken = await new SignJWT({
+        email: token.email,
+        sub: token.sub,
+      })
+        .setProtectedHeader({ alg: "HS256" })
+        .setIssuedAt()
+        .setExpirationTime("24h")
+        .sign(backendSecret);
       return token;
     },
     session({ session, token }) {
@@ -30,6 +42,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string;
         session.user.image = token.image as string;
       }
+      session.backendToken = token.backendToken as string;
       return session;
     },
   },

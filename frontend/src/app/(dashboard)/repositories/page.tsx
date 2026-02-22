@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import PageShell from "@/components/PageShell";
-import { listRepoConnections, scanRepoConnectionStream, getRepoScanProgress, deleteRepoConnection, toggleRepoConnection, setApiUserEmail } from "@/lib/api";
+import { listRepoConnections, scanRepoConnectionStream, getRepoScanProgress, deleteRepoConnection, toggleRepoConnection, setApiToken } from "@/lib/api";
 import type { RepoConnection, RepoScanStreamEvent } from "@/lib/types";
 
 function RepoIcon() {
@@ -124,10 +124,11 @@ export default function RepositoriesPage() {
   }
 
   useEffect(() => {
-    if (!session?.user?.email) return;
-    setApiUserEmail(session.user.email);
+    const token = session?.backendToken as string;
+    if (!token) return;
+    setApiToken(token);
     loadRepos();
-  }, [session?.user?.email]);
+  }, [session?.backendToken]);
 
   async function loadRepos() {
     try {

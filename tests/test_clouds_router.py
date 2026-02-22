@@ -55,6 +55,7 @@ db.get_conn = _shared_conn
 import pytest
 from fastapi.testclient import TestClient
 
+from api.auth import get_current_user
 from api.cloud_database import (
     init_cloud_tables,
     save_cloud_issues,
@@ -63,7 +64,9 @@ from api.cloud_database import (
 from api.database import init_db
 from api.main import app
 
-HEADERS = {"X-User-Email": "test@example.com"}
+TEST_USER = "test@example.com"
+app.dependency_overrides[get_current_user] = lambda: TEST_USER
+HEADERS: dict[str, str] = {}
 
 client = TestClient(app)
 
@@ -208,3 +211,45 @@ def test_get_cloud_404():
     """GET /api/clouds/nonexistent returns 404."""
     res = client.get("/api/clouds/nonexistent", headers=HEADERS)
     assert res.status_code == 404
+
+
+# ── Ownership tests ─────────────────────────────────────────────────
+
+
+def test_get_cloud_wrong_user_returns_404():
+    """User A creates a cloud, user B gets 404 trying to access it."""
+    # Create as test user
+    create_res = client.post(
+        "/api/clouds",
+        headers=HEADERS,
+        json={"name": "Owner Cloud", "project_id": "proj-own"},
+    )
+    cloud_id = create_res.json()["id"]
+
+    # Switch to a different user
+    app.dependency_overrides[get_current_user] = lambda: "other@example.com"
+    res = client.get(f"/api/clouds/{cloud_id}", headers=HEADERS)
+    assert res.status_code == 404
+
+    # Restore original user
+    app.dependency_overrides[get_current_user] = lambda: TEST_USER
+
+
+def test_delete_cloud_wrong_user_returns_404():
+    """User A creates a cloud, user B gets 404 trying to delete it."""
+    create_res = client.post(
+        "/api/clouds",
+        headers=HEADERS,
+        json={"name": "Delete Blocked", "project_id": "proj-del2"},
+    )
+    cloud_id = create_res.json()["id"]
+
+    # Switch to a different user
+    app.dependency_overrides[get_current_user] = lambda: "other@example.com"
+    res = client.delete(f"/api/clouds/{cloud_id}", headers=HEADERS)
+    assert res.status_code == 404
+
+    # Restore original user — cloud should still exist
+    app.dependency_overrides[get_current_user] = lambda: TEST_USER
+    res = client.get(f"/api/clouds/{cloud_id}", headers=HEADERS)
+    assert res.status_code == 200
