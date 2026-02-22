@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import re
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -18,9 +19,9 @@ logger = logging.getLogger(__name__)
 _SKIP_DIRS = {".git", "node_modules", ".venv", "__pycache__", "vendor", "dist", "build"}
 
 # Limits to prevent runaway costs
-MAX_FILES_PER_REPO = 150
+MAX_FILES_PER_REPO = 50
 MAX_LINES_PER_FILE = 300
-_BATCH_SIZE = 5  # Files per LLM call
+_BATCH_SIZE = 10  # Files per LLM call
 
 _HAIKU_MODEL = "claude-haiku-4-5-20251001"
 
@@ -184,7 +185,11 @@ def _run_ai_sast(files: List[Tuple[str, str]], repo_full_name: str) -> List[Dict
 
         except Exception as exc:
             logger.warning("SAST AI batch %d failed: %s", i // _BATCH_SIZE, exc)
+            if "rate_limit" in str(exc).lower():
+                time.sleep(15)
             continue
+        # Throttle between batches to stay under rate limits
+        time.sleep(2)
 
     logger.info("SAST AI: Found %d issues in %s", len(issues), repo_full_name)
     return issues
