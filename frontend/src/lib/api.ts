@@ -37,6 +37,10 @@ let _backendToken = "";
 export function setApiToken(token: string) {
   _backendToken = token;
 }
+/** True when a backend JWT token has been set (session is ready). */
+export function isApiReady(): boolean {
+  return !!_backendToken;
+}
 /** @deprecated Use setApiToken instead */
 export function setApiUserEmail(_email: string) {}
 function authHeaders(): Record<string, string> {

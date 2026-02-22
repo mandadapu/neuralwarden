@@ -17,6 +17,7 @@ import {
   listPentests,
   getPentest,
   listFindings,
+  isApiReady,
 } from "./api";
 import type { CloudAccount, CloudIssue, CloudAsset, RepoConnection, RepoIssue, Pentest, PentestFinding } from "./types";
 
@@ -25,6 +26,11 @@ const defaults: SWRConfiguration = {
   revalidateOnFocus: true,
   dedupingInterval: 5000,
 };
+
+/** Return the key only when the API token is set, otherwise null (skip fetch). */
+function whenReady(key: string | null): string | null {
+  return key && isApiReady() ? key : null;
+}
 
 /** SWR key prefix — helps with global mutations */
 export const SWR_KEYS = {
@@ -43,12 +49,12 @@ export const SWR_KEYS = {
 /* ── Cloud hooks ──────────────────────────────────────── */
 
 export function useClouds() {
-  return useSWR<CloudAccount[]>(SWR_KEYS.clouds, () => listClouds(), defaults);
+  return useSWR<CloudAccount[]>(whenReady(SWR_KEYS.clouds), () => listClouds(), defaults);
 }
 
 export function useCloud(id: string | undefined) {
   return useSWR<CloudAccount>(
-    id ? SWR_KEYS.cloud(id) : null,
+    whenReady(id ? SWR_KEYS.cloud(id) : null),
     () => getCloud(id!),
     defaults,
   );
@@ -56,7 +62,7 @@ export function useCloud(id: string | undefined) {
 
 export function useCloudIssues(cloudId: string | undefined) {
   return useSWR<CloudIssue[]>(
-    cloudId ? SWR_KEYS.cloudIssues(cloudId) : null,
+    whenReady(cloudId ? SWR_KEYS.cloudIssues(cloudId) : null),
     () => listCloudIssues(cloudId!),
     defaults,
   );
@@ -64,7 +70,7 @@ export function useCloudIssues(cloudId: string | undefined) {
 
 export function useCloudAssets(cloudId: string | undefined) {
   return useSWR<CloudAsset[]>(
-    cloudId ? SWR_KEYS.cloudAssets(cloudId) : null,
+    whenReady(cloudId ? SWR_KEYS.cloudAssets(cloudId) : null),
     () => listCloudAssets(cloudId!),
     defaults,
   );
@@ -73,12 +79,12 @@ export function useCloudAssets(cloudId: string | undefined) {
 /* ── Repo hooks ───────────────────────────────────────── */
 
 export function useRepoConnections() {
-  return useSWR<RepoConnection[]>(SWR_KEYS.repos, () => listRepoConnections(), defaults);
+  return useSWR<RepoConnection[]>(whenReady(SWR_KEYS.repos), () => listRepoConnections(), defaults);
 }
 
 export function useRepoConnection(id: string | undefined) {
   return useSWR<RepoConnection>(
-    id ? SWR_KEYS.repo(id) : null,
+    whenReady(id ? SWR_KEYS.repo(id) : null),
     () => getRepoConnection(id!),
     defaults,
   );
@@ -86,7 +92,7 @@ export function useRepoConnection(id: string | undefined) {
 
 export function useRepoIssues(connectionId: string | undefined) {
   return useSWR<RepoIssue[]>(
-    connectionId ? SWR_KEYS.repoIssues(connectionId) : null,
+    whenReady(connectionId ? SWR_KEYS.repoIssues(connectionId) : null),
     () => listRepoIssues(connectionId!),
     defaults,
   );
@@ -95,12 +101,12 @@ export function useRepoIssues(connectionId: string | undefined) {
 /* ── Pentest hooks ─────────────────────────────────────── */
 
 export function usePentests() {
-  return useSWR<Pentest[]>(SWR_KEYS.pentests, () => listPentests(), defaults);
+  return useSWR<Pentest[]>(whenReady(SWR_KEYS.pentests), () => listPentests(), defaults);
 }
 
 export function usePentest(id: string | undefined) {
   return useSWR<Pentest>(
-    id ? SWR_KEYS.pentest(id) : null,
+    whenReady(id ? SWR_KEYS.pentest(id) : null),
     () => getPentest(id!),
     defaults,
   );
@@ -108,7 +114,7 @@ export function usePentest(id: string | undefined) {
 
 export function usePentestFindings(pentestId: string | undefined) {
   return useSWR<PentestFinding[]>(
-    pentestId ? SWR_KEYS.pentestFindings(pentestId) : null,
+    whenReady(pentestId ? SWR_KEYS.pentestFindings(pentestId) : null),
     () => listFindings(pentestId!),
     defaults,
   );
