@@ -3,16 +3,26 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from api.auth import get_current_user
 from pipeline.watcher import LogWatcher
 
 router = APIRouter(prefix="/api/watcher", tags=["watcher"])
 
 _watcher: LogWatcher | None = None
+
+def _watcher_base_dir() -> Path:
+    """Allowed base directory for the watcher — prevents path traversal.
+
+    Defaults to ./watch relative to the working directory.
+    Evaluated at call time so env var changes (e.g. in tests) take effect.
+    """
+    return Path(os.getenv("WATCHER_BASE_DIR", "./watch")).resolve()
 
 
 class StartRequest(BaseModel):
@@ -37,15 +47,31 @@ def _on_file_detected(file_path: str) -> None:
         pass
 
 
+def _validate_watch_path(raw: str) -> Path:
+    """Resolve the watch path and ensure it stays within the allowed base directory."""
+    base = _watcher_base_dir()
+    resolved = Path(raw).resolve()
+    # Must be the base dir itself or a child of it
+    try:
+        resolved.relative_to(base)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"watch_dir must be within {base}",
+        )
+    return resolved
+
+
 @router.post("/start", response_model=StatusResponse)
-async def start_watcher(req: StartRequest) -> StatusResponse:
+async def start_watcher(req: StartRequest, _user: str = Depends(get_current_user)) -> StatusResponse:
     global _watcher
+
+    watch_path = _validate_watch_path(req.watch_dir)
 
     # Stop any existing watcher first
     if _watcher is not None and _watcher.is_running:
         await asyncio.to_thread(_watcher.stop)
 
-    watch_path = Path(req.watch_dir)
     watch_path.mkdir(parents=True, exist_ok=True)
 
     _watcher = LogWatcher(
@@ -58,7 +84,7 @@ async def start_watcher(req: StartRequest) -> StatusResponse:
 
 
 @router.post("/stop", response_model=StatusResponse)
-async def stop_watcher() -> StatusResponse:
+async def stop_watcher(_user: str = Depends(get_current_user)) -> StatusResponse:
     global _watcher
 
     if _watcher is not None:
@@ -71,7 +97,7 @@ async def stop_watcher() -> StatusResponse:
 
 
 @router.get("/status", response_model=StatusResponse)
-async def watcher_status() -> StatusResponse:
+async def watcher_status(_user: str = Depends(get_current_user)) -> StatusResponse:
     if _watcher is not None:
         return StatusResponse(
             running=_watcher.is_running,

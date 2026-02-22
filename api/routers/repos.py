@@ -255,34 +255,32 @@ async def trigger_scan(request: Request, conn_id: str, user_email: str = Depends
     except (json.JSONDecodeError, TypeError):
         pass
 
-    # Get repos to scan from stored assets
-    repos = list_repo_assets(conn_id)
+    # Always fetch fresh repo list from GitHub API to handle renames/new repos
+    repos = []
+    try:
+        from api.github_scanner import list_org_repos
+
+        org_name = connection.get("org_name", "")
+        if org_name:
+            fetched = list_org_repos(org_name, token=connection.get("github_token", ""))
+            repos = [
+                {
+                    "repo_full_name": r.get("full_name", ""),
+                    "repo_name": r.get("name", ""),
+                    "language": r.get("language", ""),
+                    "default_branch": r.get("default_branch", "main"),
+                    "is_private": 1 if r.get("private") else 0,
+                }
+                for r in fetched
+            ]
+    except Exception:
+        logger.warning("Failed to fetch repos from GitHub for org %s, falling back to stored assets", connection.get("org_name"))
+        repos = list_repo_assets(conn_id)
 
     async def scan_generator():
         from api.github_scanner import run_repo_scan
 
-        # If no stored assets, try fetching from GitHub API
         nonlocal repos
-        if not repos:
-            try:
-                from api.github_scanner import list_org_repos
-
-                org_name = connection.get("org_name", "")
-                if org_name:
-                    fetched = list_org_repos(org_name, token=connection.get("github_token", ""))
-                    # Convert to asset dicts
-                    repos = [
-                        {
-                            "repo_full_name": r.get("full_name", ""),
-                            "repo_name": r.get("name", ""),
-                            "language": r.get("language", ""),
-                            "default_branch": r.get("default_branch", "main"),
-                            "is_private": 1 if r.get("private") else 0,
-                        }
-                        for r in fetched
-                    ]
-            except Exception:
-                logger.warning("Failed to fetch repos from GitHub for org %s", connection.get("org_name"))
 
         total_repos = len(repos)
         _SENTINEL = object()
