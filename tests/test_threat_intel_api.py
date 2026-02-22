@@ -32,8 +32,10 @@ from unittest.mock import patch
 import pytest
 from fastapi.testclient import TestClient
 
+from api.auth import get_current_user
 from api.main import app
 
+app.dependency_overrides[get_current_user] = lambda: "test@example.com"
 client = TestClient(app)
 
 

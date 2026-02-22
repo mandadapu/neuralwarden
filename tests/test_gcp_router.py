@@ -6,8 +6,10 @@ from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
+from api.auth import get_current_user
 from api.main import app
 
+app.dependency_overrides[get_current_user] = lambda: "test@example.com"
 client = TestClient(app)
 
 
@@ -61,4 +63,4 @@ class TestGcpFetch:
     def test_fetch_gcp_error(self, mock_fetch):
         res = client.post("/api/gcp-logging/fetch", json={"project_id": "test"})
         assert res.status_code == 502
-        assert "API quota exceeded" in res.json()["detail"]
+        assert res.json()["detail"] == "GCP API error"

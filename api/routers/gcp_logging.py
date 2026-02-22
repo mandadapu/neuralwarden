@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+
+from api.auth import get_current_user
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/gcp-logging", tags=["gcp-logging"])
 
@@ -37,7 +42,7 @@ class GcpFetchResponse(BaseModel):
 
 
 @router.get("/status", response_model=GcpStatusResponse)
-async def gcp_status() -> GcpStatusResponse:
+async def gcp_status(_user: str = Depends(get_current_user)) -> GcpStatusResponse:
     """Check if GCP Cloud Logging is available and credentials are configured."""
     try:
         from api.gcp_logging import _GCP_AVAILABLE
@@ -53,7 +58,7 @@ async def gcp_status() -> GcpStatusResponse:
 
 
 @router.post("/fetch", response_model=GcpFetchResponse)
-async def gcp_fetch(req: GcpFetchRequest) -> GcpFetchResponse:
+async def gcp_fetch(req: GcpFetchRequest, _user: str = Depends(get_current_user)) -> GcpFetchResponse:
     """Fetch logs from GCP Cloud Logging and return as formatted text."""
     try:
         from api.gcp_logging import fetch_logs
@@ -75,7 +80,8 @@ async def gcp_fetch(req: GcpFetchRequest) -> GcpFetchResponse:
     except RuntimeError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"GCP API error: {e}")
+        logger.exception("GCP Cloud Logging fetch failed")
+        raise HTTPException(status_code=502, detail="GCP API error")
 
     if not lines:
         raise HTTPException(

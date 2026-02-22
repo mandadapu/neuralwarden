@@ -535,8 +535,8 @@ def run_repo_scan(
     }
 
     for idx, repo in enumerate(repos):
-        repo_full_name = repo.get("full_name", f"{org_name}/{repo.get('name', 'unknown')}")
-        repo_name = repo.get("name", "unknown")
+        repo_full_name = repo.get("full_name") or repo.get("repo_full_name") or f"{org_name}/{repo.get('name') or repo.get('repo_name', 'unknown')}"
+        repo_name = repo.get("name") or repo.get("repo_name", "unknown")
         default_branch = repo.get("default_branch", "main")
 
         if progress_callback:

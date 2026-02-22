@@ -6,6 +6,7 @@ import os
 import sqlite3
 
 os.environ["NEURALWARDEN_DB_PATH"] = ":memory:"
+os.environ["WATCHER_BASE_DIR"] = "/tmp"
 
 class _NonClosingConnection:
     def __init__(self, real_conn):
@@ -124,9 +125,10 @@ def test_watcher_status():
     assert isinstance(body["running"], bool)
 
 
-def test_watcher_start_stop(tmp_path):
+def test_watcher_start_stop():
     """POST /api/watcher/start then /stop toggles the watcher state."""
-    watch_dir = str(tmp_path / "watch_test")
+    # Use /tmp which matches WATCHER_BASE_DIR set above
+    watch_dir = "/tmp/nw_watcher_test"
 
     # Start the watcher
     res = client.post(
