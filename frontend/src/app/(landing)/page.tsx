@@ -271,7 +271,7 @@ function LandingContent() {
 
         <div className="flex items-center gap-4">
           <span className="hidden md:inline text-xs text-[#8b949e] font-mono">
-            v2.1 — operational
+            v3.0 — operational
           </span>
           <button
             onClick={handleAccessDashboard}
@@ -294,7 +294,7 @@ function LandingContent() {
             className="text-[11px] uppercase tracking-[0.25em] text-[#00e68a]/60 font-medium"
             style={{ fontFamily: "'DM Sans', sans-serif" }}
           >
-            Autonomous Cloud Defense
+            AI-Powered Cloud & Code Security
           </span>
           <div className="h-px w-8 bg-gradient-to-l from-transparent to-[#00e68a]/40" />
         </div>
@@ -308,7 +308,7 @@ function LandingContent() {
             className="block text-5xl md:text-7xl leading-[1.1] text-white"
             style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
           >
-            Your cloud has
+            Your cloud &amp; code
           </span>
           <span
             className="block text-5xl md:text-7xl leading-[1.1] mt-1"
@@ -319,7 +319,7 @@ function LandingContent() {
               WebkitTextFillColor: "transparent",
             }}
           >
-            a guardian now.
+            have a guardian now.
           </span>
         </h1>
 
@@ -331,9 +331,9 @@ function LandingContent() {
             animation: mounted ? "fadeUp 0.7s 0.45s both" : "none",
           }}
         >
-          12 AI agents run an autonomous defense loop — discovering assets,
-          scanning for vulnerabilities, correlating threats with live logs,
-          and generating remediation scripts. All in one scan.
+          AI agents scan your cloud infrastructure and source code simultaneously
+          — finding CVEs in dependencies, secrets in commits, vulnerabilities in code,
+          and misconfigurations in your cloud. All autonomous, all in one scan.
         </p>
 
         {/* CTA row */}
@@ -372,39 +372,53 @@ function LandingContent() {
           className="flex items-center gap-10 md:gap-16 mb-20"
           style={{ animation: mounted ? "fadeUp 0.7s 0.65s both" : "none" }}
         >
-          <StatItem value="12" label="AI Agents" delay={0.7} />
+          <StatItem value="30+" label="Secret Patterns" delay={0.7} />
           <div className="w-px h-8 bg-[#30363d]" />
-          <StatItem value="$0" label="Scan Cost" delay={0.8} />
+          <StatItem value="12" label="Ecosystems" delay={0.8} />
           <div className="w-px h-8 bg-[#30363d]" />
-          <StatItem value="6" label="GCP Services" delay={0.9} />
+          <StatItem value="AI" label="SAST Engine" delay={0.9} />
           <div className="w-px h-8 bg-[#30363d]" />
-          <StatItem value="<2min" label="Full Scan" delay={1.0} />
+          <StatItem value="$0" label="Scan Cost" delay={1.0} />
         </div>
 
-        {/* ── Three Pillars ────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-4xl w-full mb-20">
+        {/* ── Four Security Pillars ─────────────────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 max-w-5xl w-full mb-20">
           <PillarCard
             icon={
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20" />
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
               </svg>
             }
-            title="Neural Discovery"
-            tag="Phase 1"
-            description="Autonomously maps your entire GCP attack surface — VMs, firewalls, buckets, SQL instances, IAM policies — in seconds."
+            title="Infrastructure & Runtime"
+            tag="Cloud"
+            description="Maps your GCP attack surface — VMs, firewalls, buckets, IAM — then correlates misconfigurations with live log evidence."
             delay={0.8}
           />
           <PillarCard
             icon={
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <path d="M12 18v-6" />
+                <path d="M9 15l3 3 3-3" />
               </svg>
             }
-            title="Agentic Analysis"
-            tag="Phase 2"
-            description="Parallel workers fan out — compliance checks on public assets, Cloud Logging behavioral queries on private resources. Simultaneously."
+            title="Code & Supply Chain"
+            tag="SCA + SAST"
+            description="AI-powered SAST finds vulnerabilities in your code. SCA scans 12 ecosystems for CVEs via OSV.dev. 30+ secret patterns detect leaked credentials."
             delay={0.95}
+          />
+          <PillarCard
+            icon={
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
+              </svg>
+            }
+            title="AI & Agentic Security"
+            tag="AI-Native"
+            description="Detects prompt injection, model integrity attacks, and autonomous agent hijacking across your AI-powered systems."
+            delay={1.1}
           />
           <PillarCard
             icon={
@@ -413,80 +427,117 @@ function LandingContent() {
                 <polyline points="9 12 11 14 15 10" />
               </svg>
             }
-            title="Automated Wardenship"
-            tag="Phase 3"
-            description="The Neural Core correlates vulnerabilities with live log evidence, escalates to CRITICAL, and generates ready-to-run gcloud fix scripts."
-            delay={1.1}
+            title="Threat Intel & Perimeter"
+            tag="Defense"
+            description="Active threat detection — correlating vulnerabilities with live logs, MITRE mappings, and generating ready-to-run remediation scripts."
+            delay={1.25}
           />
         </div>
 
         {/* ── Pipeline preview ─────────────────────────── */}
         <div
-          className="max-w-3xl w-full"
+          className="max-w-4xl w-full"
           style={{ animation: mounted ? "fadeUp 0.7s 1.2s both" : "none" }}
         >
           <div className="text-center mb-6">
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8b949e]">
-              The Autonomous Defense Loop
+              Two Autonomous Pipelines — One Platform
             </span>
           </div>
 
-          <div className="bg-[#1c2128]/60 backdrop-blur-sm border border-[#30363d] rounded-2xl p-6">
-            {/* Cloud Scan */}
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#00e68a]" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#00e68a]/70">
-                Cloud Scan Super Agent
-              </span>
-              <span className="text-[10px] text-[#3d444d] ml-1">— deterministic, $0</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pl-4 mb-5">
-              <AgentNode label="Discovery" active />
-              <span className="text-[#30363d]">→</span>
-              <AgentNode label="Router" active />
-              <span className="text-[#30363d]">→</span>
-              <div className="flex flex-col gap-1">
-                <AgentNode label="Active Scanner" active />
-                <AgentNode label="Log Analyzer" active />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Cloud Scan Pipeline */}
+            <div className="bg-[#1c2128]/60 backdrop-blur-sm border border-[#30363d] rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#00e68a]" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#00e68a]/70">
+                  Cloud Scan Super Agent
+                </span>
               </div>
-              <span className="text-[#30363d]">→</span>
-              <AgentNode label="Correlation" active />
-              <span className="text-[#30363d]">→</span>
-              <AgentNode label="Remediation" active />
+              <div className="flex flex-col gap-2 pl-4 mb-4">
+                <AgentNode label="Discovery" active />
+                <AgentNode label="Router" active />
+                <div className="flex items-center gap-3 pl-2">
+                  <AgentNode label="Active Scanner" active />
+                  <AgentNode label="Log Analyzer" active />
+                </div>
+                <AgentNode label="Correlation Engine" active />
+                <AgentNode label="Remediation" active />
+              </div>
+
+              {/* Connector */}
+              <div className="flex items-center gap-2 pl-4 mb-3">
+                <div
+                  className="w-px h-4 opacity-30"
+                  style={{
+                    background: "linear-gradient(to bottom, #00e68a, transparent)",
+                    animation: "pulse-line 2s ease-in-out infinite",
+                  }}
+                />
+                <span className="text-[9px] text-[#3d444d]">feeds into threat pipeline</span>
+              </div>
+
+              {/* Threat Pipeline */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#f59e0b]/70">
+                  Neural Engine
+                </span>
+                <span className="text-[10px] text-[#3d444d] ml-1">— Claude</span>
+              </div>
+              <div className="flex flex-col gap-2 pl-4">
+                <AgentNode label="Ingest → Detect → Validate" />
+                <AgentNode label="Classify → HITL → Report" />
+              </div>
             </div>
 
-            {/* Connector */}
-            <div className="flex items-center gap-2 pl-4 mb-3">
-              <div
-                className="w-px h-5 opacity-30"
-                style={{
-                  background: "linear-gradient(to bottom, #00e68a, transparent)",
-                  animation: "pulse-line 2s ease-in-out infinite",
-                }}
-              />
-              <span className="text-[9px] text-[#3d444d]">feeds evidence into</span>
-            </div>
+            {/* Repository Scan Pipeline */}
+            <div className="bg-[#1c2128]/60 backdrop-blur-sm border border-[#30363d] rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#58a6ff]" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#58a6ff]/70">
+                  Repository Scan Engine
+                </span>
+              </div>
+              <div className="flex flex-col gap-3 pl-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#58a6ff] shadow-[0_0_8px_rgba(88,166,255,0.5)]" />
+                  <span className="text-xs font-medium text-[#58a6ff]">Secret Detection</span>
+                  <span className="text-[9px] text-[#3d444d]">— 30+ patterns</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#58a6ff] shadow-[0_0_8px_rgba(88,166,255,0.5)]" />
+                  <span className="text-xs font-medium text-[#58a6ff]">SCA Scanner</span>
+                  <span className="text-[9px] text-[#3d444d]">— OSV.dev CVEs</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#58a6ff] shadow-[0_0_8px_rgba(88,166,255,0.5)]" />
+                  <span className="text-xs font-medium text-[#58a6ff]">AI SAST</span>
+                  <span className="text-[9px] text-[#3d444d]">— Claude Haiku</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#58a6ff] shadow-[0_0_8px_rgba(88,166,255,0.5)]" />
+                  <span className="text-xs font-medium text-[#58a6ff]">License Scan</span>
+                  <span className="text-[9px] text-[#3d444d]">— copyleft detection</span>
+                </div>
+              </div>
 
-            {/* Threat Pipeline */}
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#f59e0b]/70">
-                Neural Engine — Threat Pipeline
-              </span>
-              <span className="text-[10px] text-[#3d444d] ml-1">— Claude Sonnet</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pl-4">
-              <AgentNode label="Ingest" />
-              <span className="text-[#30363d]">→</span>
-              <AgentNode label="Detect" />
-              <span className="text-[#30363d]">→</span>
-              <AgentNode label="Validate" />
-              <span className="text-[#30363d]">→</span>
-              <AgentNode label="Classify" />
-              <span className="text-[#30363d]">→</span>
-              <AgentNode label="HITL Gate" />
-              <span className="text-[#30363d]">→</span>
-              <AgentNode label="Report" />
+              {/* Ecosystems */}
+              <div className="mt-5 pt-4 border-t border-[#30363d]/50">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
+                  <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#f59e0b]/70">
+                    12 Ecosystems
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pl-4">
+                  {["npm", "PyPI", "Go", "Cargo", "RubyGems", "NuGet", "Pub", "Composer"].map((eco) => (
+                    <span key={eco} className="text-[9px] text-[#8b949e] bg-[#30363d]/40 px-2 py-0.5 rounded-full">
+                      {eco}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
