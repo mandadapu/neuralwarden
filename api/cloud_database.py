@@ -106,6 +106,10 @@ def init_cloud_tables() -> None:
         conn.execute(_CREATE_CLOUD_ISSUES)
         conn.execute(_CREATE_CLOUD_CHECKS)
         conn.execute(_CREATE_SCAN_LOGS)
+        # Indexes for frequently queried columns
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_cloud_accounts_user ON cloud_accounts(user_email)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_cloud_issues_account ON cloud_issues(cloud_account_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_logs_account ON scan_logs(cloud_account_id)")
         # Migrations — add columns that may not exist on older DBs
         # Use SAVEPOINT for PostgreSQL so a failure doesn't abort the transaction
         for migration in [

@@ -44,6 +44,8 @@ def init_db() -> None:
     conn = get_conn()
     try:
         conn.execute(_CREATE_TABLE)
+        # Index for user-scoped queries
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_analyses_user ON analyses(user_email)")
         # Migrations — use SAVEPOINT on PostgreSQL so failures don't abort the transaction
         for migration in [
             "ALTER TABLE analyses ADD COLUMN user_email TEXT DEFAULT ''",

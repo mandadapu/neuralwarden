@@ -1,6 +1,6 @@
 """Report history endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.auth import get_current_user
 from api.database import get_analysis, list_analyses
@@ -9,7 +9,7 @@ router = APIRouter(prefix="/api", tags=["reports"])
 
 
 @router.get("/reports")
-async def list_reports(limit: int = 50, user_email: str = Depends(get_current_user)):
+async def list_reports(limit: int = Query(50, ge=1, le=200), user_email: str = Depends(get_current_user)):
     """List recent analyses for the current user."""
     return {"reports": list_analyses(limit=limit, user_email=user_email)}
 

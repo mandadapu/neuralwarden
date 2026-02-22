@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 import uuid
 from collections.abc import AsyncIterator
 
 from api.schemas import AnalysisResponse
+
+logger = logging.getLogger(__name__)
 from api.services import (
     _build_initial_state,
     _build_summary,
@@ -191,8 +194,8 @@ async def stream_analysis(logs: str, skip_ingest: bool = False, user_email: str 
                 from api.database import save_analysis
                 analysis_id = save_analysis(response.model_dump(mode="json"), user_email=user_email)
                 response.analysis_id = analysis_id
-            except Exception as e:
-                print(f"[Stream] Failed to save analysis: {e}")
+            except Exception:
+                logger.exception("Failed to save stream analysis report")
 
             yield _sse_event("complete", {"response": response.model_dump()})
 

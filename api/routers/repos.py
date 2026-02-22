@@ -8,7 +8,7 @@ import logging
 import queue
 import threading
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
@@ -71,11 +71,11 @@ class UpdateRepoConnectionRequest(BaseModel):
 
 
 class UpdateIssueStatusRequest(BaseModel):
-    status: str = Field(min_length=1, max_length=30)
+    status: Literal["todo", "in_progress", "ignored", "resolved"]
 
 
 class UpdateIssueSeverityRequest(BaseModel):
-    severity: str = Field(min_length=1, max_length=30)
+    severity: Literal["critical", "high", "medium", "low"]
 
 
 # --------------- helpers ---------------
@@ -438,7 +438,7 @@ async def trigger_scan(request: Request, conn_id: str, user_email: str = Depends
             async def _cleanup():
                 await asyncio.sleep(10)
                 _scan_progress.pop(conn_id, None)
-            asyncio.ensure_future(_cleanup())
+            asyncio.create_task(_cleanup())
 
     return EventSourceResponse(scan_generator(), ping=15)
 
