@@ -287,87 +287,22 @@ async def trigger_scan(request: Request, conn_id: str, user_email: str = Depends
         logger.warning("Failed to fetch repos from GitHub for org %s, falling back to stored assets", connection.get("org_name"))
         repos = list_repo_assets(conn_id)
 
-    async def scan_generator():
-        from api.github_scanner import run_repo_scan
+    started_at = datetime.now(timezone.utc).isoformat()
+    total_repos = len(repos)
+    event_queue: queue.Queue = queue.Queue()
 
-        nonlocal repos
-
-        total_repos = len(repos)
-        _SENTINEL = object()
-        event_queue: queue.Queue = queue.Queue()
-
-        def progress_callback(event_type: str, data):
-            event_queue.put((event_type, data))
-
-        def _run_scan():
-            try:
-                run_repo_scan(
-                    connection_id=conn_id,
-                    org_name=connection.get("org_name", ""),
-                    repos=repos,
-                    scan_config=scan_config,
-                    progress_callback=progress_callback,
-                    token=connection.get("github_token", ""),
-                )
-            except Exception as exc:
-                event_queue.put(("error", exc))
-
-        thread = threading.Thread(target=_run_scan, daemon=True)
-        thread.start()
-
-        # Write initial progress for polling clients
-        _scan_progress[conn_id] = {
-            "event": "starting",
-            "total_repos": total_repos,
-            "repos_scanned": 0,
-        }
-
-        # Emit 4KB padding comment for Cloud Run buffering
-        yield {"comment": " " * 4096}
-        yield {"data": json.dumps(_scan_progress[conn_id])}
-
-        started_at = datetime.now(timezone.utc).isoformat()
-        final_result = {}
+    def _save_results(result: dict):
+        """Save scan results to DB — runs inside the scan thread so results
+        persist even if the SSE client disconnects."""
         try:
-            while True:
-                try:
-                    msg = await asyncio.to_thread(event_queue.get, timeout=15)
-                except queue.Empty:
-                    if not thread.is_alive():
-                        break
-                    yield {"comment": "keepalive"}
-                    continue
-
-                kind, payload = msg
-
-                if kind == "error":
-                    raise payload
-
-                if kind == "progress":
-                    progress_data = {
-                        "event": "scanning",
-                        "repos_scanned": payload.get("repos_scanned", 0),
-                        "total_repos": payload.get("total_repos", total_repos),
-                        "current_repo": payload.get("current_repo", ""),
-                    }
-                    _scan_progress[conn_id] = progress_data
-                    yield {"data": json.dumps(progress_data)}
-                    continue
-
-                if kind == "complete":
-                    final_result = payload
-                    break
-
-            # Save results to database
-            issues = final_result.get("issues", [])
-            scanned_repos = final_result.get("assets", repos)
+            issues = result.get("issues", [])
+            scanned_repos = result.get("assets", repos)
 
             inserted = 0
             if issues:
                 inserted = save_repo_issues(conn_id, issues)
 
             if scanned_repos:
-                # Normalize and save discovered repo assets
                 asset_dicts = []
                 for r in scanned_repos:
                     asset_dicts.append({
@@ -388,21 +323,17 @@ async def trigger_scan(request: Request, conn_id: str, user_email: str = Depends
             scan_log_id = None
             try:
                 scan_log_id = create_repo_scan_log(conn_id, started_at)
-
-                log_entries = final_result.get("log_entries", [])
                 summary = {
                     "repos_scanned": len(scanned_repos),
                     "issues_found": len(issues),
                     "issues_inserted": inserted,
                 }
-                log_status = "success" if issues is not None else "error"
-
                 complete_repo_scan_log(
                     log_id=scan_log_id,
-                    status=log_status,
+                    status="success",
                     completed_at=datetime.now(timezone.utc).isoformat(),
                     summary_json=json.dumps(summary),
-                    log_entries_json=json.dumps(log_entries),
+                    log_entries_json=json.dumps(result.get("log_entries", [])),
                 )
             except Exception:
                 logger.warning("Failed to save repo scan log", exc_info=True)
@@ -415,28 +346,93 @@ async def trigger_scan(request: Request, conn_id: str, user_email: str = Depends
                 "scan_log_id": scan_log_id,
             }
             _scan_progress[conn_id] = complete_data
-            yield {"data": json.dumps(complete_data)}
+            event_queue.put(("complete", complete_data))
 
-        except Exception as e:
-            logger.exception("Repo scan failed")
+        except Exception as exc:
+            logger.exception("Failed to save scan results")
+            event_queue.put(("error", exc))
+
+    def progress_callback(event_type: str, data):
+        event_queue.put((event_type, data))
+
+    def _run_scan():
+        from api.github_scanner import run_repo_scan
+        try:
+            result = run_repo_scan(
+                connection_id=conn_id,
+                org_name=connection.get("org_name", ""),
+                repos=repos,
+                scan_config=scan_config,
+                progress_callback=progress_callback,
+                token=connection.get("github_token", ""),
+            )
+            _save_results(result)
+        except Exception as exc:
+            logger.exception("Repo scan thread failed")
             # Save error scan log
             try:
-                err_log_id = create_repo_scan_log(
-                    conn_id, datetime.now(timezone.utc).isoformat()
-                )
+                err_log_id = create_repo_scan_log(conn_id, started_at)
                 complete_repo_scan_log(
                     log_id=err_log_id,
                     status="error",
                     completed_at=datetime.now(timezone.utc).isoformat(),
-                    summary_json=json.dumps({"error": str(e)}),
+                    summary_json=json.dumps({"error": str(exc)}),
                     log_entries_json="[]",
                 )
             except Exception:
                 logger.warning("Failed to save error scan log")
-            _scan_progress[conn_id] = {"event": "error", "message": str(e)}
-            yield {
-                "data": json.dumps({"event": "error", "message": str(e)})
-            }
+            _scan_progress[conn_id] = {"event": "error", "message": str(exc)}
+            event_queue.put(("error", exc))
+
+    thread = threading.Thread(target=_run_scan, daemon=True)
+    thread.start()
+
+    # Write initial progress for polling clients
+    _scan_progress[conn_id] = {
+        "event": "starting",
+        "total_repos": total_repos,
+        "repos_scanned": 0,
+    }
+
+    async def scan_generator():
+        # Emit 4KB padding comment for Cloud Run buffering
+        yield {"comment": " " * 4096}
+        yield {"data": json.dumps(_scan_progress[conn_id])}
+
+        try:
+            while True:
+                try:
+                    msg = await asyncio.to_thread(event_queue.get, timeout=15)
+                except queue.Empty:
+                    if not thread.is_alive():
+                        break
+                    yield {"comment": "keepalive"}
+                    continue
+
+                kind, payload = msg
+
+                if kind == "error":
+                    err_msg = str(payload) if isinstance(payload, Exception) else str(payload)
+                    yield {"data": json.dumps({"event": "error", "message": err_msg})}
+                    break
+
+                if kind == "progress":
+                    progress_data = {
+                        "event": "scanning",
+                        "repos_scanned": payload.get("repos_scanned", 0),
+                        "total_repos": payload.get("total_repos", total_repos),
+                        "current_repo": payload.get("current_repo", ""),
+                    }
+                    _scan_progress[conn_id] = progress_data
+                    yield {"data": json.dumps(progress_data)}
+                    continue
+
+                if kind == "complete":
+                    yield {"data": json.dumps(payload)}
+                    break
+
+        except Exception as e:
+            logger.warning("SSE generator error: %s", e)
         finally:
             # Clean up progress after a short delay so final poll can read it
             async def _cleanup():
