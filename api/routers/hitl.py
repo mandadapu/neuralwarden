@@ -2,8 +2,9 @@
 
 import asyncio
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from api.auth import get_current_user
 from api.schemas import HitlResumeRequest, AnalysisResponse
 from api.services import resume_analysis
 
@@ -12,7 +13,7 @@ router = APIRouter(prefix="/api", tags=["hitl"])
 
 @router.post("/hitl/{thread_id}/resume", response_model=AnalysisResponse)
 async def hitl_resume(
-    thread_id: str, req: HitlResumeRequest
+    thread_id: str, req: HitlResumeRequest, _user: str = Depends(get_current_user)
 ) -> AnalysisResponse:
     if not thread_id:
         raise HTTPException(status_code=400, detail="Missing thread_id")

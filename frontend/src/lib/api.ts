@@ -66,7 +66,7 @@ export async function resumeHitl(
 ): Promise<AnalysisResponse> {
   const res = await fetch(`${BASE}/hitl/${threadId}/resume`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ decision, notes }),
   });
   if (!res.ok) throw new Error(`HITL resume failed: ${res.statusText}`);

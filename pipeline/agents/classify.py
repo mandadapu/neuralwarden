@@ -8,7 +8,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from models.threat import ClassifiedThreat, Threat
 from pipeline.metrics import AgentTimer
-from pipeline.security import extract_json, validate_classification_output
+from pipeline.security import extract_json, validate_classification_output, wrap_user_data
 from pipeline.state import PipelineState
 from pipeline.vector_store import format_threat_intel_context
 
@@ -122,7 +122,10 @@ def run_classify(state: PipelineState) -> dict:
         correlated_evidence = state.get("correlated_evidence", [])
         if correlated_evidence:
             base_content += CORRELATION_ADDENDUM.format(
-                evidence_json=json.dumps(correlated_evidence, indent=2)
+                evidence_json=wrap_user_data(
+                    json.dumps(correlated_evidence, indent=2),
+                    "correlation_evidence",
+                )
             )
 
         with AgentTimer("classify", MODEL) as timer:
