@@ -500,6 +500,9 @@ async def trigger_scan(request: Request, cloud_id: str, user_email: str = Depend
 @router.get("/{cloud_id}/scan-progress")
 async def get_scan_progress(cloud_id: str, user_email: str = Depends(get_current_user)):
     """Return the current scan progress for polling-based overlay updates."""
+    account = get_cloud_account(cloud_id)
+    if not account or account["user_email"] != user_email:
+        raise HTTPException(status_code=404, detail="Cloud account not found")
     return _scan_progress.get(cloud_id, {"event": "idle"})
 
 
