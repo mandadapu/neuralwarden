@@ -8,7 +8,7 @@ import logging
 import queue
 import threading
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
@@ -53,10 +53,6 @@ _scan_progress: dict[str, dict] = {}
 # --------------- schemas ---------------
 
 
-_VALID_STATUSES = {"todo", "in_progress", "ignored", "resolved"}
-_VALID_SEVERITIES = {"critical", "high", "medium", "low"}
-
-
 class CreateCloudRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     project_id: str = Field(min_length=1, max_length=255)
@@ -74,11 +70,11 @@ class UpdateCloudRequest(BaseModel):
 
 
 class UpdateIssueStatusRequest(BaseModel):
-    status: str = Field(min_length=1, max_length=30)
+    status: Literal["todo", "in_progress", "ignored", "resolved"]
 
 
 class UpdateIssueSeverityRequest(BaseModel):
-    severity: str = Field(min_length=1, max_length=30)
+    severity: Literal["critical", "high", "medium", "low"]
 
 
 # --------------- helpers ---------------
@@ -492,7 +488,7 @@ async def trigger_scan(request: Request, cloud_id: str, user_email: str = Depend
             async def _cleanup():
                 await asyncio.sleep(10)
                 _scan_progress.pop(cloud_id, None)
-            asyncio.ensure_future(_cleanup())
+            asyncio.create_task(_cleanup())
 
     return EventSourceResponse(scan_generator(), ping=15)
 

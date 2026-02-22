@@ -94,6 +94,10 @@ def init_repo_tables() -> None:
         conn.execute(_CREATE_REPO_ASSETS)
         conn.execute(_CREATE_REPO_ISSUES)
         conn.execute(_CREATE_REPO_SCAN_LOGS)
+        # Indexes for frequently queried columns
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_repo_connections_user ON repo_connections(user_email)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_repo_issues_connection ON repo_issues(connection_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_repo_scan_logs_connection ON repo_scan_logs(connection_id)")
         conn.commit()
 
         # Migration: add github_token column if missing
