@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useAnalysisContext } from "@/context/AnalysisContext";
-import { listAllCloudIssues, updateIssueStatus, updateIssueSeverity } from "@/lib/api";
-import type { ClassifiedThreat, CloudIssue, Summary } from "@/lib/types";
+import { listAllCloudIssues, updateIssueStatus, updateIssueSeverity, listAllRepoIssues, updateRepoIssueStatus, updateRepoIssueSeverity } from "@/lib/api";
+import type { ClassifiedThreat, CloudIssue, RepoIssue, Summary } from "@/lib/types";
 import SummaryCards from "@/components/SummaryCards";
 import PipelineProgress from "@/components/PipelineProgress";
 import ThreatsTable from "@/components/ThreatsTable";
@@ -39,10 +39,41 @@ function cloudIssueToThreat(issue: CloudIssue): ClassifiedThreat {
   };
 }
 
+/** Map repo issue rule_code prefix to taxonomy type ID */
+function ruleCodeToType(ruleCode: string): string {
+  if (ruleCode.startsWith("secret_")) return "exposed_secrets";
+  if (ruleCode.startsWith("sast_")) return "sast";
+  if (ruleCode.startsWith("cve_")) return "open_source_deps";
+  if (ruleCode.startsWith("license_")) return "license_issues";
+  if (ruleCode.startsWith("dep_")) return "open_source_deps";
+  if (ruleCode.startsWith("code_")) return "sast";
+  return "sast"; // fallback
+}
+
+function repoIssueToThreat(issue: RepoIssue): ClassifiedThreat {
+  return {
+    threat_id: issue.id,
+    type: ruleCodeToType(issue.rule_code),
+    confidence: 1.0,
+    source_log_indices: [],
+    method: "rule_based",
+    description: issue.description,
+    source_ip: "",
+    risk: issue.severity,
+    risk_score: RISK_SCORES[issue.severity] ?? 50,
+    mitre_technique: issue.rule_code,
+    mitre_tactic: "",
+    business_impact: issue.title,
+    affected_systems: issue.location ? [issue.location] : [],
+    remediation_priority: RISK_SCORES[issue.severity] ?? 50,
+  };
+}
+
 export default function DashboardPage() {
   const { data: session } = useSession();
   const [selectedThreatIndex, setSelectedThreatIndex] = useState<number | null>(null);
   const [cloudThreats, setCloudThreats] = useState<ClassifiedThreat[]>([]);
+  const [repoThreats, setRepoThreats] = useState<ClassifiedThreat[]>([]);
   const [hiddenCloudIds, setHiddenCloudIds] = useState<Set<string>>(new Set());
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -60,6 +91,11 @@ export default function DashboardPage() {
       let issues = await listAllCloudIssues();
       issues = issues.filter((i) => i.status === "todo" || i.status === "in_progress");
       setCloudThreats(issues.map(cloudIssueToThreat));
+    } catch {}
+    try {
+      let repoIssues = await listAllRepoIssues();
+      repoIssues = repoIssues.filter((i) => i.status === "todo" || i.status === "in_progress");
+      setRepoThreats(repoIssues.map(repoIssueToThreat));
     } catch {}
     setLastRefreshed(new Date());
     setRefreshing(false);
@@ -86,7 +122,10 @@ export default function DashboardPage() {
   const visibleCloudThreats = cloudThreats.filter(
     (t) => !hiddenCloudIds.has(t.threat_id) && !snoozedIds.has(t.threat_id) && !ignoredIds.has(t.threat_id)
   );
-  const allThreats = [...visibleCloudThreats, ...pipelineThreats];
+  const visibleRepoThreats = repoThreats.filter(
+    (t) => !hiddenCloudIds.has(t.threat_id) && !snoozedIds.has(t.threat_id) && !ignoredIds.has(t.threat_id)
+  );
+  const allThreats = [...visibleCloudThreats, ...visibleRepoThreats, ...pipelineThreats];
 
   // Build summary from what's actually displayed in the table
   const combinedSummary: Summary = {
@@ -107,25 +146,30 @@ export default function DashboardPage() {
   const handleAction = async (threatId: string, action: string) => {
     // Check if this is a cloud issue (vs pipeline threat)
     const cloudThreat = cloudThreats.find((t) => t.threat_id === threatId);
+    const repoThreat = repoThreats.find((t) => t.threat_id === threatId);
 
-    if (cloudThreat) {
-      // Handle severity adjustments for cloud issues
+    if (cloudThreat || repoThreat) {
+      const isRepo = !!repoThreat;
+      const threat = (cloudThreat || repoThreat)!;
+
+      // Handle severity adjustments
       if (action.startsWith("adjust_")) {
         const newSeverity = action.replace("adjust_", "") as "critical" | "high" | "medium" | "low";
         try {
-          await updateIssueSeverity(threatId, newSeverity);
+          if (isRepo) await updateRepoIssueSeverity(threatId, newSeverity);
+          else await updateIssueSeverity(threatId, newSeverity);
         } catch (err) {
-          console.error("Failed to update cloud issue severity:", err);
+          console.error("Failed to update issue severity:", err);
           return;
         }
-        // Update local state so the UI reflects the change
-        setCloudThreats((prev) =>
+        const updater = (prev: ClassifiedThreat[]) =>
           prev.map((t) =>
             t.threat_id === threatId
               ? { ...t, risk: newSeverity, risk_score: RISK_SCORES[newSeverity] ?? 50 }
               : t
-          )
-        );
+          );
+        if (isRepo) setRepoThreats(updater);
+        else setCloudThreats(updater);
         return;
       }
 
@@ -138,15 +182,15 @@ export default function DashboardPage() {
       const config = actionConfig[action];
       if (config) {
         try {
-          await updateIssueStatus(threatId, config.backendStatus);
+          if (isRepo) await updateRepoIssueStatus(threatId, config.backendStatus);
+          else await updateIssueStatus(threatId, config.backendStatus);
         } catch (err) {
-          console.error("Failed to update cloud issue status:", err);
+          console.error("Failed to update issue status:", err);
           return;
         }
-        // Add to context list (shows in Snoozed/Ignored/Resolved pages)
-        addThreatTo(cloudThreat, config.destination);
-        // Remove from feed
-        setCloudThreats((prev) => prev.filter((t) => t.threat_id !== threatId));
+        addThreatTo(threat, config.destination);
+        if (isRepo) setRepoThreats((prev) => prev.filter((t) => t.threat_id !== threatId));
+        else setCloudThreats((prev) => prev.filter((t) => t.threat_id !== threatId));
         setHiddenCloudIds((prev) => new Set(prev).add(threatId));
       }
       setSelectedThreatIndex(null);

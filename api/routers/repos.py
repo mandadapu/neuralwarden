@@ -273,7 +273,6 @@ async def trigger_scan(request: Request, conn_id: str, user_email: str = Depends
         org_name = connection.get("org_name", "")
         if org_name:
             fetched = list_org_repos(org_name, token=connection.get("github_token", ""))
-            print(f"[SCAN] Fetched {len(fetched)} repos for {org_name}: {[r.get('full_name') for r in fetched[:5]]}", flush=True)
             repos = [
                 {
                     "repo_full_name": r.get("full_name", ""),
@@ -287,8 +286,6 @@ async def trigger_scan(request: Request, conn_id: str, user_email: str = Depends
     except Exception:
         logger.warning("Failed to fetch repos from GitHub for org %s, falling back to stored assets", connection.get("org_name"))
         repos = list_repo_assets(conn_id)
-
-    print(f"[SCAN] Will process {len(repos)} repos: {[r.get('repo_full_name') for r in repos[:5]]}", flush=True)
 
     async def scan_generator():
         from api.github_scanner import run_repo_scan
@@ -335,7 +332,7 @@ async def trigger_scan(request: Request, conn_id: str, user_email: str = Depends
             while True:
                 try:
                     msg = await asyncio.to_thread(event_queue.get, timeout=15)
-                except Exception:
+                except queue.Empty:
                     if not thread.is_alive():
                         break
                     yield {"comment": "keepalive"}

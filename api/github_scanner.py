@@ -25,7 +25,11 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 GITHUB_API = "https://api.github.com"
 
 # Directories to skip when walking repo files
-_SKIP_DIRS = {".git", "node_modules", ".venv", "__pycache__", "vendor", "dist", "build"}
+_SKIP_DIRS = {
+    ".git", "node_modules", ".venv", "__pycache__", "vendor", "dist", "build",
+    "test", "tests", "__tests__", "__mocks__", "spec", "specs", "fixtures",
+    "e2e", "cypress", "playwright", ".storybook", "coverage",
+}
 
 # Max file size to scan (1 MB)
 _MAX_FILE_SIZE = 1_048_576
@@ -188,6 +192,17 @@ def cleanup_clone(temp_dir: str) -> None:
 # ── File walker ───────────────────────────────────────────────────
 
 
+def _is_test_file(fname: str) -> bool:
+    """Return True if *fname* looks like a test/spec file."""
+    low = fname.lower()
+    stem = Path(low).stem
+    return (
+        stem.startswith("test_") or stem.endswith("_test")
+        or ".test." in low or ".spec." in low
+        or stem == "conftest" or stem.startswith("mock_")
+    )
+
+
 def _walk_files(repo_dir: str):
     """Yield ``(relative_path, absolute_path)`` for scannable files."""
     root = Path(repo_dir)
@@ -195,6 +210,8 @@ def _walk_files(repo_dir: str):
         # Prune skipped directories in-place
         dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
         for fname in filenames:
+            if _is_test_file(fname):
+                continue
             abs_path = Path(dirpath) / fname
             rel_path = abs_path.relative_to(root)
             yield str(rel_path), str(abs_path)

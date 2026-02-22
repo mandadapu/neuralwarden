@@ -1,8 +1,11 @@
 """Pipeline service — wraps LangGraph pipeline for the FastAPI backend."""
 
+import logging
 import time
 import uuid
 from functools import lru_cache
+
+logger = logging.getLogger(__name__)
 
 from langgraph.types import Command
 
@@ -210,8 +213,8 @@ def run_analysis(logs: str, user_email: str = "") -> AnalysisResponse:
             from api.database import save_analysis
             analysis_id = save_analysis(response.model_dump(mode="json"), user_email=user_email)
             response.analysis_id = analysis_id
-        except Exception as e:
-            print(f"[Services] Failed to save analysis: {e}")
+        except Exception:
+            logger.exception("Failed to save analysis report")
 
         return response
 

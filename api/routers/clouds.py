@@ -296,7 +296,7 @@ async def trigger_scan(request: Request, cloud_id: str, user_email: str = Depend
             while True:
                 try:
                     msg = await asyncio.to_thread(event_queue.get, timeout=15)
-                except Exception:
+                except queue.Empty:
                     if not thread.is_alive():
                         break
                     yield {"comment": "keepalive"}

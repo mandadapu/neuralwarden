@@ -6,11 +6,14 @@ Supports SQLite (local dev) and PostgreSQL (Cloud Run) via api.db layer.
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 
 from api.db import get_conn, adapt_sql, placeholder, insert_or_ignore, is_postgres
 from api.encryption import encrypt, decrypt
+
+logger = logging.getLogger(__name__)
 
 # ── Severity ordering (lower = more severe) ─────────────────────────
 
@@ -162,6 +165,7 @@ def create_cloud_account(
             ),
         )
         conn.commit()
+        logger.info("audit: cloud_account created id=%s user=%s project=%s", account_id, user_email, project_id)
         return account_id
     finally:
         conn.close()
@@ -214,7 +218,8 @@ def update_cloud_account(account_id: str, **fields) -> None:
     updates = {k: v for k, v in fields.items() if k in _ALLOWED_ACCOUNT_FIELDS}
     if not updates:
         return
-    if "credentials_json" in updates and updates["credentials_json"]:
+    has_cred_change = "credentials_json" in updates and updates["credentials_json"]
+    if has_cred_change:
         updates["credentials_json"] = encrypt(updates["credentials_json"])
     p = placeholder
     set_clause = ", ".join(f"{k} = {p}" for k in updates)
@@ -226,6 +231,10 @@ def update_cloud_account(account_id: str, **fields) -> None:
             values,
         )
         conn.commit()
+        changed = list(updates.keys())
+        if has_cred_change:
+            changed = [k if k != "credentials_json" else "credentials_json(rotated)" for k in changed]
+        logger.info("audit: cloud_account updated id=%s fields=%s", account_id, changed)
     finally:
         conn.close()
 
@@ -239,6 +248,7 @@ def delete_cloud_account(account_id: str) -> None:
         conn.execute(adapt_sql("DELETE FROM cloud_assets WHERE cloud_account_id = ?"), (account_id,))
         conn.execute(adapt_sql("DELETE FROM cloud_accounts WHERE id = ?"), (account_id,))
         conn.commit()
+        logger.info("audit: cloud_account deleted id=%s", account_id)
     finally:
         conn.close()
 
@@ -423,6 +433,7 @@ def update_cloud_issue_status(issue_id: str, status: str) -> None:
             (status, issue_id),
         )
         conn.commit()
+        logger.info("audit: cloud_issue status changed id=%s status=%s", issue_id, status)
     finally:
         conn.close()
 
@@ -436,6 +447,7 @@ def update_cloud_issue_severity(issue_id: str, severity: str) -> None:
             (severity, issue_id),
         )
         conn.commit()
+        logger.info("audit: cloud_issue severity changed id=%s severity=%s", issue_id, severity)
     finally:
         conn.close()
 

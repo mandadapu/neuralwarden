@@ -10,17 +10,22 @@ import json
 import logging
 import os
 import re
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
-_SKIP_DIRS = {".git", "node_modules", ".venv", "__pycache__", "vendor", "dist", "build"}
+_SKIP_DIRS = {
+    ".git", "node_modules", ".venv", "__pycache__", "vendor", "dist", "build",
+    "test", "tests", "__tests__", "__mocks__", "spec", "specs", "fixtures",
+    "e2e", "cypress", "playwright", ".storybook", "coverage",
+}
 
 # Limits to prevent runaway costs
-MAX_FILES_PER_REPO = 150
+MAX_FILES_PER_REPO = 50
 MAX_LINES_PER_FILE = 300
-_BATCH_SIZE = 5  # Files per LLM call
+_BATCH_SIZE = 10  # Files per LLM call
 
 _HAIKU_MODEL = "claude-haiku-4-5-20251001"
 
@@ -90,6 +95,17 @@ _SYSTEM_PROMPT = (
 )
 
 
+def _is_test_file(fname: str) -> bool:
+    """Return True if *fname* looks like a test/spec file."""
+    low = fname.lower()
+    stem = Path(low).stem
+    return (
+        stem.startswith("test_") or stem.endswith("_test")
+        or ".test." in low or ".spec." in low
+        or stem == "conftest" or stem.startswith("mock_")
+    )
+
+
 def _collect_source_files(repo_dir: str) -> List[Tuple[str, str]]:
     """Collect source files eligible for SAST, returning (rel_path, content)."""
     root = Path(repo_dir)
@@ -99,6 +115,8 @@ def _collect_source_files(repo_dir: str) -> List[Tuple[str, str]]:
         dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
         for fname in filenames:
             if Path(fname).suffix.lower() not in _SOURCE_EXTENSIONS:
+                continue
+            if _is_test_file(fname):
                 continue
             abs_path = os.path.join(dirpath, fname)
             rel_path = str(Path(abs_path).relative_to(root))
@@ -182,8 +200,13 @@ def _run_ai_sast(files: List[Tuple[str, str]], repo_full_name: str) -> List[Dict
                     "fix_time": "30 min",
                 })
 
+            # Throttle between batches to avoid rate limits
+            time.sleep(2)
+
         except Exception as exc:
             logger.warning("SAST AI batch %d failed: %s", i // _BATCH_SIZE, exc)
+            if "rate_limit" in str(exc).lower() or "429" in str(exc):
+                time.sleep(15)
             continue
 
     logger.info("SAST AI: Found %d issues in %s", len(issues), repo_full_name)
