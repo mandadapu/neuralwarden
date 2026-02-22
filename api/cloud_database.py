@@ -391,6 +391,19 @@ def list_cloud_issues(
         conn.close()
 
 
+def get_cloud_issue(issue_id: str) -> dict | None:
+    """Return a single cloud issue by ID, or None."""
+    conn = get_conn()
+    try:
+        row = conn.execute(
+            adapt_sql("SELECT * FROM cloud_issues WHERE id = ?"),
+            (issue_id,),
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
 def update_cloud_issue_status(issue_id: str, status: str) -> None:
     """Update the status of a single issue."""
     conn = get_conn()

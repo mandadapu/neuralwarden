@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import PageShell from "@/components/PageShell";
 import RemediationModal from "@/components/RemediationModal";
-import { listClouds, listCloudIssues, setApiUserEmail } from "@/lib/api";
+import { listClouds, listCloudIssues, setApiToken } from "@/lib/api";
 import type { CloudIssue } from "@/lib/types";
 
 const SEVERITY_STYLES: Record<string, string> = {
@@ -21,10 +21,11 @@ export default function AutoFixPage() {
   const [fixIssue, setFixIssue] = useState<CloudIssue | null>(null);
 
   useEffect(() => {
-    if (!session?.user?.email) return;
-    setApiUserEmail(session.user.email);
+    const token = session?.backendToken as string;
+    if (!token) return;
+    setApiToken(token);
     loadAllIssues();
-  }, [session?.user?.email]);
+  }, [session?.backendToken]);
 
   async function loadAllIssues() {
     try {
